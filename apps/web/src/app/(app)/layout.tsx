@@ -41,7 +41,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-3">
           <select
             aria-label="Organization"
-            className="input !w-auto"
+            className="input !w-auto max-w-[9rem] truncate sm:max-w-xs"
             value={currentOrgId ?? ''}
             onChange={(e) => setCurrentOrg(e.target.value)}
           >

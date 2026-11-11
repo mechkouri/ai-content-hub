@@ -28,9 +28,9 @@ let assets: any[];
 const files = new Map<string, Buffer>();
 
 const prismaMock: any = {
-  user: { upsert: jest.fn().mockResolvedValue({}) },
+  user: { upsert: vi.fn().mockResolvedValue({}) },
   membership: {
-    findUnique: jest.fn(async ({ where }: any) => {
+    findUnique: vi.fn(async ({ where }: any) => {
       const k = where.userId_organizationId;
       return (
         memberships.find((m) => m.userId === k.userId && m.organizationId === k.organizationId) ??
@@ -39,58 +39,58 @@ const prismaMock: any = {
     }),
   },
   mediaAsset: {
-    count: jest.fn(
+    count: vi.fn(
       async ({ where }: any) =>
         assets.filter(
           (a) => where.id.in.includes(a.id) && a.organizationId === where.organizationId,
         ).length,
     ),
-    create: jest.fn(async ({ data }: any) => {
+    create: vi.fn(async ({ data }: any) => {
       const a = { id: `asset-${assets.length + 1}`, createdAt: new Date(), ...data };
       assets.push(a);
       return a;
     }),
-    findMany: jest.fn(async ({ where }: any) =>
+    findMany: vi.fn(async ({ where }: any) =>
       assets.filter((a) => a.organizationId === where.organizationId),
     ),
-    findFirst: jest.fn(
+    findFirst: vi.fn(
       async ({ where }: any) =>
         assets.find((a) => a.id === where.id && a.organizationId === where.organizationId) ?? null,
     ),
-    delete: jest.fn(async ({ where }: any) => {
+    delete: vi.fn(async ({ where }: any) => {
       assets = assets.filter((a) => a.id !== where.id);
     }),
   },
   brandKit: {
-    findMany: jest.fn(async ({ where }: any) =>
+    findMany: vi.fn(async ({ where }: any) =>
       kits.filter((k) => k.organizationId === where.organizationId),
     ),
-    findFirst: jest.fn(async ({ where, orderBy }: any) => {
+    findFirst: vi.fn(async ({ where, orderBy }: any) => {
       let list = kits.filter((k) => k.organizationId === where.organizationId);
       if (where.isActive !== undefined) list = list.filter((k) => k.isActive === where.isActive);
       if (where.id) list = list.filter((k) => k.id === where.id);
       if (orderBy?.version === 'desc') list = [...list].sort((a, b) => b.version - a.version);
       return list[0] ?? null;
     }),
-    findUnique: jest.fn(async ({ where }: any) => kits.find((k) => k.id === where.id) ?? null),
-    updateMany: jest.fn(async ({ where, data }: any) => {
+    findUnique: vi.fn(async ({ where }: any) => kits.find((k) => k.id === where.id) ?? null),
+    updateMany: vi.fn(async ({ where, data }: any) => {
       kits
         .filter((k) => k.organizationId === where.organizationId && k.isActive === where.isActive)
         .forEach((k) => Object.assign(k, data));
     }),
-    update: jest.fn(async ({ where, data }: any) =>
+    update: vi.fn(async ({ where, data }: any) =>
       Object.assign(
         kits.find((k) => k.id === where.id),
         data,
       ),
     ),
-    create: jest.fn(async ({ data }: any) => {
+    create: vi.fn(async ({ data }: any) => {
       const k = { id: randomUUID(), ...data };
       kits.push(k);
       return k;
     }),
   },
-  $transaction: jest.fn(async (arg: any) =>
+  $transaction: vi.fn(async (arg: any) =>
     typeof arg === 'function' ? arg(prismaMock) : Promise.all(arg),
   ),
 };

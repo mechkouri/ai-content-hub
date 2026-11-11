@@ -97,7 +97,13 @@ export class OpenRouterProvider implements TextProvider {
     );
 
     const raw = await res.text();
-    let body: any = null;
+    interface CompletionBody {
+      error?: { message?: unknown; code?: unknown };
+      choices?: { message?: { content?: unknown } }[];
+      model?: string;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+    }
+    let body: CompletionBody | null = null;
     try {
       body = JSON.parse(raw);
     } catch {
@@ -106,7 +112,7 @@ export class OpenRouterProvider implements TextProvider {
     if (!res.ok) {
       throw classifyHttpError(
         res.status,
-        body?.error?.message ?? raw,
+        typeof body?.error?.message === 'string' ? body.error.message : raw,
         res.headers.get('retry-after'),
       );
     }
@@ -120,9 +126,9 @@ export class OpenRouterProvider implements TextProvider {
     }
     return {
       text,
-      model: body.model ?? req.model,
-      promptTokens: body.usage?.prompt_tokens ?? 0,
-      completionTokens: body.usage?.completion_tokens ?? 0,
+      model: body?.model ?? req.model,
+      promptTokens: body?.usage?.prompt_tokens ?? 0,
+      completionTokens: body?.usage?.completion_tokens ?? 0,
     };
   }
 }

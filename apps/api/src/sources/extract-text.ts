@@ -2,11 +2,12 @@ import { BadRequestException } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import mammoth from 'mammoth';
 // Import the library file directly: the package index runs a debug script on load.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse: (
   data: Buffer,
   opts?: { max?: number },
-) => Promise<{ text: string; numpages: number }> = require('pdf-parse/lib/pdf-parse.js');
+) => Promise<{ text: string; numpages: number }> =
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('pdf-parse/lib/pdf-parse.js');
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const MAX_TEXT_CHARS = 200_000;
@@ -24,7 +25,7 @@ export function detectFileKind(buf: Buffer): FileKind | null {
 
 export function cleanText(text: string): string {
   return text
-    .replace(/\u0000/g, '')
+    .replaceAll('\u0000', '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\r\n?/g, '\n')
     .replace(/[ \t\f\v]+/g, ' ')

@@ -307,9 +307,9 @@ let memberships: { userId: string; organizationId: string; role: Role }[];
 let nextRaw: any;
 
 const prismaMock: any = {
-  user: { upsert: jest.fn().mockResolvedValue({}) },
+  user: { upsert: vi.fn().mockResolvedValue({}) },
   membership: {
-    findUnique: jest.fn(async ({ where }: any) => {
+    findUnique: vi.fn(async ({ where }: any) => {
       const k = where.userId_organizationId;
       const m = memberships.find(
         (x) => x.userId === k.userId && x.organizationId === k.organizationId,
@@ -318,20 +318,20 @@ const prismaMock: any = {
     }),
   },
   organization: {
-    findUnique: jest.fn(async ({ where }: any) => ({ id: where.id, name: 'Atlas University' })),
+    findUnique: vi.fn(async ({ where }: any) => ({ id: where.id, name: 'Atlas University' })),
   },
-  brandKit: { findFirst: jest.fn(async () => brandKit) },
+  brandKit: { findFirst: vi.fn(async () => brandKit) },
   source: {
-    findFirst: jest.fn(
+    findFirst: vi.fn(
       async ({ where }: any) =>
         sources.find((s) => s.id === where.id && s.organizationId === where.organizationId) ?? null,
     ),
   },
   sourceFact: {
-    findMany: jest.fn(async ({ where }: any) => facts.filter((f) => f.sourceId === where.sourceId)),
+    findMany: vi.fn(async ({ where }: any) => facts.filter((f) => f.sourceId === where.sourceId)),
   },
   contentPiece: {
-    create: jest.fn(async ({ data }: any) => {
+    create: vi.fn(async ({ data }: any) => {
       const p = {
         id: randomUUID(),
         createdAt: new Date(),
@@ -343,11 +343,11 @@ const prismaMock: any = {
       pieces.push(p);
       return p;
     }),
-    findFirst: jest.fn(
+    findFirst: vi.fn(
       async ({ where }: any) =>
         pieces.find((p) => p.id === where.id && p.organizationId === where.organizationId) ?? null,
     ),
-    findMany: jest.fn(async ({ where, select }: any) =>
+    findMany: vi.fn(async ({ where, select }: any) =>
       pieces
         .filter(
           (p) =>
@@ -357,13 +357,13 @@ const prismaMock: any = {
         )
         .map((p) => (select ? Object.fromEntries(Object.keys(select).map((k) => [k, p[k]])) : p)),
     ),
-    update: jest.fn(async ({ where, data }: any) =>
+    update: vi.fn(async ({ where, data }: any) =>
       Object.assign(
         pieces.find((p) => p.id === where.id),
         data,
       ),
     ),
-    delete: jest.fn(
+    delete: vi.fn(
       async ({ where }: any) => void (pieces = pieces.filter((p) => p.id !== where.id)),
     ),
   },
@@ -371,7 +371,7 @@ const prismaMock: any = {
 
 // Like the real AiService, the mock validates the model's reply against the schema it is given.
 const aiMock = {
-  generateJson: jest.fn(async (_ctx: any, opts: any) => ({
+  generateJson: vi.fn(async (_ctx: any, opts: any) => ({
     data: opts.schema.parse(nextRaw),
     model: 'free-model',
     provider: 'openrouter',

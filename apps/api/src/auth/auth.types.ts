@@ -1,5 +1,5 @@
 import { Membership } from '@prisma/client';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 export interface AuthUser {
   id: string;

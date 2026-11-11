@@ -11,3 +11,5 @@ coverage
 next-env.d.ts
 .storage
 *.tsbuildinfo
+playwright-report
+test-results

@@ -57,7 +57,12 @@ export class CloudflareImageProvider implements ImageProvider {
     if (contentType.startsWith('image/')) {
       data = Buffer.from(await res.arrayBuffer());
     } else {
-      const body: any = await res.json().catch(() => null);
+      const body = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        errors?: unknown;
+        image?: unknown;
+        result?: { image?: unknown };
+      } | null;
       const b64: unknown = body?.result?.image ?? body?.image;
       if (body?.success === false || typeof b64 !== 'string') {
         throw classifyHttpError(502, JSON.stringify(body?.errors ?? ''));

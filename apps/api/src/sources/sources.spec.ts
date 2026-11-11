@@ -183,9 +183,9 @@ let memberships: { userId: string; organizationId: string; role: Role }[];
 const stored = new Map<string, Buffer>();
 
 const prismaMock: any = {
-  user: { upsert: jest.fn().mockResolvedValue({}) },
+  user: { upsert: vi.fn().mockResolvedValue({}) },
   membership: {
-    findUnique: jest.fn(async ({ where }: any) => {
+    findUnique: vi.fn(async ({ where }: any) => {
       const k = where.userId_organizationId;
       const m = memberships.find(
         (x) => x.userId === k.userId && x.organizationId === k.organizationId,
@@ -194,7 +194,7 @@ const prismaMock: any = {
     }),
   },
   source: {
-    create: jest.fn(async ({ data }: any) => {
+    create: vi.fn(async ({ data }: any) => {
       const s = {
         id: randomUUID(),
         createdAt: new Date(),
@@ -208,12 +208,12 @@ const prismaMock: any = {
       sources.push(s);
       return s;
     }),
-    findFirst: jest.fn(
+    findFirst: vi.fn(
       async ({ where }: any) =>
         sources.find((s) => s.id === where.id && s.organizationId === where.organizationId) ?? null,
     ),
     // Honors `select` like real Prisma, so the test proves the list never returns the full original text.
-    findMany: jest.fn(async ({ where, select }: any) =>
+    findMany: vi.fn(async ({ where, select }: any) =>
       sources
         .filter((s) => s.organizationId === where.organizationId)
         .map((s) => {
@@ -222,24 +222,24 @@ const prismaMock: any = {
           return Object.fromEntries(Object.keys(select).map((k) => [k, (full as any)[k]]));
         }),
     ),
-    update: jest.fn(async ({ where, data }: any) =>
+    update: vi.fn(async ({ where, data }: any) =>
       Object.assign(
         sources.find((s) => s.id === where.id),
         data,
       ),
     ),
-    delete: jest.fn(async ({ where }: any) => {
+    delete: vi.fn(async ({ where }: any) => {
       sources = sources.filter((s) => s.id !== where.id);
       facts = facts.filter((f) => f.sourceId !== where.id);
     }),
   },
   sourceFact: {
-    findMany: jest.fn(async ({ where }: any) => facts.filter((f) => f.sourceId === where.sourceId)),
-    findFirst: jest.fn(
+    findMany: vi.fn(async ({ where }: any) => facts.filter((f) => f.sourceId === where.sourceId)),
+    findFirst: vi.fn(
       async ({ where }: any) =>
         facts.find((f) => f.id === where.id && f.sourceId === where.sourceId) ?? null,
     ),
-    createMany: jest.fn(
+    createMany: vi.fn(
       async ({ data }: any) =>
         void data.forEach((d: any) =>
           facts.push({
@@ -251,29 +251,29 @@ const prismaMock: any = {
           }),
         ),
     ),
-    deleteMany: jest.fn(async ({ where }: any) => {
+    deleteMany: vi.fn(async ({ where }: any) => {
       facts = facts.filter((f) => !(f.sourceId === where.sourceId && f.manual === where.manual));
     }),
-    create: jest.fn(async ({ data }: any) => {
+    create: vi.fn(async ({ data }: any) => {
       const f = { id: randomUUID(), createdAt: new Date(), edited: false, ...data };
       facts.push(f);
       return f;
     }),
-    update: jest.fn(async ({ where, data }: any) =>
+    update: vi.fn(async ({ where, data }: any) =>
       Object.assign(
         facts.find((f) => f.id === where.id),
         data,
       ),
     ),
-    delete: jest.fn(async ({ where }: any) => {
+    delete: vi.fn(async ({ where }: any) => {
       facts = facts.filter((f) => f.id !== where.id);
     }),
   },
-  $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+  $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
-const aiMock = { generateJson: jest.fn() };
-const pageFetcher = { fetch: jest.fn() };
+const aiMock = { generateJson: vi.fn() };
+const pageFetcher = { fetch: vi.fn() };
 
 const goodExtraction = {
   data: {
