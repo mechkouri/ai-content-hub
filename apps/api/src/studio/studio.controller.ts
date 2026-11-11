@@ -40,6 +40,7 @@ const listSchema = z.object({
   sourceId: z.string().uuid().optional(),
   approvalStatus: z.enum(['DRAFT', 'IN_REVIEW', 'CHANGES_REQUESTED', 'APPROVED']).optional(),
   kind: z.enum(KINDS).optional(),
+  campaignId: z.string().uuid().optional(),
   scheduledFrom: z.coerce.date().optional(),
   scheduledTo: z.coerce.date().optional(),
 });
