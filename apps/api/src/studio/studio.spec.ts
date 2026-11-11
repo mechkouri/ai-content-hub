@@ -27,6 +27,7 @@ const U_EDITOR = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const U_VIEWER = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const U_APPROVER = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const U_ADMIN = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const U_PUBLISHER = '99999999-9999-4999-8999-999999999999';
 const U_OTHER = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 
 const FACT_VALUES = {
@@ -356,6 +357,7 @@ const prismaMock: any = {
         edited: false,
         approvalStatus: 'DRAFT',
         submittedById: null,
+        scheduledFor: null,
         translatedFromId: null,
         ...data,
       };
@@ -373,7 +375,11 @@ const prismaMock: any = {
             p.organizationId === where.organizationId &&
             (!where.sourceId || p.sourceId === where.sourceId) &&
             (!where.kind || p.kind === where.kind) &&
-            (!where.approvalStatus || p.approvalStatus === where.approvalStatus),
+            (!where.approvalStatus || p.approvalStatus === where.approvalStatus) &&
+            (!where.scheduledFor ||
+              (p.scheduledFor &&
+                (!where.scheduledFor.gte || p.scheduledFor >= where.scheduledFor.gte) &&
+                (!where.scheduledFor.lt || p.scheduledFor < where.scheduledFor.lt))),
         )
         .map((p) => (select ? Object.fromEntries(Object.keys(select).map((k) => [k, p[k]])) : p)),
     ),
@@ -505,6 +511,7 @@ describe('content studio API', () => {
       { userId: U_VIEWER, organizationId: ORG_A, role: Role.VIEWER },
       { userId: U_APPROVER, organizationId: ORG_A, role: Role.APPROVER },
       { userId: U_ADMIN, organizationId: ORG_A, role: Role.ADMIN },
+      { userId: U_PUBLISHER, organizationId: ORG_A, role: Role.PUBLISHER },
       { userId: U_OTHER, organizationId: ORG_B, role: Role.OWNER },
     ];
     aiMock.generateJson.mockClear();
@@ -982,6 +989,88 @@ describe('content studio API', () => {
 
     it('returns 404 for malformed ids', async () => {
       await act('not-a-uuid', 'submit', U_EDITOR).expect(404);
+    });
+  });
+
+  describe('content calendar', () => {
+    const make = async () =>
+      (await generate({ sourceId: SRC, kind: 'ARTICLE' }).expect(201)).body.piece;
+    const approved = async () => {
+      const a = await make();
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      await act(a.id, 'approve', U_APPROVER).expect(201);
+      return a;
+    };
+    const act = (id: string, action: string, user: string, body: object = {}) =>
+      request(app.getHttpServer())
+        .post(`${base}/${id}/${action}`)
+        .set('Authorization', as(user))
+        .send(body);
+    const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
+
+    it('schedules approved content, lists it by date range, and unschedules it', async () => {
+      const a = await approved();
+      const b = await approved();
+      const s1 = await act(a.id, 'schedule', U_PUBLISHER, { scheduledFor: inDays(3) }).expect(201);
+      expect(s1.body.scheduledFor).toBeTruthy();
+      expect(s1.body.scheduledById).toBe(U_PUBLISHER);
+      await act(b.id, 'schedule', U_ADMIN, { scheduledFor: inDays(10) }).expect(201);
+
+      const week = await request(app.getHttpServer())
+        .get(
+          `${base}?scheduledFrom=${encodeURIComponent(inDays(1))}&scheduledTo=${encodeURIComponent(inDays(7))}`,
+        )
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(week.body.map((p: any) => p.id)).toEqual([a.id]);
+      const both = await request(app.getHttpServer())
+        .get(`${base}?scheduledFrom=${encodeURIComponent(inDays(1))}`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(both.body.map((p: any) => p.id)).toEqual([a.id, b.id]); // date order
+
+      // Rescheduling moves it.
+      await act(a.id, 'schedule', U_PUBLISHER, { scheduledFor: inDays(20) }).expect(201);
+      const un = await act(a.id, 'unschedule', U_PUBLISHER).expect(201);
+      expect(un.body.scheduledFor).toBeNull();
+      await act(a.id, 'unschedule', U_PUBLISHER).expect(409); // nothing to remove
+      await request(app.getHttpServer())
+        .get(`${base}?scheduledFrom=not-a-date`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(400);
+    });
+
+    it('only schedules approved content, in the future, within a year', async () => {
+      const draft = await make();
+      await act(draft.id, 'schedule', U_PUBLISHER, { scheduledFor: inDays(2) }).expect(409);
+      const a = await approved();
+      await act(a.id, 'schedule', U_PUBLISHER, { scheduledFor: inDays(-1) }).expect(400);
+      await act(a.id, 'schedule', U_PUBLISHER, { scheduledFor: inDays(400) }).expect(400);
+      await act(a.id, 'schedule', U_PUBLISHER, { scheduledFor: 'tomorrow-ish' }).expect(400);
+      await act(a.id, 'schedule', U_PUBLISHER, {}).expect(400);
+    });
+
+    it('is limited to publishers and managers, and to the own organization', async () => {
+      const a = await approved();
+      const body = { scheduledFor: inDays(2) };
+      await act(a.id, 'schedule', U_EDITOR, body).expect(403);
+      await act(a.id, 'schedule', U_APPROVER, body).expect(403);
+      await act(a.id, 'schedule', U_VIEWER, body).expect(403);
+      await act(a.id, 'schedule', U_OTHER, body).expect(404);
+      await act('not-a-uuid', 'schedule', U_PUBLISHER, body).expect(404);
+      await act(a.id, 'schedule', U_ADMIN, body).expect(201);
+    });
+
+    it('clears the date when approved content is edited afterwards', async () => {
+      const a = await approved();
+      await act(a.id, 'schedule', U_PUBLISHER, { scheduledFor: inDays(2) }).expect(201);
+      const edited = await request(app.getHttpServer())
+        .patch(`${base}/${a.id}`)
+        .set('Authorization', as(U_EDITOR))
+        .send({ content: article({ conclusion: 'See you at the Rabat campus.' }) })
+        .expect(200);
+      expect(edited.body.piece.approvalStatus).toBe('DRAFT');
+      expect(edited.body.piece.scheduledFor).toBeNull();
     });
   });
 });

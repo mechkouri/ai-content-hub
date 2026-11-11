@@ -18,7 +18,8 @@ export type Permission =
   | 'source:write'
   | 'content:read'
   | 'content:write'
-  | 'content:review';
+  | 'content:review'
+  | 'content:schedule';
 
 const ALL_ROLES: Role[] = [
   Role.OWNER,
@@ -50,6 +51,7 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   'content:read': ALL_ROLES,
   'content:write': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
   'content:review': [Role.OWNER, Role.ADMIN, Role.APPROVER],
+  'content:schedule': [Role.OWNER, Role.ADMIN, Role.PUBLISHER],
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {
