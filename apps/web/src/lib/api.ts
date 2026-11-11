@@ -219,3 +219,144 @@ export const FACT_LABELS: Record<string, string> = {
 
 export const canWriteSources = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
+
+// ---------- content studio ----------
+
+export type ContentKind = 'ARTICLE' | 'INSTAGRAM' | 'FACEBOOK' | 'LINKEDIN';
+export type ContentStatus = 'DRAFT' | 'NEEDS_REVIEW';
+export type Lang = 'fr' | 'ar' | 'en';
+
+export const CONTENT_KINDS: { id: ContentKind; label: string; icon: string; blurb: string }[] = [
+  {
+    id: 'ARTICLE',
+    label: 'Website article',
+    icon: '📰',
+    blurb: 'SEO-ready article with title, meta description, headings and FAQ',
+  },
+  {
+    id: 'INSTAGRAM',
+    label: 'Instagram',
+    icon: '📸',
+    blurb: 'Caption, carousel slides, hashtags and a call to action',
+  },
+  {
+    id: 'FACEBOOK',
+    label: 'Facebook',
+    icon: '👍',
+    blurb: 'Conversational post with optional link and images',
+  },
+  {
+    id: 'LINKEDIN',
+    label: 'LinkedIn',
+    icon: '💼',
+    blurb: 'Professional announcement, text or image post',
+  },
+];
+
+export const LANG_LABELS: Record<string, string> = { fr: 'Français', ar: 'العربية', en: 'English' };
+
+export interface ClaimWarning {
+  type: 'number' | 'url' | 'email';
+  value: string;
+  message: string;
+}
+export interface SeoCheck {
+  id: string;
+  ok: boolean;
+  message: string;
+}
+
+export interface ImageIdea {
+  brief: string;
+  altText: string;
+}
+export interface ArticleContent {
+  seoTitle: string;
+  metaDescription: string;
+  slug: string;
+  h1: string;
+  excerpt: string;
+  introduction: string;
+  sections: { heading: string; body: string; subsections?: { heading: string; body: string }[] }[];
+  conclusion: string;
+  faq: { question: string; answer: string }[];
+  internalLinkSuggestions: { anchorText: string; suggestedTopic: string }[];
+  featuredImageBrief: string;
+  imageAltText: string;
+  structuredData: { type: string; notes?: string };
+}
+export interface InstagramContent {
+  caption: string;
+  carousel: { headline: string; body: string }[];
+  hashtags: string[];
+  cta: string;
+  imageBrief: string;
+  altText: string;
+}
+export interface FacebookContent {
+  postText: string;
+  cta: string;
+  link?: string | null;
+  images: ImageIdea[];
+  hashtags: string[];
+}
+export interface LinkedinContent {
+  postText: string;
+  cta: string;
+  imageMode: 'text' | 'image' | 'multi_image';
+  images: ImageIdea[];
+  hashtags: string[];
+}
+export type AnyContent = ArticleContent | InstagramContent | FacebookContent | LinkedinContent;
+
+export interface ContentSummary {
+  id: string;
+  sourceId: string;
+  kind: ContentKind;
+  status: ContentStatus;
+  language: string;
+  title: string;
+  edited: boolean;
+  translatedFromId: string | null;
+  warnings: ClaimWarning[];
+  createdAt: string;
+}
+export interface ContentPiece extends Omit<ContentSummary, 'warnings'> {
+  warnings: ClaimWarning[];
+  content: AnyContent;
+  options: Record<string, unknown>;
+  usedFactIds: string[];
+  model: string | null;
+  provider: string | null;
+  updatedAt: string;
+}
+export interface ContentDetail {
+  piece: ContentPiece;
+  seoChecks?: SeoCheck[];
+  source?: { id: string; title: string } | null;
+  factsAvailable?: number;
+  excludedUnverified?: number;
+}
+
+export interface GenerateOptions {
+  language?: Lang;
+  style: string;
+  tone: string;
+  audience?: string;
+  length: 'short' | 'medium' | 'long';
+  primaryKeyword?: string;
+  instructions?: string;
+}
+
+export const STYLE_OPTIONS = [
+  'informative',
+  'journalistic',
+  'storytelling',
+  'promotional',
+  'formal',
+  'conversational',
+];
+export const TONE_OPTIONS = ['professional', 'friendly', 'inspiring', 'urgent', 'neutral'];
+
+export const canWriteContent = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
