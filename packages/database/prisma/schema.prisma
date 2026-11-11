@@ -269,6 +269,8 @@ model ContentPiece {
   status           ContentStatus   @default(DRAFT)
   approvalStatus   ApprovalStatus  @default(DRAFT)
   submittedById    String?         @db.Uuid
+  scheduledFor     DateTime?
+  scheduledById    String?         @db.Uuid
   language         String
   title            String
   content          Json
@@ -290,4 +292,5 @@ model ContentPiece {
 
   @@index([organizationId, sourceId, createdAt])
   @@index([organizationId, approvalStatus])
+  @@index([organizationId, scheduledFor])
 }

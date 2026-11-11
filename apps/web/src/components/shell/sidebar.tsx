@@ -33,6 +33,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
       { href: '/sources', label: 'Sources', icon: FileText },
       { href: '/studio', label: 'Content studio', icon: PenLine },
+      { href: '/calendar', label: 'Content calendar', icon: CalendarDays },
     ],
   },
   {
@@ -48,7 +49,6 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 /** Planned features from the design that are not built yet. They are shown disabled, never faked. */
 export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: 'Campaigns', icon: Megaphone },
-  { label: 'Content calendar', icon: CalendarDays },
   { label: 'Visual design studio', icon: Wand2 },
   { label: 'Workflow automation', icon: Workflow },
   { label: 'Channels', icon: Share2 },

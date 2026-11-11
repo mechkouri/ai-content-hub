@@ -37,6 +37,8 @@ export class ApprovalsService {
       where: { id: piece.id },
       data: {
         approvalStatus: to,
+        // A schedule only makes sense for approved text: any other state clears it.
+        ...(to !== ApprovalStatus.APPROVED ? { scheduledFor: null, scheduledById: null } : {}),
         ...(submittedById !== undefined ? { submittedById } : {}),
       },
     });

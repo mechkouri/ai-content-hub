@@ -18,6 +18,7 @@ import { parseBody } from '../common/parse';
 import { OrgAccessGuard, RequirePermission } from '../organizations/org-access.guard';
 import { ApprovalsService } from './approvals.service';
 import { KINDS, LANGUAGES, optionsSchema } from './content-schemas';
+import { ScheduleService } from './schedule.service';
 import { StudioService } from './studio.service';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,7 +40,10 @@ const listSchema = z.object({
   sourceId: z.string().uuid().optional(),
   approvalStatus: z.enum(['DRAFT', 'IN_REVIEW', 'CHANGES_REQUESTED', 'APPROVED']).optional(),
   kind: z.enum(KINDS).optional(),
+  scheduledFrom: z.coerce.date().optional(),
+  scheduledTo: z.coerce.date().optional(),
 });
+const scheduleSchema = z.object({ scheduledFor: z.coerce.date() });
 
 @Controller('organizations/:orgId/content')
 @UseGuards(AuthGuard, OrgAccessGuard)
@@ -47,6 +51,7 @@ export class StudioController {
   constructor(
     private readonly studio: StudioService,
     private readonly approvals: ApprovalsService,
+    private readonly schedule: ScheduleService,
   ) {}
 
   @Post('generate')
@@ -105,6 +110,24 @@ export class StudioController {
   @RequirePermission('content:read')
   reviews(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.approvals.history(orgId, uuid(id));
+  }
+
+  @Post(':id/schedule')
+  @RequirePermission('content:schedule')
+  scheduleContent(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const { scheduledFor } = parseBody(scheduleSchema, body);
+    return this.schedule.schedule(orgId, uuid(id), req.user.id, scheduledFor);
+  }
+
+  @Post(':id/unschedule')
+  @RequirePermission('content:schedule')
+  unschedule(@Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.schedule.unschedule(orgId, uuid(id));
   }
 
   @Post(':id/submit')

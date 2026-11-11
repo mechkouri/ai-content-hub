@@ -293,13 +293,30 @@ export class StudioService {
     return piece;
   }
 
-  list(orgId: string, filter: { sourceId?: string; kind?: Kind; approvalStatus?: ApprovalStatus }) {
+  list(
+    orgId: string,
+    filter: {
+      sourceId?: string;
+      kind?: Kind;
+      approvalStatus?: ApprovalStatus;
+      scheduledFrom?: Date;
+      scheduledTo?: Date;
+    },
+  ) {
     return this.prisma.contentPiece.findMany({
       where: {
         organizationId: orgId,
         ...(filter.sourceId ? { sourceId: filter.sourceId } : {}),
         ...(filter.kind ? { kind: filter.kind } : {}),
         ...(filter.approvalStatus ? { approvalStatus: filter.approvalStatus } : {}),
+        ...(filter.scheduledFrom || filter.scheduledTo
+          ? {
+              scheduledFor: {
+                ...(filter.scheduledFrom ? { gte: filter.scheduledFrom } : {}),
+                ...(filter.scheduledTo ? { lt: filter.scheduledTo } : {}),
+              },
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -307,6 +324,7 @@ export class StudioService {
         kind: true,
         status: true,
         approvalStatus: true,
+        scheduledFor: true,
         language: true,
         title: true,
         edited: true,
@@ -315,7 +333,11 @@ export class StudioService {
         createdAt: true,
         updatedAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      // A calendar query reads in date order; the normal list shows newest first.
+      orderBy:
+        filter.scheduledFrom || filter.scheduledTo
+          ? { scheduledFor: 'asc' }
+          : { createdAt: 'desc' },
       take: 200,
     });
   }
