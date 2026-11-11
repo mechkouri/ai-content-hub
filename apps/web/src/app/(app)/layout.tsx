@@ -9,16 +9,11 @@ import { useRequireAuth } from '@/lib/use-require-auth';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: '🏠' },
+  { href: '/brand', label: 'Brand kit', icon: '🎨' },
+  { href: '/media', label: 'Media library', icon: '🖼️' },
   { href: '/members', label: 'Team', icon: '👥' },
 ];
-const SOON = [
-  'Create Content',
-  'Campaigns',
-  'Design Studio',
-  'Calendar',
-  'Media Library',
-  'Integrations',
-];
+const SOON = ['Create Content', 'Campaigns', 'Design Studio', 'Calendar', 'Integrations'];
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const ready = useRequireAuth();
