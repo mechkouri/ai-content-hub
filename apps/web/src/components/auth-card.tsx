@@ -1,16 +1,8 @@
-import type { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { Logo } from './shell/logo';
 
-export function Logo({ className = '' }: { className?: string }) {
-  return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-brand via-fuchsia-500 to-orange-400 text-lg font-bold text-white">
-        A
-      </div>
-      <span className="text-lg font-bold tracking-tight">AI Content Hub</span>
-    </div>
-  );
-}
+export { Logo };
 
 export function AuthCard({
   title,
@@ -22,20 +14,23 @@ export function AuthCard({
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
+    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,#EFF6FF,transparent_60%)] p-4">
       <div className="w-full max-w-md">
-        <Logo className="mb-6 justify-center" />
-        <div className="card p-6">
-          <h1 className="text-xl font-bold">{title}</h1>
-          <p className="mb-5 mt-1 text-sm text-slate-500">{subtitle}</p>
+        <Logo className="mb-8 justify-center" />
+        <div className="card p-7 shadow-lift">
+          <h1 className="font-display text-2xl font-semibold">{title}</h1>
+          <p className="mb-6 mt-1 text-sm text-muted">{subtitle}</p>
           {!isSupabaseConfigured && (
-            <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            <p className="mb-4 rounded-lg border border-amber-200 bg-warn-soft p-3 text-sm text-warn-ink">
               Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and
               NEXT_PUBLIC_SUPABASE_ANON_KEY in apps/web/.env.local.
             </p>
           )}
           {children}
         </div>
+        <p className="mt-6 text-center text-xs text-muted">
+          One input, a complete digital campaign.
+        </p>
       </div>
     </main>
   );
