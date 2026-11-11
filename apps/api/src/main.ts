@@ -7,6 +7,7 @@ async function bootstrap() {
   const env = loadEnv();
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
+  app.enableCors({ origin: env.WEB_ORIGIN, credentials: false });
   await app.listen(env.API_PORT);
   console.log(`API listening on http://localhost:${env.API_PORT}/api`);
 }
