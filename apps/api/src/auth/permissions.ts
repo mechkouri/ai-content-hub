@@ -13,7 +13,9 @@ export type Permission =
   | 'media:write'
   | 'media:delete'
   | 'ai:use'
-  | 'ai:admin';
+  | 'ai:admin'
+  | 'source:read'
+  | 'source:write';
 
 const ALL_ROLES: Role[] = [
   Role.OWNER,
@@ -40,6 +42,8 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   'media:delete': [Role.OWNER, Role.ADMIN, Role.DESIGNER],
   'ai:use': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
   'ai:admin': MANAGERS,
+  'source:read': ALL_ROLES,
+  'source:write': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {

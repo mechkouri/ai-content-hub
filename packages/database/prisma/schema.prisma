@@ -41,6 +41,7 @@ model Organization {
   mediaAssets     MediaAsset[]
   aiUsages        AiUsage[]
   aiSetting       AiSetting?
+  sources         Source[]
 }
 
 model Membership {
@@ -156,4 +157,60 @@ model AiSetting {
   monthlyImageLimit   Int?
   updatedAt           DateTime     @updatedAt
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+enum SourceType {
+  TEXT
+  PDF
+  DOCX
+  URL
+}
+
+enum SourceStatus {
+  TEXT_READY
+  EXTRACTED
+  FAILED
+}
+
+// Original material a campaign is built from. The original text is always kept, even if AI extraction fails.
+model Source {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  type             SourceType
+  status           SourceStatus @default(TEXT_READY)
+  title            String
+  language         String?
+  classification   String?
+  summary          String?
+  originalText     String
+  truncated        Boolean      @default(false)
+  url              String?
+  fileName         String?
+  mimeType         String?
+  sizeBytes        Int?
+  storageKey       String?
+  extractionError  String?
+  createdById      String       @db.Uuid
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facts            SourceFact[]
+
+  @@index([organizationId, createdAt])
+}
+
+// One extracted (or manually added) fact, linked back to the exact quote in the source.
+model SourceFact {
+  id        String   @id @default(uuid()) @db.Uuid
+  sourceId  String   @db.Uuid
+  kind      String
+  value     String
+  quote     String?
+  verified  Boolean  @default(false)
+  manual    Boolean  @default(false)
+  edited    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  source    Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
 }
