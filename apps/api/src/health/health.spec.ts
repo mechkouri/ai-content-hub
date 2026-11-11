@@ -23,5 +23,9 @@ describe('health', () => {
   it('env defaults and validation', () => {
     expect(loadEnv({}).API_PORT).toBe(4000);
     expect(() => loadEnv({ API_PORT: 'abc' })).toThrow();
+    // Empty values from `KEY=` lines in .env must count as unset, not as invalid.
+    expect(
+      loadEnv({ SUPABASE_JWT_SECRET: '', SUPABASE_JWKS_URL: '' }).SUPABASE_JWT_SECRET,
+    ).toBeUndefined();
   });
 });
