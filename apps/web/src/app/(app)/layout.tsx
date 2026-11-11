@@ -11,6 +11,7 @@ const NAV = [
   { href: '/dashboard', label: 'Overview', icon: '🏠' },
   { href: '/brand', label: 'Brand kit', icon: '🎨' },
   { href: '/media', label: 'Media library', icon: '🖼️' },
+  { href: '/ai', label: 'AI providers', icon: '✨' },
   { href: '/members', label: 'Team', icon: '👥' },
 ];
 const SOON = ['Create Content', 'Campaigns', 'Design Studio', 'Calendar', 'Integrations'];
