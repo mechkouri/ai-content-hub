@@ -1,0 +1,16 @@
+{
+  "name": "@aich/database",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "validate": "prisma validate",
+    "generate": "prisma generate",
+    "build": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}
