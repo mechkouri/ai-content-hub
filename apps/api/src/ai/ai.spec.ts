@@ -125,24 +125,25 @@ describe('OpenRouterProvider', () => {
   it('classifies failures: daily free quota vs plain rate limit vs auth vs 200-with-error', async () => {
     process.env.OPENROUTER_API_KEY = 'k';
     const p = new OpenRouterProvider();
-    const call = () => p.generate({ model: 'openrouter/free', prompt: 'x' });
-    fetchMock.mockResolvedValueOnce(
-      json(429, { error: { message: 'Rate limit exceeded: free-models-per-day' } }),
+    // The model list is served normally; each chat call takes the next queued reply.
+    const chat: Response[] = [];
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith('/models') ? json(200, MODELS) : chat.shift()!,
     );
+    const call = () => p.generate({ model: 'meta/free-one:free', prompt: 'x' });
+    chat.push(json(429, { error: { message: 'Rate limit exceeded: free-models-per-day' } }));
     await expect(call()).rejects.toMatchObject({ kind: 'quota', retryable: false });
-    fetchMock.mockResolvedValueOnce(
-      json(429, { error: { message: 'slow down' } }, { 'retry-after': '3' }),
-    );
+    chat.push(json(429, { error: { message: 'slow down' } }, { 'retry-after': '3' }));
     await expect(call()).rejects.toMatchObject({
       kind: 'rate_limit',
       retryable: true,
       retryAfterSeconds: 3,
     });
-    fetchMock.mockResolvedValueOnce(json(401, { error: { message: 'bad key' } }));
+    chat.push(json(401, { error: { message: 'bad key' } }));
     await expect(call()).rejects.toMatchObject({ kind: 'auth', retryable: false });
-    fetchMock.mockResolvedValueOnce(json(200, { error: { code: 502, message: 'upstream down' } }));
+    chat.push(json(200, { error: { code: 502, message: 'upstream down' } }));
     await expect(call()).rejects.toMatchObject({ kind: 'unavailable', retryable: true });
-    fetchMock.mockResolvedValueOnce(json(200, { choices: [{ message: { content: '  ' } }] }));
+    chat.push(json(200, { choices: [{ message: { content: '  ' } }] }));
     await expect(call()).rejects.toMatchObject({ kind: 'unavailable' });
   });
 
@@ -152,6 +153,279 @@ describe('OpenRouterProvider', () => {
     await expect(p.generate({ model: 'openrouter/free', prompt: 'x' })).rejects.toMatchObject({
       kind: 'not_configured',
     });
+  });
+});
+
+describe('OpenRouterProvider automatic model selection', () => {
+  const free = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name: id,
+    context_length: 100_000,
+    pricing: { prompt: '0', completion: '0' },
+    supported_parameters: ['response_format', 'reasoning', 'include_reasoning', 'max_tokens'],
+    architecture: { output_modalities: ['text'] },
+    ...extra,
+  });
+  const CATALOG = {
+    data: [
+      free('forced/thinker:free', { reasoning: { mandatory: true, default_enabled: true } }),
+      free('google/quiet-small:free', {
+        context_length: 50_000,
+        reasoning: { mandatory: false, default_enabled: false },
+      }),
+      free('google/quiet-big:free', {
+        context_length: 250_000,
+        reasoning: { mandatory: false, default_enabled: false },
+      }),
+      free('maybe/unknown:free', { reasoning: {} }),
+      free('plain/no-reasoning:free', {
+        supported_parameters: ['response_format', 'max_tokens'],
+        context_length: 10_000,
+      }),
+      free('no/json:free', {
+        supported_parameters: ['reasoning', 'max_tokens'],
+        reasoning: { mandatory: false, default_enabled: false },
+      }),
+      free('google/lyria-music:free', { architecture: { output_modalities: ['text', 'audio'] } }),
+      {
+        id: 'vendor/paid',
+        name: 'paid',
+        pricing: { prompt: '0.1', completion: '0.1' },
+        architecture: { output_modalities: ['text'] },
+      },
+    ],
+  };
+  const ok = (text: string, extra: object = {}) =>
+    json(200, {
+      model: 'x',
+      choices: [{ message: { content: text }, finish_reason: 'stop', ...extra }],
+      usage: { prompt_tokens: 1, completion_tokens: 2 },
+    });
+
+  it('ranks non-reasoning free models first, drops forced reasoners, music models and paid models', async () => {
+    fetchMock.mockResolvedValue(json(200, CATALOG));
+    const p = new OpenRouterProvider();
+    expect(await p.pickAutoModels(true)).toEqual([
+      'google/quiet-big:free', // reasoning optional/off, biggest context
+      'google/quiet-small:free',
+      'plain/no-reasoning:free', // no reasoning support at all
+      'maybe/unknown:free', // unclear reasoning behaviour ranks after the clear ones
+      'openrouter/free', // last resort
+    ]);
+    const all = (await p.listFreeModels()).map((m) => m.id);
+    expect(all).not.toContain('google/lyria-music:free'); // audio generator is not a text writer
+    expect(all).not.toContain('vendor/paid');
+  });
+
+  it('only requires JSON support when JSON is requested', async () => {
+    fetchMock.mockResolvedValue(json(200, CATALOG));
+    const p = new OpenRouterProvider();
+    expect((await p.pickAutoModels(true)).includes('no/json:free')).toBe(false);
+    expect((await p.pickAutoModels(false)).includes('no/json:free')).toBe(true);
+  });
+
+  it('falls back to the openrouter free router when the catalog is unreachable', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    expect(await new OpenRouterProvider().pickAutoModels(true)).toEqual(['openrouter/free']);
+  });
+
+  it('uses the best candidate and moves to the next one when an answer is empty or cut off', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    const used: string[] = [];
+    const replies = [
+      ok('', {}), // 1st candidate: empty answer (spent its tokens thinking)
+      ok('{"partial": tru', { finish_reason: 'length' }), // 2nd: cut off
+      ok('{"done": true}'), // 3rd: finished
+    ];
+    fetchMock.mockImplementation(async (url: string, init: any) => {
+      if (String(url).endsWith('/models')) return json(200, CATALOG);
+      used.push(JSON.parse(init.body).model);
+      return replies.shift()!;
+    });
+    const res = await new OpenRouterProvider().generate({
+      model: 'openrouter/free',
+      prompt: 'x',
+      json: true,
+      maxTokens: 1000,
+    });
+    expect(res.text).toBe('{"done": true}');
+    expect(used).toEqual([
+      'google/quiet-big:free',
+      'google/quiet-small:free',
+      'plain/no-reasoning:free',
+    ]);
+  });
+
+  it('does not switch models for credential or quota problems', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    const used: string[] = [];
+    fetchMock.mockImplementation(async (url: string, init: any) => {
+      if (String(url).endsWith('/models')) return json(200, CATALOG);
+      used.push(JSON.parse(init.body).model);
+      return json(429, { error: { message: 'free-models-per-day exhausted' } });
+    });
+    await expect(
+      new OpenRouterProvider().generate({ model: 'openrouter/free', prompt: 'x' }),
+    ).rejects.toMatchObject({ kind: 'quota' });
+    expect(used).toHaveLength(1);
+  });
+
+  it('gives reasoning models extra token room, but not models that answer directly', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    const sent: Record<string, number> = {};
+    fetchMock.mockImplementation(async (url: string, init: any) => {
+      if (String(url).endsWith('/models')) return json(200, CATALOG);
+      const b = JSON.parse(init.body);
+      sent[b.model] = b.max_tokens;
+      return ok('fine');
+    });
+    const p = new OpenRouterProvider();
+    await p.generate({ model: 'google/quiet-big:free', prompt: 'x', maxTokens: 2000 });
+    expect(sent['google/quiet-big:free']).toBe(2000);
+    await p.generate({ model: 'forced/thinker:free', prompt: 'x', maxTokens: 2000 });
+    expect(sent['forced/thinker:free']).toBe(6000); // 3x
+    await p.generate({ model: 'forced/thinker:free', prompt: 'x', maxTokens: 9000 });
+    expect(sent['forced/thinker:free']).toBe(16_000); // capped
+  });
+
+  it('switches reasoning off only for models where it is optional', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    const sent: Record<string, any> = {};
+    fetchMock.mockImplementation(async (url: string, init: any) => {
+      if (String(url).endsWith('/models')) return json(200, CATALOG);
+      const b = JSON.parse(init.body);
+      sent[b.model] = b;
+      return ok('fine');
+    });
+    const p = new OpenRouterProvider();
+    await p.generate({ model: 'google/quiet-big:free', prompt: 'x', maxTokens: 1000 });
+    await p.generate({ model: 'forced/thinker:free', prompt: 'x', maxTokens: 1000 });
+    await p.generate({ model: 'maybe/unknown:free', prompt: 'x', maxTokens: 1000 });
+    expect(sent['google/quiet-big:free'].reasoning).toEqual({ enabled: false });
+    expect(sent['google/quiet-big:free'].max_tokens).toBe(1000); // no thinking, no extra room needed
+    expect(sent['forced/thinker:free'].reasoning).toBeUndefined(); // mandatory: would be rejected
+    expect(sent['forced/thinker:free'].max_tokens).toBe(3000);
+    expect(sent['maybe/unknown:free'].reasoning).toBeUndefined();
+  });
+
+  it('remembers a model that refuses to stop reasoning and retries it without the flag', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    const bodies: any[] = [];
+    fetchMock.mockImplementation(async (url: string, init: any) => {
+      if (String(url).endsWith('/models')) return json(200, CATALOG);
+      const b = JSON.parse(init.body);
+      bodies.push(b);
+      return b.reasoning
+        ? json(400, {
+            error: { message: 'Reasoning is mandatory for this endpoint and cannot be disabled.' },
+          })
+        : ok('finally');
+    });
+    const p = new OpenRouterProvider();
+    await expect(
+      p.generate({ model: 'google/quiet-big:free', prompt: 'x', maxTokens: 1000 }),
+    ).resolves.toMatchObject({ text: 'finally' });
+    expect(bodies.map((b) => Boolean(b.reasoning))).toEqual([true, false]);
+    await p.generate({ model: 'google/quiet-big:free', prompt: 'x', maxTokens: 1000 });
+    expect(bodies.map((b) => Boolean(b.reasoning))).toEqual([true, false, false]); // remembered, not re-sent
+  });
+
+  it('lets a model that just failed rest, and tries models that were fast before first', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    let now = 5_000_000;
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+    const used: string[] = [];
+    const behavior: Record<string, 'rate_limited' | 'fast' | 'slow'> = {
+      'google/quiet-big:free': 'rate_limited',
+      'google/quiet-small:free': 'slow',
+      'plain/no-reasoning:free': 'fast',
+    };
+    fetchMock.mockImplementation(async (url: string, init: any) => {
+      if (String(url).endsWith('/models')) return json(200, CATALOG);
+      const model = JSON.parse(init.body).model;
+      used.push(model);
+      const kind = behavior[model] ?? 'slow';
+      if (kind === 'rate_limited')
+        return json(429, { error: { message: 'Provider returned error' } });
+      now += kind === 'fast' ? 2_000 : 20_000;
+      return ok('{"ok":true}');
+    });
+    try {
+      const p = new OpenRouterProvider();
+      // 1st call: biggest model is rate limited, the next one answers (slowly).
+      await p.generate({ model: 'openrouter/free', prompt: 'x', json: true });
+      expect(used).toEqual(['google/quiet-big:free', 'google/quiet-small:free']);
+      // Make the "fast" model known by using it directly.
+      await p.generate({ model: 'plain/no-reasoning:free', prompt: 'x', json: true });
+      used.length = 0;
+      // 2nd automatic call: the rate-limited model rests, the measured-fast model goes first.
+      await p.generate({ model: 'openrouter/free', prompt: 'x', json: true });
+      expect(used[0]).toBe('plain/no-reasoning:free');
+      expect(used).not.toContain('google/quiet-big:free');
+      // After the rest period it is eligible again.
+      now += 3 * 60 * 1000;
+      expect((await p.pickAutoModels(true)).includes('google/quiet-big:free')).toBe(true);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it('turns a stalled response body into a typed, retryable timeout', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    const stalled = {
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => {
+        throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      },
+    };
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith('/models') ? json(200, CATALOG) : (stalled as unknown as Response),
+    );
+    await expect(
+      new OpenRouterProvider().generate({ model: 'google/quiet-big:free', prompt: 'x' }),
+    ).rejects.toMatchObject({ kind: 'timeout', retryable: true });
+  });
+
+  it('stops trying more models once the shared time budget is used up', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    process.env.AI_TIMEOUT_MS = '60000';
+    let now = 1_000_000;
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+    const used: string[] = [];
+    try {
+      fetchMock.mockImplementation(async (url: string, init: any) => {
+        if (String(url).endsWith('/models')) return json(200, CATALOG);
+        used.push(JSON.parse(init.body).model);
+        now += 70_000; // every attempt is slow and ends without an answer
+        return ok('');
+      });
+      await expect(
+        new OpenRouterProvider().generate({ model: 'openrouter/free', prompt: 'x', json: true }),
+      ).rejects.toMatchObject({ kind: 'unavailable' });
+      // Budget is 2 x 60s: after two 70s attempts there is no time left for the 3rd and 4th candidates.
+      expect(used).toHaveLength(2);
+    } finally {
+      clock.mockRestore();
+      delete process.env.AI_TIMEOUT_MS;
+    }
+  });
+
+  it('accepts a cut-off answer for plain text but not for structured JSON', async () => {
+    process.env.OPENROUTER_API_KEY = 'k';
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).endsWith('/models')
+        ? json(200, CATALOG)
+        : ok('half a sent', { finish_reason: 'length' }),
+    );
+    const p = new OpenRouterProvider();
+    await expect(
+      p.generate({ model: 'google/quiet-big:free', prompt: 'x' }),
+    ).resolves.toMatchObject({ text: 'half a sent' });
+    await expect(
+      p.generate({ model: 'google/quiet-big:free', prompt: 'x', json: true }),
+    ).rejects.toMatchObject({ kind: 'unavailable' });
   });
 });
 
@@ -199,6 +473,22 @@ describe('CloudflareImageProvider', () => {
       }),
     );
     await expect(p.generate({ prompt: 'x', steps: 4 })).rejects.toMatchObject({ kind: 'quota' });
+  });
+
+  it('turns a stalled image download into a typed, retryable timeout', async () => {
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'a';
+    process.env.CLOUDFLARE_API_TOKEN = 'b';
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'image/jpeg' }),
+      arrayBuffer: async () => {
+        throw new DOMException('timeout', 'TimeoutError');
+      },
+    } as unknown as Response);
+    await expect(
+      new CloudflareImageProvider().generate({ prompt: 'x', steps: 4 }),
+    ).rejects.toMatchObject({ kind: 'timeout', retryable: true });
   });
 
   it('is not configured by default', async () => {
@@ -357,14 +647,27 @@ describe('AiService', () => {
   });
 
   it('retries transient provider errors, and logs failures without counting them toward quota', async () => {
-    let n = 0;
-    const p = fakeText('a', async (req) => {
-      if (++n < 3) throw new ProviderError('unavailable', 'blip', true);
-      return okText()(req);
+    process.env.AI_RETRY_ATTEMPTS = '3';
+    try {
+      let n = 0;
+      const p = fakeText('a', async (req) => {
+        if (++n < 3) throw new ProviderError('unavailable', 'blip', true);
+        return okText()(req);
+      });
+      await make([p]).generateText(ctx, { prompt: 'x' });
+      expect(p.generate).toHaveBeenCalledTimes(3);
+      expect(usage.filter((u) => u.status === AiStatus.SUCCESS)).toHaveLength(1);
+    } finally {
+      delete process.env.AI_RETRY_ATTEMPTS;
+    }
+  });
+
+  it('defaults to two attempts per provider so slow free models cannot stack up', async () => {
+    const p = fakeText('a', async () => {
+      throw new ProviderError('unavailable', 'blip', true);
     });
-    await make([p]).generateText(ctx, { prompt: 'x' });
-    expect(p.generate).toHaveBeenCalledTimes(3);
-    expect(usage.filter((u) => u.status === AiStatus.SUCCESS)).toHaveLength(1);
+    await expect(make([p]).generateText(ctx, { prompt: 'x' })).rejects.toBeDefined();
+    expect(p.generate).toHaveBeenCalledTimes(2);
   });
 
   it('on provider quota exhaustion tries the next free provider, but not on other errors', async () => {

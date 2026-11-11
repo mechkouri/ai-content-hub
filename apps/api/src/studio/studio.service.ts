@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -23,6 +25,16 @@ import {
 } from './content-schemas';
 
 const isLanguage = (v: unknown): v is Language => LANGUAGES.includes(v as Language);
+
+/** The main body text of a piece, used to notice when a "translation" came back unchanged. */
+function mainText(kind: Kind, c: any): string {
+  const raw =
+    kind === 'ARTICLE' ? c?.introduction : kind === 'INSTAGRAM' ? c?.caption : c?.postText;
+  return String(raw ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 
 @Injectable()
 export class StudioService {
@@ -225,6 +237,18 @@ export class StudioService {
     );
 
     const content = this.postProcess(kind, out.data.content as any);
+    // Lazy models sometimes hand the text back untranslated: refuse that instead of saving a fake translation.
+    const before = mainText(kind, original.content);
+    if (before.length > 0 && before === mainText(kind, content)) {
+      throw new HttpException(
+        {
+          code: 'TRANSLATION_UNCHANGED',
+          message: 'The AI returned the text without translating it. Please try again.',
+          retryable: true,
+        },
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
     // Fields that must not change in translation.
     if (kind === 'ARTICLE') content.slug = (original.content as any).slug;
     if (kind === 'LINKEDIN') content.imageMode = (original.content as any).imageMode;

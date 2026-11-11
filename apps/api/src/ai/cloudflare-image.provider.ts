@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { loadEnv } from '../config/env';
 import { detectImageType } from '../storage/image-type';
 import { ImageProvider, ImageRequest, ImageResult, ProviderError } from './ai.types';
-import { classifyHttpError, fetchWithTimeout } from './ai.util';
+import { classifyHttpError, fetchWithTimeout, readBytes, readJson, readText } from './ai.util';
 
 export const FLUX_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
@@ -49,15 +49,15 @@ export class CloudflareImageProvider implements ImageProvider {
 
     const contentType = res.headers.get('content-type') ?? '';
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
+      const text = await readText(res).catch(() => '');
       throw classifyHttpError(res.status, text, res.headers.get('retry-after'));
     }
 
     let data: Buffer;
     if (contentType.startsWith('image/')) {
-      data = Buffer.from(await res.arrayBuffer());
+      data = await readBytes(res);
     } else {
-      const body: any = await res.json().catch(() => null);
+      const body: any = await readJson(res);
       const b64: unknown = body?.result?.image ?? body?.image;
       if (body?.success === false || typeof b64 !== 'string') {
         throw classifyHttpError(502, JSON.stringify(body?.errors ?? ''));

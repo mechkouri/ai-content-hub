@@ -14,7 +14,7 @@ const schema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().min(1).optional(),
   CLOUDFLARE_API_TOKEN: z.string().min(1).optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).default(60_000),
-  AI_RETRY_ATTEMPTS: z.coerce.number().int().min(1).max(5).default(3),
+  AI_RETRY_ATTEMPTS: z.coerce.number().int().min(1).max(5).default(2),
   AI_RATE_PER_MINUTE: z.coerce.number().int().min(1).default(20),
   AI_DAILY_TEXT_LIMIT: z.coerce.number().int().min(0).default(200),
   AI_MONTHLY_TEXT_LIMIT: z.coerce.number().int().min(0).default(3000),
