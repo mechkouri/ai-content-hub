@@ -138,3 +138,25 @@ export function Topbar({
     </header>
   );
 }
+
+/** Topbar shown to visitors who are not signed in: browsing is free, the account is needed to create. */
+export function GuestTopbar({ onMenu }: { onMenu: () => void }) {
+  return (
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white/85 px-4 backdrop-blur-md lg:px-10">
+      <button
+        className="rounded-lg p-2 text-slate-600 hover:bg-surface lg:hidden"
+        onClick={onMenu}
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+      <div className="flex-1" />
+      <Link href="/login" className="btn-ghost">
+        Log in
+      </Link>
+      <Link href="/signup" className="btn-primary">
+        Create account
+      </Link>
+    </header>
+  );
+}

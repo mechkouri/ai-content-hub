@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { GuestHome } from '@/components/dashboard/guest-home';
 import { Overview, OverviewData, nameFromEmail } from '@/components/dashboard/overview';
 import { AiStatus, apiFetch, BrandKit, ContentSummary, SourceSummary } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
@@ -36,6 +37,7 @@ export default function Dashboard() {
     };
   }, [currentOrgId]);
 
+  if (!user) return <GuestHome />;
   if (!data) return <p className="text-sm text-muted">Loading…</p>;
   const metaName = String(user?.user_metadata?.full_name ?? '').trim();
   const name = metaName ? metaName.split(/\s+/)[0] : nameFromEmail(user?.email ?? '');
