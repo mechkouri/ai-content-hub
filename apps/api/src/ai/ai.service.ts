@@ -143,7 +143,7 @@ export class AiService {
   /** Generates JSON validated by a Zod schema, with one repair attempt if the model returns bad JSON. */
   async generateJson<T>(
     ctx: AiContext,
-    opts: Omit<TextOptions, 'json'> & { schema: ZodType<T> },
+    opts: Omit<TextOptions, 'json'> & { schema: ZodType<T, any, any> },
   ): Promise<{ data: T; model: string; provider: string }> {
     const { schema, ...rest } = opts;
     let prompt = rest.prompt;
