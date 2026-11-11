@@ -2,31 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-surface text-slate-900 antialiased;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+@layer base {
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+  /* Arabic: the design swaps in Cairo for headings and Tajawal for interface text, with neutral tracking. */
+  :dir(rtl) {
+    font-family: var(--font-ar-body), var(--font-body), system-ui, sans-serif;
+    letter-spacing: 0;
+  }
+  :dir(rtl) :is(h1, h2, h3) {
+    font-family: var(--font-ar-display), var(--font-display), system-ui, sans-serif;
+    letter-spacing: 0;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand/30;
+  }
 }
 
-.btn {
-  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
-}
-.btn-primary {
-  @apply btn bg-brand text-white hover:bg-brand-dark;
-}
-.btn-ghost {
-  @apply btn bg-slate-200/70 text-slate-800 hover:bg-slate-300/70;
-}
-.btn-danger {
-  @apply btn bg-red-50 text-red-700 hover:bg-red-100;
-}
-.input {
-  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20;
-}
-.card {
-  @apply rounded-xl bg-white shadow-card;
+@layer components {
+  /* ---- buttons ---- */
+  .btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white shadow-[inset_0_1px_0_rgba(255,255,255,.2)] hover:bg-brand-dark hover:shadow-glow;
+  }
+  /* AI actions: soft indigo, as in the design's assistive buttons */
+  .btn-ai {
+    @apply btn border border-ai-line bg-ai-soft text-ai hover:bg-[#E0E7FF];
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-white text-slate-700 hover:bg-surface hover:text-ink;
+  }
+  .btn-danger {
+    @apply btn border border-transparent bg-danger-soft text-danger-ink hover:bg-red-100;
+  }
+  .btn-sm {
+    @apply !h-8 !px-3 text-xs;
+  }
+
+  /* ---- form fields ---- */
+  .input {
+    @apply min-h-10 w-full rounded-lg border border-line-strong bg-white px-3 py-2 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-brand focus:ring-[3px] focus:ring-brand/15 disabled:bg-surface-sub disabled:text-slate-500;
+  }
+
+  /* ---- surfaces ---- */
+  .card {
+    @apply rounded-2xl border border-line bg-white shadow-card;
+  }
+  .card-hover {
+    @apply transition duration-150 hover:-translate-y-px hover:border-line-strong hover:shadow-lift;
+  }
+
+  /* ---- status chips (pill, 24px) ---- */
+  .chip {
+    @apply inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium;
+  }
+  .chip-ok {
+    @apply chip bg-ok-soft text-ok-ink;
+  }
+  .chip-draft {
+    @apply chip bg-surface-sub text-slate-600;
+  }
+  .chip-ai {
+    @apply chip bg-ai-soft text-ai-dark;
+  }
+  .chip-info {
+    @apply chip border border-brand-line bg-brand-soft text-brand-dark;
+  }
+  .chip-warn {
+    @apply chip bg-warn-soft text-warn-ink;
+  }
+  .chip-danger {
+    @apply chip bg-danger-soft text-danger-ink;
+  }
+
+  /* small uppercase section label */
+  .eyebrow {
+    @apply font-label text-[11px] font-semibold uppercase tracking-wider text-muted;
+  }
 }

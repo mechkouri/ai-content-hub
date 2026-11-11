@@ -450,7 +450,7 @@ export default function BrandPage() {
                     {canWrite && !k.isActive && (
                       <button
                         type="button"
-                        className="btn-ghost !px-2 !py-1 text-xs"
+                        className="btn-ghost btn-sm"
                         onClick={() => activate(k.id)}
                       >
                         Use

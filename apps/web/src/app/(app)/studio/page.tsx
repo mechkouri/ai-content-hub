@@ -57,7 +57,11 @@ export default function StudioPage() {
       const ready = src.filter((s) => s.status === 'EXTRACTED');
       setSources(ready);
       setPieces(content);
-      const wanted = new URLSearchParams(window.location.search).get('sourceId');
+      const params = new URLSearchParams(window.location.search);
+      const wanted = params.get('sourceId');
+      // Quick-create shortcuts (dashboard) pass ?kind=ARTICLE|INSTAGRAM|FACEBOOK|LINKEDIN.
+      const wantedKind = CONTENT_KINDS.find((k) => k.id === params.get('kind'));
+      if (wantedKind) setKind(wantedKind.id);
       setSourceId((cur) => cur || (ready.find((s) => s.id === wanted) ?? ready[0])?.id || '');
     } catch (e) {
       setError(describeError(e));

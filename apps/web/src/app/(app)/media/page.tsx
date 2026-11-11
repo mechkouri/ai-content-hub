@@ -146,7 +146,7 @@ export default function MediaPage() {
                   </div>
                   {canDeleteMedia(currentRole) && (
                     <button
-                      className="btn-danger !px-2 !py-1 text-xs"
+                      className="btn-danger btn-sm"
                       onClick={() => remove(a)}
                       aria-label={`Delete ${a.filename}`}
                     >
