@@ -11,6 +11,7 @@ import { findUnsupportedClaims, normalizeDigits, seoChecks } from './content-gua
 import { buildPrompt, buildTranslationPrompt } from './content-prompts';
 import {
   articleSchema,
+  generationEnvelope,
   facebookSchema,
   instagramSchema,
   linkedinSchema,
@@ -231,6 +232,19 @@ describe('content schemas', () => {
       }),
     ).toThrow();
   });
+  it('accepts model output wrapped in "content" or returned flat, and rejects anything else', () => {
+    const env = generationEnvelope('INSTAGRAM');
+    const post = instagram();
+    const nested = env.parse({ usedFacts: ['F1'], content: post });
+    const flat = env.parse({ usedFacts: ['F1'], ...post }); // fields at the top level
+    expect(flat.content).toEqual(nested.content);
+    expect(flat.usedFacts).toEqual(['F1']);
+    expect(env.parse({ ...post }).usedFacts).toEqual([]); // usedFacts is optional
+    expect(() => env.parse({ usedFacts: [], content: { caption: 'only a caption' } })).toThrow();
+    expect(() => env.parse('not an object')).toThrow();
+    expect(() => env.parse(null)).toThrow();
+  });
+
   it('derives titles', () => {
     expect(titleOf('ARTICLE', { h1: 'Main heading' })).toBe('Main heading');
     expect(titleOf('INSTAGRAM', { caption: 'First line\nsecond' })).toBe('First line');
@@ -760,6 +774,20 @@ describe('content studio API', () => {
         .set('Authorization', as(U_VIEWER))
         .send({ language: 'fr' })
         .expect(403);
+    });
+
+    it('refuses a translation that comes back untranslated, and saves nothing', async () => {
+      const a = await make();
+      expect(pieces).toHaveLength(1);
+      // The model just returns the English text again.
+      nextRaw = { usedFacts: [], content: article() };
+      const res = await request(app.getHttpServer())
+        .post(`${base}/${a.id}/translate`)
+        .set('Authorization', as(U_EDITOR))
+        .send({ language: 'ar' })
+        .expect(502);
+      expect(res.body).toMatchObject({ code: 'TRANSLATION_UNCHANGED', retryable: true });
+      expect(pieces).toHaveLength(1);
     });
 
     it('deletes content', async () => {

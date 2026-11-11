@@ -16,6 +16,34 @@ export async function fetchWithTimeout(
   }
 }
 
+/**
+ * The request's timeout signal also covers reading the response body. A stalled download then throws a raw
+ * TimeoutError, so body reads go through these helpers to turn it into a typed, retryable provider error.
+ */
+async function guardedRead<T>(read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (e) {
+    const name = (e as Error)?.name;
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      throw new ProviderError('timeout', 'The AI provider took too long to respond', true);
+    }
+    throw new ProviderError('unavailable', 'The AI provider response was interrupted', true);
+  }
+}
+export const readText = (res: Response) => guardedRead(() => res.text());
+export const readBytes = (res: Response) =>
+  guardedRead(async () => Buffer.from(await res.arrayBuffer()));
+/** Parses JSON, returning null for an invalid body (a stalled download still throws a typed error). */
+export const readJson = async (res: Response): Promise<any> => {
+  const text = await readText(res);
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
 const QUOTA_HINT = /per.?day|daily|quota|credits?|allocation|exhaust|limit.*(reached|exceeded)/i;
 
 /** Maps an HTTP failure to a typed provider error. Quota-like 429s are NOT retried. */

@@ -131,10 +131,20 @@ export const schemaFor = (kind: Kind) => schemas[kind];
 
 /** Wrapper the model must return: which numbered facts it used, plus the content itself. */
 export const generationEnvelope = <K extends Kind>(kind: K) =>
-  z.object({
-    usedFacts: z.array(z.string().max(12)).max(80).optional().default([]),
-    content: schemas[kind],
-  });
+  z.preprocess(
+    (value) => {
+      // Some models return the content fields at the top level instead of inside "content": accept both.
+      if (value && typeof value === 'object' && !Array.isArray(value) && !('content' in value)) {
+        const { usedFacts, ...rest } = value as Record<string, unknown>;
+        return { usedFacts, content: rest };
+      }
+      return value;
+    },
+    z.object({
+      usedFacts: z.array(z.string().max(12)).max(80).optional().default([]),
+      content: schemas[kind],
+    }),
+  );
 
 // ---------- post-processing ----------
 

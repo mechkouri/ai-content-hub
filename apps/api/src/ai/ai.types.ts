@@ -24,6 +24,10 @@ export interface ModelInfo {
   name: string;
   contextLength: number;
   supportsJson: boolean;
+  /** Does the model "think" before answering? 'on' models can spend their token budget reasoning. */
+  reasoning?: 'off' | 'unknown' | 'on';
+  /** Reasoning can be switched off for this model (OpenRouter: reasoning.mandatory is false). */
+  reasoningOptional?: boolean;
 }
 
 export interface TextRequest {
