@@ -1,4 +1,10 @@
 import 'reflect-metadata';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load the repo-root .env (works from both src/ and dist/).
+config({ path: resolve(__dirname, '../../../.env') });
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
