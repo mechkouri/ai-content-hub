@@ -45,7 +45,7 @@ export function SerpPreview({ a }: { a: ArticleContent }) {
   return (
     <Frame label="Google preview">
       <div className="p-4" dir="auto">
-        <p className="truncate text-xs text-slate-500">yourwebsite.com › {a.slug || 'article'}</p>
+        <p className="truncate text-xs text-muted">yourwebsite.com › {a.slug || 'article'}</p>
         <p className="mt-0.5 text-lg leading-snug text-[#1a0dab]">
           {clip(a.seoTitle, 62) || 'SEO title'}
         </p>

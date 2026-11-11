@@ -15,6 +15,7 @@ import {
   LinkedinPreview,
   SerpPreview,
 } from '@/components/studio/previews';
+import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
 import {
   AnyContent,
@@ -145,7 +146,7 @@ export default function ContentDetailPage() {
     }
   }
 
-  if (!detail || !draft) return <p className="text-sm text-slate-500">{error || 'Loading…'}</p>;
+  if (!detail || !draft) return <p className="text-sm text-muted">{error || 'Loading…'}</p>;
   const { piece, seoChecks, source } = detail;
   const kind = CONTENT_KINDS.find((k) => k.id === piece.kind)!;
   const warnings = piece.warnings;
@@ -168,10 +169,10 @@ export default function ContentDetailPage() {
       <section className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold" dir="auto">
+            <h1 className="font-display text-2xl font-semibold" dir="auto">
               {piece.title}
             </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
               <span>
                 {kind.icon} {kind.label} · {LANG_LABELS[piece.language] ?? piece.language}
               </span>
@@ -208,9 +209,15 @@ export default function ContentDetailPage() {
             )}
           </div>
         </div>
-        {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
+            {error}
+          </p>
+        )}
         {notice && (
-          <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-800">{notice}</p>
+          <p className="mt-3 rounded-lg border border-green-200 bg-ok-soft p-3 text-sm text-ok-ink">
+            {notice}
+          </p>
         )}
         {dirty && (
           <p className="mt-3 rounded-lg bg-slate-100 p-3 text-xs text-slate-600">
@@ -218,6 +225,27 @@ export default function ContentDetailPage() {
           </p>
         )}
       </section>
+
+      <PipelineSteps
+        steps={[
+          { label: 'Source parsed', detail: source?.title ?? 'Original saved', state: 'done' },
+          {
+            label: 'Facts verified',
+            detail: `${piece.usedFactIds.length} verified fact${piece.usedFactIds.length === 1 ? '' : 's'} used`,
+            state: 'done',
+          },
+          { label: 'Draft written', detail: piece.model ?? 'AI draft', state: 'done' },
+          {
+            label: 'Human review',
+            detail: warnings.length
+              ? `${warnings.length} detail${warnings.length === 1 ? '' : 's'} to check`
+              : piece.edited
+                ? 'Edited and checked'
+                : 'Ready to use',
+            state: warnings.length ? 'active' : 'done',
+          },
+        ]}
+      />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-4">
@@ -237,18 +265,18 @@ export default function ContentDetailPage() {
 
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <section className={`card p-4 ${warnings.length ? 'ring-2 ring-amber-300' : ''}`}>
-            <h2 className="text-sm font-bold">
+            <h2 className="text-sm font-display text-base font-semibold">
               {warnings.length
                 ? `⚠ ${warnings.length} detail${warnings.length > 1 ? 's' : ''} to check`
                 : '✓ Facts match'}
             </h2>
             {warnings.length === 0 ? (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted">
                 Every number, date, link and email matches your verified facts.
               </p>
             ) : (
               <>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   These are not in your verified facts, so they may be invented. Highlighted in the
                   text. Fix or remove them, or add them as a fact on the source if they are correct,
                   then use “Re-check facts”.
@@ -277,7 +305,7 @@ export default function ContentDetailPage() {
 
           {seoChecks && (
             <section className="card p-4">
-              <h2 className="text-sm font-bold">SEO checklist</h2>
+              <h2 className="text-sm font-display text-base font-semibold">SEO checklist</h2>
               <p className="text-[11px] text-slate-400">Based on the last saved version.</p>
               <ul className="mt-2 space-y-1.5">
                 {seoChecks.map((c) => (
@@ -294,8 +322,8 @@ export default function ContentDetailPage() {
 
           {canWrite && (
             <section className="card space-y-3 p-4">
-              <h2 className="text-sm font-bold">Translate</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-sm font-display text-base font-semibold">Translate</h2>
+              <p className="text-xs text-muted">
                 Creates a new copy in another language. Numbers, dates and links stay unchanged.
               </p>
               <div className="flex gap-2">
@@ -326,14 +354,14 @@ export default function ContentDetailPage() {
                 </p>
               )}
               {translating && (
-                <p className="text-xs text-slate-500">Translating. This can take up to a minute.</p>
+                <p className="text-xs text-muted">Translating. This can take up to a minute.</p>
               )}
             </section>
           )}
 
           {siblings.length > 0 && (
             <section className="card p-4">
-              <h2 className="text-sm font-bold">Other languages</h2>
+              <h2 className="text-sm font-display text-base font-semibold">Other languages</h2>
               <ul className="mt-2 space-y-1">
                 {siblings.map((p) => (
                   <li key={p.id}>

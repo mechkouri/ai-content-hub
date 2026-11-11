@@ -22,8 +22,8 @@ function Block({ title, hint, children }: { title: string; hint?: string; childr
   return (
     <section className="card space-y-4 p-6">
       <div>
-        <h2 className="font-bold">{title}</h2>
-        {hint && <p className="text-xs text-slate-500">{hint}</p>}
+        <h2 className="font-display text-base font-semibold">{title}</h2>
+        {hint && <p className="text-xs text-muted">{hint}</p>}
       </div>
       {children}
     </section>
@@ -190,7 +190,7 @@ export function ArticleEditor({
                   />
                 </Field>
                 <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="mb-2 text-xs font-semibold text-slate-500">Sub-sections (H3)</p>
+                  <p className="mb-2 text-xs font-semibold text-muted">Sub-sections (H3)</p>
                   <ListEditor
                     items={s.subsections ?? []}
                     onChange={(subsections) => update({ subsections })}

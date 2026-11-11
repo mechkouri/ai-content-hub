@@ -119,7 +119,7 @@ export function ListEditor<T>({
     <div className="space-y-3">
       {items.map((item, i) => (
         <div key={i} className="rounded-xl border border-slate-200 p-3">
-          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500">
+          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted">
             <span>
               {itemLabel} {i + 1}
             </span>

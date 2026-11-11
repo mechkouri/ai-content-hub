@@ -32,29 +32,10 @@ function locate(text: string, quote: string): [number, number] | null {
 }
 
 function Trust({ f }: { f: SourceFactRow }) {
-  if (f.manual)
-    return (
-      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-        Added by you
-      </span>
-    );
-  if (f.edited)
-    return (
-      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
-        Edited by you
-      </span>
-    );
-  if (f.verified)
-    return (
-      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800">
-        ✓ Found in source
-      </span>
-    );
-  return (
-    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-      ⚠ Not found in source — check it
-    </span>
-  );
+  if (f.manual) return <span className="chip-draft">Added by you</span>;
+  if (f.edited) return <span className="chip-info">Edited by you</span>;
+  if (f.verified) return <span className="chip-ok">✓ Found in source</span>;
+  return <span className="chip-warn">⚠ Not found in source — check it</span>;
 }
 
 export default function SourceDetailPage() {
@@ -155,7 +136,7 @@ export default function SourceDetailPage() {
     }
   }
 
-  if (!data) return <p className="text-sm text-slate-500">{error || 'Loading…'}</p>;
+  if (!data) return <p className="text-sm text-muted">{error || 'Loading…'}</p>;
   const { source, facts, missing, unverifiedCount } = data;
   const activeFact = facts.find((f) => f.id === highlight);
   const range = activeFact?.quote ? locate(source.originalText, activeFact.quote) : null;
@@ -174,8 +155,8 @@ export default function SourceDetailPage() {
       <section className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold">{source.title}</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="font-display text-2xl font-semibold">{source.title}</h1>
+            <p className="mt-1 text-sm text-muted">
               {source.type === 'URL' && source.url ? (
                 <a
                   href={source.url}
@@ -213,12 +194,18 @@ export default function SourceDetailPage() {
           )}
         </div>
         {source.summary && <p className="mt-3 text-sm text-slate-700">{source.summary}</p>}
-        {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
+            {error}
+          </p>
+        )}
         {notice && (
-          <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-800">{notice}</p>
+          <p className="mt-3 rounded-lg border border-green-200 bg-ok-soft p-3 text-sm text-ok-ink">
+            {notice}
+          </p>
         )}
         {source.status !== 'EXTRACTED' && (
-          <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          <p className="mt-3 rounded-lg border border-amber-200 bg-warn-soft p-3 text-sm text-warn-ink">
             Your content is saved, but facts have not been extracted yet.
             {storedError ? ` Last attempt: ${storedError}` : ''}{' '}
             {canWrite ? 'Use “Extract facts” to try again.' : ''}
@@ -230,7 +217,7 @@ export default function SourceDetailPage() {
           </p>
         )}
         {unverifiedCount > 0 && (
-          <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          <p className="mt-3 rounded-lg border border-amber-200 bg-warn-soft p-3 text-sm text-warn-ink">
             {unverifiedCount} fact{unverifiedCount > 1 ? 's' : ''} could not be matched to the
             original text. Please confirm, edit or delete them before using them.
           </p>
@@ -239,8 +226,8 @@ export default function SourceDetailPage() {
 
       {missing.length > 0 && (
         <section className="card p-6">
-          <h2 className="font-bold">Possibly missing information</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="font-display text-base font-semibold">Possibly missing information</h2>
+          <p className="text-sm text-muted">
             This kind of document usually includes the following, but we did not find it. We will
             never invent it.
           </p>
@@ -266,7 +253,7 @@ export default function SourceDetailPage() {
 
       {grouped.map(({ kind, items }) => (
         <section key={kind} className="card p-6">
-          <h2 className="mb-2 font-bold">{FACT_LABELS[kind]}</h2>
+          <h2 className="mb-2 font-display text-base font-semibold">{FACT_LABELS[kind]}</h2>
           <ul className="divide-y divide-slate-100">
             {items.map((f) => (
               <li key={f.id} className="space-y-2 py-3">
@@ -358,8 +345,8 @@ export default function SourceDetailPage() {
       {canWrite && (
         <form id="add-fact" onSubmit={addFact} className="card flex flex-wrap items-end gap-3 p-6">
           <div className="w-full">
-            <h2 className="font-bold">Add a fact yourself</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="font-display text-base font-semibold">Add a fact yourself</h2>
+            <p className="text-sm text-muted">
               Facts you add are marked as yours and are kept when facts are re-extracted.
             </p>
           </div>
