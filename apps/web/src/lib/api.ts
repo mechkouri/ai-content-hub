@@ -6,6 +6,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public code?: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
   }
@@ -25,7 +27,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     },
   });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, errorMessage(body, res.status));
+  if (!res.ok) {
+    const b = body as { code?: string; retryAfterSeconds?: number } | null;
+    throw new ApiError(res.status, errorMessage(body, res.status), b?.code, b?.retryAfterSeconds);
+  }
   return body as T;
 }
 
@@ -116,3 +121,30 @@ export const canWriteBrand = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'DESIGNER';
 export const canUploadMedia = (role: Role | null) => canWriteBrand(role) || role === 'EDITOR';
 export const canDeleteMedia = canWriteBrand;
+
+export interface AiStatus {
+  providers: {
+    text: { id: string; configured: boolean }[];
+    image: { id: string; configured: boolean }[];
+  };
+  textModel: string;
+  freeOnly: boolean;
+  usage: { text: { today: number; month: number }; image: { today: number; month: number } };
+  limits: { dailyText: number; monthlyText: number; dailyImage: number; monthlyImage: number };
+  settings: {
+    textModel: string | null;
+    dailyTextLimit: number | null;
+    monthlyTextLimit: number | null;
+    dailyImageLimit: number | null;
+    monthlyImageLimit: number | null;
+  } | null;
+}
+export interface FreeModel {
+  id: string;
+  name: string;
+  contextLength: number;
+  supportsJson: boolean;
+}
+export const canUseAi = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
+export const canAdminAi = (role: Role | null) => role === 'OWNER' || role === 'ADMIN';
