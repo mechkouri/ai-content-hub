@@ -326,8 +326,8 @@ export class StudioService {
   }
 
   /** Replaces the content with a human-edited version, re-validating it and re-checking its claims. */
-  async update(orgId: string, id: string, rawContent: unknown) {
-    const piece = await this.find(orgId, id);
+  /** Validates edited content and finds claims that are not in the verified facts. Saves nothing. */
+  private async evaluate(orgId: string, piece: any, rawContent: unknown) {
     const kind = piece.kind as Kind;
     const parsed = schemaFor(kind).safeParse(rawContent);
     if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
@@ -339,6 +339,22 @@ export class StudioService {
       ? await this.originalText(orgId, piece.translatedFromId)
       : [];
     const warnings = this.assess(kind, content, this.corpus(verified, org, brand, options, extra));
+    return { kind, content, warnings };
+  }
+
+  /** Live check while editing: the same verdict saving would give, without saving and without any AI call. */
+  async check(orgId: string, id: string, rawContent: unknown) {
+    const piece = await this.find(orgId, id);
+    const { warnings } = await this.evaluate(orgId, piece, rawContent);
+    return {
+      warnings,
+      status: warnings.length ? ContentStatus.NEEDS_REVIEW : ContentStatus.DRAFT,
+    };
+  }
+
+  async update(orgId: string, id: string, rawContent: unknown) {
+    const piece = await this.find(orgId, id);
+    const { kind, content, warnings } = await this.evaluate(orgId, piece, rawContent);
 
     const updated = await this.prisma.contentPiece.update({
       where: { id: piece.id },

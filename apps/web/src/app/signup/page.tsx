@@ -8,6 +8,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +19,13 @@ export default function SignupPage() {
     e.preventDefault();
     setBusy(true);
     setError('');
-    const { data, error } = await supabase().auth.signUp({ email, password });
+    const name = fullName.trim();
+    const { data, error } = await supabase().auth.signUp({
+      email,
+      password,
+      // Stored with the account (user metadata) and used for the greeting.
+      options: name ? { data: { full_name: name } } : undefined,
+    });
     setBusy(false);
     if (error) return setError(error.message);
     if (data.session) router.replace('/onboarding');
@@ -28,6 +35,15 @@ export default function SignupPage() {
   return (
     <AuthCard title="Create your account" subtitle="Start turning one input into a full campaign.">
       <form onSubmit={onSubmit} className="space-y-3">
+        <input
+          className="input"
+          type="text"
+          placeholder="Your name (optional)"
+          autoComplete="name"
+          maxLength={80}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
         <input
           className="input"
           type="email"

@@ -76,6 +76,13 @@ export class StudioController {
     );
   }
 
+  /** Dry run of an edit: returns the claim warnings without saving (used for live highlighting). */
+  @Post(':id/check')
+  @RequirePermission('content:read')
+  check(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: unknown) {
+    return this.studio.check(orgId, uuid(id), parseBody(updateSchema, body).content);
+  }
+
   @Patch(':id')
   @RequirePermission('content:write')
   update(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: unknown) {

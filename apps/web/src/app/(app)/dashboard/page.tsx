@@ -37,5 +37,7 @@ export default function Dashboard() {
   }, [currentOrgId]);
 
   if (!data) return <p className="text-sm text-muted">Loading…</p>;
-  return <Overview data={data} name={nameFromEmail(user?.email ?? '')} orgName={orgName} />;
+  const metaName = String(user?.user_metadata?.full_name ?? '').trim();
+  const name = metaName ? metaName.split(/\s+/)[0] : nameFromEmail(user?.email ?? '');
+  return <Overview data={data} name={name} orgName={orgName} />;
 }
