@@ -9,6 +9,7 @@ import { useRequireAuth } from '@/lib/use-require-auth';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: '🏠' },
+  { href: '/sources', label: 'Sources', icon: '📄' },
   { href: '/brand', label: 'Brand kit', icon: '🎨' },
   { href: '/media', label: 'Media library', icon: '🖼️' },
   { href: '/ai', label: 'AI providers', icon: '✨' },

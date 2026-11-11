@@ -148,3 +148,74 @@ export interface FreeModel {
 export const canUseAi = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
 export const canAdminAi = (role: Role | null) => role === 'OWNER' || role === 'ADMIN';
+
+export type SourceType = 'TEXT' | 'PDF' | 'DOCX' | 'URL';
+export type SourceStatus = 'TEXT_READY' | 'EXTRACTED' | 'FAILED';
+
+export interface SourceSummary {
+  id: string;
+  type: SourceType;
+  status: SourceStatus;
+  title: string;
+  language: string | null;
+  classification: string | null;
+  url: string | null;
+  fileName: string | null;
+  createdAt: string;
+  extractionError: string | null;
+  _count: { facts: number };
+}
+
+export interface SourceFactRow {
+  id: string;
+  kind: string;
+  value: string;
+  quote: string | null;
+  verified: boolean;
+  manual: boolean;
+  edited: boolean;
+}
+
+export interface SourceDetail {
+  source: Omit<SourceSummary, '_count'> & {
+    originalText: string;
+    summary: string | null;
+    truncated: boolean;
+    sizeBytes: number | null;
+  };
+  facts: SourceFactRow[];
+  missing: string[];
+  unverifiedCount: number;
+  extraction?: { ok: boolean; code?: string; message?: string; retryable?: boolean };
+}
+
+export const FACT_KINDS = [
+  'title',
+  'subject',
+  'organization',
+  'date',
+  'name',
+  'requirement',
+  'location',
+  'contact',
+  'link',
+  'audience',
+  'condition',
+] as const;
+
+export const FACT_LABELS: Record<string, string> = {
+  title: 'Title',
+  subject: 'Subject',
+  organization: 'Organization',
+  date: 'Dates & deadlines',
+  name: 'Names',
+  requirement: 'Requirements',
+  location: 'Locations',
+  contact: 'Contacts',
+  link: 'Official links',
+  audience: 'Target audience',
+  condition: 'Conditions',
+};
+
+export const canWriteSources = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
