@@ -193,7 +193,12 @@ export default function SourceDetailPage() {
             </p>
           </div>
           {canWrite && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {source.status === 'EXTRACTED' && (
+                <Link href={`/studio?sourceId=${source.id}`} className="btn-primary">
+                  ✍️ Create content
+                </Link>
+              )}
               <button className="btn-ghost" disabled={extracting} onClick={extract}>
                 {extracting
                   ? 'Extracting…'

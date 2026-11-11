@@ -9,6 +9,10 @@ const HELP: Record<string, string> = {
   PROVIDER_AUTH_FAILED: 'The AI provider key on the server is wrong or expired.',
   PROVIDER_NOT_CONFIGURED: 'AI is not set up on the server yet (missing provider key).',
   PROVIDER_UNAVAILABLE: 'The AI provider is temporarily unavailable.',
+  SOURCE_NOT_READY: 'Extract and review the facts of this source first.',
+  NO_VERIFIED_FACTS:
+    'This source has no verified facts yet. Open it and confirm or add facts first.',
+  MODEL_NOT_FREE: 'That model is not free. Only free models can be used.',
   INVALID_AI_OUTPUT: 'The AI did not return a usable answer. Try again.',
 };
 
