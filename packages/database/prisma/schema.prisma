@@ -37,6 +37,8 @@ model Organization {
   updatedAt       DateTime     @updatedAt
   memberships     Membership[]
   invitations     Invitation[]
+  brandKits       BrandKit[]
+  mediaAssets     MediaAsset[]
 }
 
 model Membership {
@@ -65,4 +67,49 @@ model Invitation {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+}
+
+model MediaAsset {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  storageKey     String       @unique
+  createdById    String       @db.Uuid
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mainLogoFor    BrandKit[]   @relation("MainLogo")
+  altLogoFor     BrandKit[]   @relation("AltLogo")
+
+  @@index([organizationId])
+}
+
+// Immutable-ish versions: each save creates a new version; exactly one is active per organization.
+model BrandKit {
+  id              String       @id @default(uuid()) @db.Uuid
+  organizationId  String       @db.Uuid
+  version         Int
+  isActive        Boolean      @default(false)
+  label           String?
+  description     String?
+  websiteUrl      String?
+  defaultLanguage String       @default("en")
+  primaryColor    String       @default("#1877F2")
+  secondaryColor  String       @default("#0F172A")
+  accentColor     String       @default("#F59E0B")
+  headingFont     String       @default("Inter")
+  bodyFont        String       @default("Inter")
+  imageStyle      String?
+  socialUrls      Json         @default("{}")
+  mainLogoId      String?      @db.Uuid
+  altLogoId       String?      @db.Uuid
+  createdById     String       @db.Uuid
+  createdAt       DateTime     @default(now())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mainLogo        MediaAsset?  @relation("MainLogo", fields: [mainLogoId], references: [id], onDelete: SetNull)
+  altLogo         MediaAsset?  @relation("AltLogo", fields: [altLogoId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, version])
+  @@index([organizationId, isActive])
 }
