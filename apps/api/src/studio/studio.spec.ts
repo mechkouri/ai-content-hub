@@ -25,6 +25,8 @@ const ORG_A = '11111111-1111-4111-8111-111111111111';
 const ORG_B = '22222222-2222-4222-8222-222222222222';
 const U_EDITOR = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const U_VIEWER = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const U_APPROVER = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const U_ADMIN = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const U_OTHER = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 
 const FACT_VALUES = {
@@ -316,6 +318,7 @@ describe('prompts', () => {
 let sources: any[];
 let facts: any[];
 let pieces: any[];
+let reviews: any[];
 let brandKit: any;
 let memberships: { userId: string; organizationId: string; role: Role }[];
 let nextRaw: any;
@@ -351,6 +354,8 @@ const prismaMock: any = {
         createdAt: new Date(),
         updatedAt: new Date(),
         edited: false,
+        approvalStatus: 'DRAFT',
+        submittedById: null,
         translatedFromId: null,
         ...data,
       };
@@ -367,7 +372,8 @@ const prismaMock: any = {
           (p) =>
             p.organizationId === where.organizationId &&
             (!where.sourceId || p.sourceId === where.sourceId) &&
-            (!where.kind || p.kind === where.kind),
+            (!where.kind || p.kind === where.kind) &&
+            (!where.approvalStatus || p.approvalStatus === where.approvalStatus),
         )
         .map((p) => (select ? Object.fromEntries(Object.keys(select).map((k) => [k, p[k]])) : p)),
     ),
@@ -381,6 +387,19 @@ const prismaMock: any = {
       async ({ where }: any) => void (pieces = pieces.filter((p) => p.id !== where.id)),
     ),
   },
+};
+
+prismaMock.contentReview = {
+  create: jest.fn(async ({ data }: any) => {
+    const r = { id: randomUUID(), createdAt: new Date(), ...data };
+    reviews.push(r);
+    return r;
+  }),
+  findMany: jest.fn(async ({ where }: any) =>
+    reviews.filter(
+      (r) => r.contentId === where.contentId && r.organizationId === where.organizationId,
+    ),
+  ),
 };
 
 // Like the real AiService, the mock validates the model's reply against the schema it is given.
@@ -473,6 +492,7 @@ describe('content studio API', () => {
       f(SRC_NO_FACTS, 'title', 'Unchecked claim', false),
     ];
     pieces = [];
+    reviews = [];
     brandKit = {
       defaultLanguage: 'en',
       websiteUrl: 'https://atlas.example',
@@ -483,6 +503,8 @@ describe('content studio API', () => {
     memberships = [
       { userId: U_EDITOR, organizationId: ORG_A, role: Role.EDITOR },
       { userId: U_VIEWER, organizationId: ORG_A, role: Role.VIEWER },
+      { userId: U_APPROVER, organizationId: ORG_A, role: Role.APPROVER },
+      { userId: U_ADMIN, organizationId: ORG_A, role: Role.ADMIN },
       { userId: U_OTHER, organizationId: ORG_B, role: Role.OWNER },
     ];
     aiMock.generateJson.mockClear();
@@ -850,6 +872,116 @@ describe('content studio API', () => {
         .get(`${base}/${a.id}`)
         .set('Authorization', as(U_EDITOR))
         .expect(404);
+    });
+  });
+
+  describe('approvals', () => {
+    const make = async () =>
+      (await generate({ sourceId: SRC, kind: 'ARTICLE' }).expect(201)).body.piece;
+    const act = (id: string, action: string, user: string, body: object = {}, org = ORG_A) =>
+      request(app.getHttpServer())
+        .post(`/api/organizations/${org}/content/${id}/${action}`)
+        .set('Authorization', as(user))
+        .send(body);
+
+    it('runs submit -> approve with a recorded history', async () => {
+      const a = await make();
+      expect(a.approvalStatus).toBe('DRAFT');
+      const sub = await act(a.id, 'submit', U_EDITOR, { comment: 'Ready for you' }).expect(201);
+      expect(sub.body.approvalStatus).toBe('IN_REVIEW');
+      expect(sub.body.submittedById).toBe(U_EDITOR);
+      await act(a.id, 'submit', U_EDITOR).expect(409); // already in review
+
+      const ok = await act(a.id, 'approve', U_APPROVER, { comment: 'Looks right' }).expect(201);
+      expect(ok.body.approvalStatus).toBe('APPROVED');
+
+      const hist = await request(app.getHttpServer())
+        .get(`${base}/${a.id}/reviews`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(hist.body.map((r: any) => r.action)).toEqual(['SUBMITTED', 'APPROVED']);
+      expect(hist.body[0].comment).toBe('Ready for you');
+
+      const queue = await request(app.getHttpServer())
+        .get(`${base}?approvalStatus=APPROVED`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(queue.body).toHaveLength(1);
+    });
+
+    it('lets only reviewers decide, and never on a piece that is not in review', async () => {
+      const a = await make();
+      await act(a.id, 'approve', U_APPROVER).expect(409); // not submitted yet
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      await act(a.id, 'approve', U_EDITOR).expect(403); // editors cannot approve
+      await act(a.id, 'approve', U_VIEWER).expect(403);
+      await act(a.id, 'submit', U_VIEWER).expect(403);
+      await act(a.id, 'approve', U_OTHER).expect(404); // other tenant
+      await act(a.id, 'approve', U_APPROVER).expect(201);
+      await act(a.id, 'approve', U_APPROVER).expect(409); // already decided
+    });
+
+    it('sends content back with a required comment and allows resubmitting', async () => {
+      const a = await make();
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      await act(a.id, 'request-changes', U_APPROVER).expect(400); // comment required
+      const back = await act(a.id, 'request-changes', U_APPROVER, {
+        comment: 'Shorten the intro',
+      }).expect(201);
+      expect(back.body.approvalStatus).toBe('CHANGES_REQUESTED');
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      const hist = await request(app.getHttpServer())
+        .get(`${base}/${a.id}/reviews`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(hist.body.map((r: any) => r.action)).toEqual([
+        'SUBMITTED',
+        'CHANGES_REQUESTED',
+        'SUBMITTED',
+      ]);
+    });
+
+    it('withdraws only by the submitter or a manager', async () => {
+      const a = await make();
+      await act(a.id, 'withdraw', U_EDITOR).expect(409); // nothing to withdraw
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      await act(a.id, 'withdraw', U_APPROVER).expect(403);
+      const w = await act(a.id, 'withdraw', U_EDITOR).expect(201);
+      expect(w.body.approvalStatus).toBe('DRAFT');
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      await act(a.id, 'withdraw', U_ADMIN).expect(201);
+    });
+
+    it('refuses to submit content that still has unsupported claims', async () => {
+      nextRaw = {
+        usedFacts: [],
+        content: article({ introduction: 'Join 2500 students on 14 March 2027.' }),
+      };
+      const risky = (await generate({ sourceId: SRC, kind: 'ARTICLE' }).expect(201)).body.piece;
+      expect(risky.status).toBe('NEEDS_REVIEW');
+      const res = await act(risky.id, 'submit', U_EDITOR).expect(409);
+      expect(String(res.body.message)).toMatch(/unsupported claims/);
+    });
+
+    it('voids a review or approval when the content is edited afterwards', async () => {
+      const a = await make();
+      await act(a.id, 'submit', U_EDITOR).expect(201);
+      await act(a.id, 'approve', U_ADMIN).expect(201);
+      const edited = await request(app.getHttpServer())
+        .patch(`${base}/${a.id}`)
+        .set('Authorization', as(U_EDITOR))
+        .send({ content: article({ conclusion: 'See you at the Rabat campus.' }) })
+        .expect(200);
+      expect(edited.body.piece.approvalStatus).toBe('DRAFT');
+      const hist = await request(app.getHttpServer())
+        .get(`${base}/${a.id}/reviews`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(hist.body.map((r: any) => r.action)).toEqual(['SUBMITTED', 'APPROVED', 'INVALIDATED']);
+    });
+
+    it('returns 404 for malformed ids', async () => {
+      await act('not-a-uuid', 'submit', U_EDITOR).expect(404);
     });
   });
 });

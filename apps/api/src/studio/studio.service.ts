@@ -6,9 +6,10 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ContentKind, ContentStatus, Prisma, SourceStatus } from '@prisma/client';
+import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from '@prisma/client';
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApprovalsService } from './approvals.service';
 import { ClaimWarning, findUnsupportedClaims, flattenStrings, seoChecks } from './content-guard';
 import { PromptContext, buildPrompt, buildTranslationPrompt } from './content-prompts';
 import {
@@ -41,6 +42,7 @@ export class StudioService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ai: AiService,
+    private readonly approvals: ApprovalsService,
   ) {}
 
   // ---------- helpers ----------
@@ -291,18 +293,20 @@ export class StudioService {
     return piece;
   }
 
-  list(orgId: string, filter: { sourceId?: string; kind?: Kind }) {
+  list(orgId: string, filter: { sourceId?: string; kind?: Kind; approvalStatus?: ApprovalStatus }) {
     return this.prisma.contentPiece.findMany({
       where: {
         organizationId: orgId,
         ...(filter.sourceId ? { sourceId: filter.sourceId } : {}),
         ...(filter.kind ? { kind: filter.kind } : {}),
+        ...(filter.approvalStatus ? { approvalStatus: filter.approvalStatus } : {}),
       },
       select: {
         id: true,
         sourceId: true,
         kind: true,
         status: true,
+        approvalStatus: true,
         language: true,
         title: true,
         edited: true,
@@ -352,7 +356,7 @@ export class StudioService {
     };
   }
 
-  async update(orgId: string, id: string, rawContent: unknown) {
+  async update(orgId: string, id: string, rawContent: unknown, actorId: string) {
     const piece = await this.find(orgId, id);
     const { kind, content, warnings } = await this.evaluate(orgId, piece, rawContent);
 
@@ -366,7 +370,9 @@ export class StudioService {
         edited: true,
       },
     });
-    return this.present(updated);
+    // An edit voids any pending review or approval: the reviewed text is no longer the saved text.
+    const final = (await this.approvals.invalidateAfterEdit(orgId, piece, actorId)) ?? updated;
+    return this.present(final);
   }
 
   private async originalText(orgId: string, id: string): Promise<string[]> {

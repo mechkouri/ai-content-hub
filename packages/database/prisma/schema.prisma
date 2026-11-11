@@ -29,12 +29,12 @@ model User {
 }
 
 model Organization {
-  id              String       @id @default(uuid()) @db.Uuid
+  id              String         @id @default(uuid()) @db.Uuid
   name            String
-  slug            String       @unique
-  defaultLanguage String       @default("en")
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  slug            String         @unique
+  defaultLanguage String         @default("en")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   memberships     Membership[]
   invitations     Invitation[]
   brandKits       BrandKit[]
@@ -149,15 +149,15 @@ model AiUsage {
 
 // Per-organization AI preferences and limits (null = platform default). Limits can only lower platform caps.
 model AiSetting {
-  id                  String       @id @default(uuid()) @db.Uuid
-  organizationId      String       @unique @db.Uuid
-  textModel           String?
-  dailyTextLimit      Int?
-  monthlyTextLimit    Int?
-  dailyImageLimit     Int?
-  monthlyImageLimit   Int?
-  updatedAt           DateTime     @updatedAt
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                String       @id @default(uuid()) @db.Uuid
+  organizationId    String       @unique @db.Uuid
+  textModel         String?
+  dailyTextLimit    Int?
+  monthlyTextLimit  Int?
+  dailyImageLimit   Int?
+  monthlyImageLimit Int?
+  updatedAt         DateTime     @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 enum SourceType {
@@ -175,28 +175,28 @@ enum SourceStatus {
 
 // Original material a campaign is built from. The original text is always kept, even if AI extraction fails.
 model Source {
-  id               String       @id @default(uuid()) @db.Uuid
-  organizationId   String       @db.Uuid
-  type             SourceType
-  status           SourceStatus @default(TEXT_READY)
-  title            String
-  language         String?
-  classification   String?
-  summary          String?
-  originalText     String
-  truncated        Boolean      @default(false)
-  url              String?
-  fileName         String?
-  mimeType         String?
-  sizeBytes        Int?
-  storageKey       String?
-  extractionError  String?
-  createdById      String       @db.Uuid
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  facts            SourceFact[]
-  contentPieces    ContentPiece[]
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @db.Uuid
+  type            SourceType
+  status          SourceStatus   @default(TEXT_READY)
+  title           String
+  language        String?
+  classification  String?
+  summary         String?
+  originalText    String
+  truncated       Boolean        @default(false)
+  url             String?
+  fileName        String?
+  mimeType        String?
+  sizeBytes       Int?
+  storageKey      String?
+  extractionError String?
+  createdById     String         @db.Uuid
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  facts           SourceFact[]
+  contentPieces   ContentPiece[]
 
   @@index([organizationId, createdAt])
 }
@@ -229,31 +229,65 @@ enum ContentStatus {
   NEEDS_REVIEW
 }
 
+// Human approval workflow, separate from the automatic claim check above.
+enum ApprovalStatus {
+  DRAFT
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+enum ReviewAction {
+  SUBMITTED
+  WITHDRAWN
+  APPROVED
+  CHANGES_REQUESTED
+  INVALIDATED
+}
+
+// Append-only history of approval decisions on a piece of content.
+model ContentReview {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  contentId      String       @db.Uuid
+  action         ReviewAction
+  actorId        String       @db.Uuid
+  comment        String?
+  createdAt      DateTime     @default(now())
+  content        ContentPiece @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId, createdAt])
+}
+
 // A generated piece of content (article or social post), always built from a source's verified facts.
 // `content` is validated against a per-kind schema; `warnings` lists claims not supported by the facts.
 model ContentPiece {
-  id               String         @id @default(uuid()) @db.Uuid
-  organizationId   String         @db.Uuid
-  sourceId         String         @db.Uuid
+  id               String          @id @default(uuid()) @db.Uuid
+  organizationId   String          @db.Uuid
+  sourceId         String          @db.Uuid
   kind             ContentKind
-  status           ContentStatus  @default(DRAFT)
+  status           ContentStatus   @default(DRAFT)
+  approvalStatus   ApprovalStatus  @default(DRAFT)
+  submittedById    String?         @db.Uuid
   language         String
   title            String
   content          Json
-  options          Json           @default("{}")
-  warnings         Json           @default("[]")
-  usedFactIds      Json           @default("[]")
-  translatedFromId String?        @db.Uuid
-  edited           Boolean        @default(false)
+  options          Json            @default("{}")
+  warnings         Json            @default("[]")
+  usedFactIds      Json            @default("[]")
+  translatedFromId String?         @db.Uuid
+  edited           Boolean         @default(false)
   model            String?
   provider         String?
-  createdById      String         @db.Uuid
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  source           Source         @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  translatedFrom   ContentPiece?  @relation("Translations", fields: [translatedFromId], references: [id], onDelete: SetNull)
-  translations     ContentPiece[] @relation("Translations")
+  createdById      String          @db.Uuid
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  source           Source          @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  translatedFrom   ContentPiece?   @relation("Translations", fields: [translatedFromId], references: [id], onDelete: SetNull)
+  translations     ContentPiece[]  @relation("Translations")
+  reviews          ContentReview[]
 
   @@index([organizationId, sourceId, createdAt])
+  @@index([organizationId, approvalStatus])
 }

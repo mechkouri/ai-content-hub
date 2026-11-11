@@ -15,13 +15,16 @@ import {
   LinkedinPreview,
   SerpPreview,
 } from '@/components/studio/previews';
+import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
 import {
   AnyContent,
   apiFetch,
   ArticleContent,
+  canReviewContent,
   canWriteContent,
+  ContentReview,
   CONTENT_KINDS,
   ContentDetail,
   ClaimWarning,
@@ -38,11 +41,12 @@ import { describeError } from '@/lib/errors';
 export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { currentOrgId, currentRole, memberships } = useApp();
+  const { currentOrgId, currentRole, memberships, user } = useApp();
   const orgName =
     memberships.find((m) => m.organizationId === currentOrgId)?.organization.name ??
     'Your organization';
   const canWrite = canWriteContent(currentRole);
+  const canReview = canReviewContent(currentRole);
   const base = `/organizations/${currentOrgId}/content/${id}`;
 
   const [detail, setDetail] = useState<ContentDetail | null>(null);
@@ -54,6 +58,9 @@ export default function ContentDetailPage() {
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [target, setTarget] = useState('');
+  const [reviews, setReviews] = useState<ContentReview[]>([]);
+  const [comment, setComment] = useState('');
+  const [deciding, setDeciding] = useState(false);
 
   const load = useCallback(async () => {
     if (!currentOrgId) return;
@@ -66,6 +73,7 @@ export default function ContentDetailPage() {
         `/organizations/${currentOrgId}/content?sourceId=${d.piece.sourceId}`,
       );
       setRelated(all);
+      setReviews(await apiFetch<ContentReview[]>(`${base}/reviews`));
     } catch (e) {
       setError(describeError(e));
     }
@@ -123,6 +131,9 @@ export default function ContentDetailPage() {
       setDetail((prev) => ({ ...res, source: prev?.source }));
       setDraft(res.piece.content);
       setSaved(res.piece.content);
+      apiFetch<ContentReview[]>(`${base}/reviews`)
+        .then(setReviews)
+        .catch(() => undefined);
       setNotice(
         res.piece.warnings.length
           ? 'Saved. Some details still need checking.'
@@ -132,6 +143,32 @@ export default function ContentDetailPage() {
       setError(describeError(e));
     }
     setSaving(false);
+  }
+
+  async function decide(action: 'submit' | 'withdraw' | 'approve' | 'request-changes') {
+    setDeciding(true);
+    setError('');
+    setNotice('');
+    try {
+      await apiFetch(`${base}/${action}`, {
+        method: 'POST',
+        body: JSON.stringify({ comment: comment.trim() || undefined }),
+      });
+      setComment('');
+      await load();
+      setNotice(
+        action === 'submit'
+          ? 'Submitted for review.'
+          : action === 'withdraw'
+            ? 'Submission withdrawn.'
+            : action === 'approve'
+              ? 'Approved.'
+              : 'Sent back with your comment.',
+      );
+    } catch (e) {
+      setError(describeError(e));
+    }
+    setDeciding(false);
   }
 
   async function translate() {
@@ -202,6 +239,7 @@ export default function ContentDetailPage() {
                 {kind.icon} {kind.label} · {LANG_LABELS[piece.language] ?? piece.language}
               </span>
               <StatusBadge status={piece.status} />
+              <ApprovalBadge status={piece.approvalStatus} />
               {piece.edited && <span className="text-xs">edited</span>}
               {source && (
                 <Link href={`/sources/${source.id}`} className="text-brand underline">
@@ -264,10 +302,14 @@ export default function ContentDetailPage() {
             label: 'Human review',
             detail: warnings.length
               ? `${warnings.length} detail${warnings.length === 1 ? '' : 's'} to check`
-              : piece.edited
-                ? 'Edited and checked'
-                : 'Ready to use',
-            state: warnings.length ? 'active' : 'done',
+              : piece.approvalStatus === 'APPROVED'
+                ? 'Approved'
+                : piece.approvalStatus === 'IN_REVIEW'
+                  ? 'Waiting for an approver'
+                  : piece.approvalStatus === 'CHANGES_REQUESTED'
+                    ? 'Changes requested'
+                    : 'Ready to submit',
+            state: piece.approvalStatus === 'APPROVED' && !warnings.length ? 'done' : 'active',
           },
         ]}
       />
@@ -315,6 +357,85 @@ export default function ContentDetailPage() {
                 </ul>
               </>
             )}
+          </section>
+
+          <section className="card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-display text-base font-semibold">Approval</h2>
+              <ApprovalBadge status={piece.approvalStatus} />
+            </div>
+            {piece.approvalStatus === 'APPROVED' && (
+              <p className="mt-1 text-xs text-muted">
+                Approved. Any edit will send it back to draft so the approved text is always the
+                saved text.
+              </p>
+            )}
+            {(canWrite || canReview) && piece.approvalStatus !== 'APPROVED' && (
+              <div className="mt-3 space-y-2">
+                <textarea
+                  className="input min-h-[64px]"
+                  placeholder={
+                    piece.approvalStatus === 'IN_REVIEW'
+                      ? 'Comment (required to request changes)'
+                      : 'Add a note for the reviewer (optional)'
+                  }
+                  maxLength={1000}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  disabled={deciding}
+                />
+                {canWrite && piece.approvalStatus !== 'IN_REVIEW' && (
+                  <>
+                    <button
+                      className="btn-primary w-full"
+                      onClick={() => decide('submit')}
+                      disabled={deciding || dirty || warnings.length > 0}
+                    >
+                      Submit for review
+                    </button>
+                    {(dirty || warnings.length > 0) && (
+                      <p className="text-[11px] text-amber-700">
+                        {dirty
+                          ? 'Save your changes before submitting.'
+                          : 'Fix the details flagged above before submitting.'}
+                      </p>
+                    )}
+                  </>
+                )}
+                {piece.approvalStatus === 'IN_REVIEW' && (
+                  <>
+                    {canReview && (
+                      <div className="flex gap-2">
+                        <button
+                          className="btn-primary flex-1"
+                          onClick={() => decide('approve')}
+                          disabled={deciding || dirty}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn-ghost flex-1"
+                          onClick={() => decide('request-changes')}
+                          disabled={deciding || dirty || comment.trim().length < 3}
+                        >
+                          Request changes
+                        </button>
+                      </div>
+                    )}
+                    {canWrite && (
+                      <button
+                        className="btn-ghost w-full"
+                        onClick={() => decide('withdraw')}
+                        disabled={deciding}
+                      >
+                        Withdraw
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+            <ReviewHistory reviews={reviews} userId={user?.id} />
           </section>
 
           {piece.kind === 'ARTICLE' && <SerpPreview a={draft as ArticleContent} />}

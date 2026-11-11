@@ -8,6 +8,7 @@ import {
   canWriteContent,
   CONTENT_KINDS,
   ContentDetail,
+  ApprovalStatus,
   ContentKind,
   ContentSummary,
   GenerateOptions,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { KindBadge } from '@/components/dashboard/widgets';
+import { ApprovalBadge } from '@/components/studio/approval';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { describeError } from '@/lib/errors';
 
@@ -47,6 +49,7 @@ export default function StudioPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [filterKind, setFilterKind] = useState<'' | ContentKind>('');
+  const [filterApproval, setFilterApproval] = useState<'' | ApprovalStatus>('');
 
   const load = useCallback(async () => {
     if (!currentOrgId) return;
@@ -116,7 +119,11 @@ export default function StudioPage() {
   }
 
   const noFacts = facts !== null && facts.verified === 0;
-  const visible = (pieces ?? []).filter((p) => !filterKind || p.kind === filterKind);
+  const visible = (pieces ?? []).filter(
+    (p) =>
+      (!filterKind || p.kind === filterKind) &&
+      (!filterApproval || p.approvalStatus === filterApproval),
+  );
 
   return (
     <div className="space-y-4">
@@ -340,19 +347,33 @@ export default function StudioPage() {
       <section className="card p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold">Your content</h2>
-          <select
-            className="input !w-auto"
-            value={filterKind}
-            onChange={(e) => setFilterKind(e.target.value as '' | ContentKind)}
-            aria-label="Filter by type"
-          >
-            <option value="">All types</option>
-            {CONTENT_KINDS.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <select
+              className="input !w-auto"
+              value={filterApproval}
+              onChange={(e) => setFilterApproval(e.target.value as '' | ApprovalStatus)}
+              aria-label="Filter by approval"
+            >
+              <option value="">Any approval state</option>
+              <option value="IN_REVIEW">In review</option>
+              <option value="CHANGES_REQUESTED">Changes requested</option>
+              <option value="APPROVED">Approved</option>
+              <option value="DRAFT">Not submitted</option>
+            </select>
+            <select
+              className="input !w-auto"
+              value={filterKind}
+              onChange={(e) => setFilterKind(e.target.value as '' | ContentKind)}
+              aria-label="Filter by type"
+            >
+              <option value="">All types</option>
+              {CONTENT_KINDS.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         {pieces === null ? (
           <p className="text-sm text-muted">Loading…</p>
@@ -386,6 +407,7 @@ export default function StudioPage() {
                       <span className="text-xs text-amber-700">{p.warnings.length} to check</span>
                     )}
                     <StatusBadge status={p.status} />
+                    <ApprovalBadge status={p.approvalStatus} />
                   </div>
                 </Link>
               </li>
