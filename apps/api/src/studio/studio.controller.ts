@@ -16,6 +16,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { AuthenticatedRequest } from '../auth/auth.types';
 import { parseBody } from '../common/parse';
 import { OrgAccessGuard, RequirePermission } from '../organizations/org-access.guard';
+import { ApprovalsService } from './approvals.service';
 import { KINDS, LANGUAGES, optionsSchema } from './content-schemas';
 import { StudioService } from './studio.service';
 
@@ -32,15 +33,21 @@ const generateSchema = z.object({
 });
 const translateSchema = z.object({ language: z.enum(LANGUAGES) });
 const updateSchema = z.object({ content: z.record(z.unknown()) });
+const commentSchema = z.object({ comment: z.string().trim().max(1000).optional() });
+const changesSchema = z.object({ comment: z.string().trim().min(3).max(1000) });
 const listSchema = z.object({
   sourceId: z.string().uuid().optional(),
+  approvalStatus: z.enum(['DRAFT', 'IN_REVIEW', 'CHANGES_REQUESTED', 'APPROVED']).optional(),
   kind: z.enum(KINDS).optional(),
 });
 
 @Controller('organizations/:orgId/content')
 @UseGuards(AuthGuard, OrgAccessGuard)
 export class StudioController {
-  constructor(private readonly studio: StudioService) {}
+  constructor(
+    private readonly studio: StudioService,
+    private readonly approvals: ApprovalsService,
+  ) {}
 
   @Post('generate')
   @RequirePermission('content:write')
@@ -85,8 +92,67 @@ export class StudioController {
 
   @Patch(':id')
   @RequirePermission('content:write')
-  update(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: unknown) {
-    return this.studio.update(orgId, uuid(id), parseBody(updateSchema, body).content);
+  update(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    return this.studio.update(orgId, uuid(id), parseBody(updateSchema, body).content, req.user.id);
+  }
+
+  @Get(':id/reviews')
+  @RequirePermission('content:read')
+  reviews(@Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.approvals.history(orgId, uuid(id));
+  }
+
+  @Post(':id/submit')
+  @RequirePermission('content:write')
+  submit(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const { comment } = parseBody(commentSchema, body ?? {});
+    return this.approvals.submit(orgId, uuid(id), req.user.id, comment);
+  }
+
+  @Post(':id/withdraw')
+  @RequirePermission('content:write')
+  withdraw(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const { comment } = parseBody(commentSchema, body ?? {});
+    return this.approvals.withdraw(orgId, uuid(id), req.user.id, req.membership!.role, comment);
+  }
+
+  @Post(':id/approve')
+  @RequirePermission('content:review')
+  approve(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const { comment } = parseBody(commentSchema, body ?? {});
+    return this.approvals.approve(orgId, uuid(id), req.user.id, comment);
+  }
+
+  @Post(':id/request-changes')
+  @RequirePermission('content:review')
+  requestChanges(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const { comment } = parseBody(changesSchema, body);
+    return this.approvals.requestChanges(orgId, uuid(id), req.user.id, comment);
   }
 
   @Delete(':id')
