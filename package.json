@@ -13,11 +13,23 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "turbo run test:e2e",
+    "test:all": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test:unit && pnpm test:integration && pnpm test:e2e",
+    "e2e:install": "pnpm --filter @aich/web exec playwright install --with-deps chromium"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@next/eslint-plugin-next": "^16.4.6",
+    "@playwright/test": "^1.65.0",
+    "embedded-postgres": "18.6.0-beta.19",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
     "prettier": "^3.3.3",
     "turbo": "^2.3.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.72.2"
   }
 }

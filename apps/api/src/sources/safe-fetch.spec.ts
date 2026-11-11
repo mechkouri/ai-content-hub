@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
   FetchFailedError,
   Transport,
@@ -125,13 +126,13 @@ describe('assertSafeUrl', () => {
 
 describe('safeFetchText', () => {
   it('fetches a page and decodes it', async () => {
-    const transport: Transport = jest.fn(async () => html('<p>Bonjour é</p>'));
+    const transport: Transport = vi.fn(async () => html('<p>Bonjour é</p>'));
     const page = await safeFetchText('https://example.com/a', {
       resolver: publicResolver,
       transport,
     });
     expect(page).toMatchObject({ finalUrl: 'https://example.com/a', body: '<p>Bonjour é</p>' });
-    const req = (transport as jest.Mock).mock.calls[0][0];
+    const req = (transport as Mock).mock.calls[0][0];
     expect(req.address).toBe(PUBLIC); // connects to the validated, pinned address
     expect(req.headers['User-Agent']).toContain('AIContentHubBot');
   });
@@ -157,7 +158,7 @@ describe('safeFetchText', () => {
     'file:///etc/passwd',
     'http://[::1]/',
   ])('blocks a redirect to %s', async (target) => {
-    const transport: Transport = jest.fn(async () => redirect(target));
+    const transport: Transport = vi.fn(async () => redirect(target));
     await expect(
       safeFetchText('https://example.com/', { resolver: publicResolver, transport }),
     ).rejects.toBeInstanceOf(UnsafeUrlError);
@@ -165,7 +166,7 @@ describe('safeFetchText', () => {
   });
 
   it('revalidates DNS on every hop (a redirect to a host that now resolves privately is blocked)', async () => {
-    const resolver = jest.fn(async (host: string) =>
+    const resolver = vi.fn(async (host: string) =>
       host === 'second.example.com' ? ['192.168.1.10'] : [PUBLIC],
     );
     const transport: Transport = async () => redirect('https://second.example.com/');
@@ -223,7 +224,7 @@ describe('safeFetchText', () => {
   });
 
   it('never calls the network for an unsafe starting URL', async () => {
-    const transport: Transport = jest.fn();
+    const transport: Transport = vi.fn();
     await expect(
       safeFetchText('http://10.1.2.3/', { resolver: publicResolver, transport }),
     ).rejects.toBeInstanceOf(UnsafeUrlError);

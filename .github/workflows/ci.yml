@@ -10,13 +10,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Placeholders so `prisma validate` / `prisma generate` can read the schema. Never a real database.
+  DATABASE_URL: postgresql://user:pass@localhost:5432/db
+  DIRECT_URL: postgresql://user:pass@localhost:5432/db
+
 jobs:
-  verify:
-    name: Verify
+  quality:
+    name: Lint, format, types
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: postgresql://user:pass@localhost:5432/db
-      DIRECT_URL: postgresql://user:pass@localhost:5432/db
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -27,6 +33,112 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm --filter @aich/database validate
+      - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:unit
+
+  integration:
+    name: Integration tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aich_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aich_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Applies every migration to the empty database, checks for schema drift, then runs the
+      # API tests (authentication, permissions, tenant isolation, validation) against it.
+      - run: pnpm test:integration
+
+  e2e:
+    name: End-to-end tests (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: aich_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aich_e2e_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm e2e:install
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm build
+
+  # Single status for branch protection: it fails unless every job above succeeded.
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [quality, unit, integration, e2e, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to succeed
+        run: |
+          echo '${{ toJSON(needs) }}'
+          test "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" = "false"

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { HttpException, INestApplication, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AiKind, AiStatus, Role } from '@prisma/client';
@@ -37,14 +38,14 @@ const ENV_KEYS = [
 ];
 const savedEnv: Record<string, string | undefined> = {};
 const realFetch = global.fetch;
-let fetchMock: jest.Mock;
+let fetchMock: Mock;
 
 beforeEach(() => {
   ENV_KEYS.forEach((k) => {
     savedEnv[k] = process.env[k];
     delete process.env[k];
   });
-  fetchMock = jest.fn();
+  fetchMock = vi.fn();
   global.fetch = fetchMock as unknown as typeof fetch;
 });
 afterEach(() => {
@@ -225,12 +226,12 @@ describe('retry & json helpers', () => {
     expect(waits).toEqual([100, 200]);
   });
   it('does not retry non-retryable errors and gives up after max attempts', async () => {
-    const fn = jest.fn().mockRejectedValue(new ProviderError('auth', 'no'));
+    const fn = vi.fn().mockRejectedValue(new ProviderError('auth', 'no'));
     await expect(
       withRetry(fn, { attempts: 3, baseMs: 1, sleep: async () => {} }),
     ).rejects.toMatchObject({ kind: 'auth' });
     expect(fn).toHaveBeenCalledTimes(1);
-    const fn2 = jest.fn().mockRejectedValue(new ProviderError('timeout', 't', true));
+    const fn2 = vi.fn().mockRejectedValue(new ProviderError('timeout', 't', true));
     await expect(
       withRetry(fn2, { attempts: 3, baseMs: 1, sleep: async () => {} }),
     ).rejects.toMatchObject({ kind: 'timeout' });
@@ -247,10 +248,10 @@ describe('retry & json helpers', () => {
 let usage: any[];
 let settings: any;
 const prismaMock: any = {
-  user: { upsert: jest.fn().mockResolvedValue({}) },
-  membership: { findUnique: jest.fn() },
+  user: { upsert: vi.fn().mockResolvedValue({}) },
+  membership: { findUnique: vi.fn() },
   aiUsage: {
-    count: jest.fn(
+    count: vi.fn(
       async ({ where }: any) =>
         usage.filter(
           (u) =>
@@ -260,14 +261,14 @@ const prismaMock: any = {
             u.createdAt >= where.createdAt.gte,
         ).length,
     ),
-    create: jest.fn(async ({ data }: any) => {
+    create: vi.fn(async ({ data }: any) => {
       usage.push({ ...data, createdAt: new Date() });
       return data;
     }),
   },
   aiSetting: {
-    findUnique: jest.fn(async () => settings),
-    upsert: jest.fn(
+    findUnique: vi.fn(async () => settings),
+    upsert: vi.fn(
       async ({ create, update }: any) => (settings = { ...(settings ?? {}), ...create, ...update }),
     ),
   },
@@ -282,7 +283,7 @@ const fakeText = (id: string, impl: (req: any) => Promise<any>): TextProvider =>
   listFreeModels: async () => [
     { id: 'openrouter/free', name: 'Free', contextLength: 0, supportsJson: true },
   ],
-  generate: jest.fn(impl),
+  generate: vi.fn(impl),
 });
 const okText =
   (text = 'hello') =>
@@ -308,7 +309,7 @@ describe('AiService', () => {
     const p = fakeText('a', okText());
     const res = await make([p]).generateText(ctx, { prompt: 'hi' });
     expect(res.text).toBe('hello');
-    expect((p.generate as jest.Mock).mock.calls[0][0].model).toBe('openrouter/free');
+    expect((p.generate as Mock).mock.calls[0][0].model).toBe('openrouter/free');
     expect(usage).toHaveLength(1);
     expect(usage[0]).toMatchObject({
       status: AiStatus.SUCCESS,
@@ -440,9 +441,7 @@ describe('AiService', () => {
       schema: z.object({ title: z.string(), tags: z.array(z.string()) }),
     });
     expect(out.data).toEqual({ title: 'Hello', tags: ['a'] });
-    expect((p.generate as jest.Mock).mock.calls[1][0].prompt).toContain(
-      'previous reply was invalid',
-    );
+    expect((p.generate as Mock).mock.calls[1][0].prompt).toContain('previous reply was invalid');
 
     const bad = fakeText('a', okText('{"title":1}'));
     const err = await make([bad])
@@ -455,7 +454,7 @@ describe('AiService', () => {
     const img: ImageProvider = {
       id: 'cf',
       isConfigured: () => true,
-      generate: jest.fn(async () => ({ data: JPEG, mimeType: 'image/jpeg', model: 'flux' })),
+      generate: vi.fn(async () => ({ data: JPEG, mimeType: 'image/jpeg', model: 'flux' })),
     };
     const svc = make([], [img]);
     await expect(svc.generateImage(ctx, { prompt: '' })).rejects.toMatchObject({ status: 400 });

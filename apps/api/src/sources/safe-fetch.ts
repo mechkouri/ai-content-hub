@@ -127,7 +127,15 @@ export type Transport = (req: TransportRequest) => Promise<Response>;
 export const defaultTransport: Transport = async (req) => {
   const agent = new Agent({
     connect: {
-      lookup: (_host: string, opts: any, cb: any) => {
+      lookup: (
+        _host: string,
+        opts: { all?: boolean } | undefined,
+        cb: (
+          err: Error | null,
+          address: string | { address: string; family: number }[],
+          family?: number,
+        ) => void,
+      ) => {
         const entry = { address: req.address, family: req.family };
         if (opts?.all) cb(null, [entry]);
         else cb(null, entry.address, entry.family);

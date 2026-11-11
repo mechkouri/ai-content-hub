@@ -1,7 +1,7 @@
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { AiKind, AiStatus } from '@prisma/client';
 import { createHash } from 'crypto';
-import { ZodType } from 'zod';
+import { ZodType, ZodTypeDef } from 'zod';
 import { loadEnv } from '../config/env';
 import { AiLimitsService } from './ai-limits.service';
 import {
@@ -143,7 +143,7 @@ export class AiService {
   /** Generates JSON validated by a Zod schema, with one repair attempt if the model returns bad JSON. */
   async generateJson<T>(
     ctx: AiContext,
-    opts: Omit<TextOptions, 'json'> & { schema: ZodType<T, any, any> },
+    opts: Omit<TextOptions, 'json'> & { schema: ZodType<T, ZodTypeDef, unknown> },
   ): Promise<{ data: T; model: string; provider: string }> {
     const { schema, ...rest } = opts;
     let prompt = rest.prompt;

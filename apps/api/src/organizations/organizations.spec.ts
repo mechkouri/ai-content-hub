@@ -21,41 +21,41 @@ let memberships: M[];
 let invitations: any[];
 
 const prismaMock = {
-  user: { upsert: jest.fn().mockResolvedValue({}) },
+  user: { upsert: vi.fn().mockResolvedValue({}) },
   membership: {
-    findUnique: jest.fn(async ({ where }: any) => {
+    findUnique: vi.fn(async ({ where }: any) => {
       const k = where.userId_organizationId;
       return (
         memberships.find((m) => m.userId === k.userId && m.organizationId === k.organizationId) ??
         null
       );
     }),
-    count: jest.fn(
+    count: vi.fn(
       async ({ where }: any) =>
         memberships.filter(
           (m) => m.organizationId === where.organizationId && m.role === where.role,
         ).length,
     ),
-    update: jest.fn(async ({ where, data }: any) => {
+    update: vi.fn(async ({ where, data }: any) => {
       const m = memberships.find((x) => x.id === where.id)!;
       m.role = data.role;
       return m;
     }),
-    delete: jest.fn(async ({ where }: any) => {
+    delete: vi.fn(async ({ where }: any) => {
       memberships = memberships.filter((m) => m.id !== where.id);
     }),
-    upsert: jest.fn(async ({ create }: any) => ({ id: 'new', ...create })),
-    findMany: jest.fn(async () => []),
+    upsert: vi.fn(async ({ create }: any) => ({ id: 'new', ...create })),
+    findMany: vi.fn(async () => []),
   },
   invitation: {
-    create: jest.fn(async ({ data }: any) => ({ id: 'inv1', ...data })),
-    findUnique: jest.fn(
+    create: vi.fn(async ({ data }: any) => ({ id: 'inv1', ...data })),
+    findUnique: vi.fn(
       async ({ where }: any) => invitations.find((i) => i.tokenHash === where.tokenHash) ?? null,
     ),
-    update: jest.fn(async () => ({})),
+    update: vi.fn(async () => ({})),
   },
-  organization: { findUnique: jest.fn(async ({ where }: any) => ({ id: where.id, name: 'Org' })) },
-  $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+  organization: { findUnique: vi.fn(async ({ where }: any) => ({ id: where.id, name: 'Org' })) },
+  $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 // Test tokens are "user:<id>:<email>"; the real verifier is covered separately below.
