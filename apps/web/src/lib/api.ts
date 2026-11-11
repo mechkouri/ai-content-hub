@@ -224,6 +224,16 @@ export const canWriteSources = (role: Role | null) =>
 
 export type ContentKind = 'ARTICLE' | 'INSTAGRAM' | 'FACEBOOK' | 'LINKEDIN';
 export type ContentStatus = 'DRAFT' | 'NEEDS_REVIEW';
+export type ApprovalStatus = 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
+export type ReviewAction =
+  'SUBMITTED' | 'WITHDRAWN' | 'APPROVED' | 'CHANGES_REQUESTED' | 'INVALIDATED';
+export interface ContentReview {
+  id: string;
+  action: ReviewAction;
+  actorId: string;
+  comment: string | null;
+  createdAt: string;
+}
 export type Lang = 'fr' | 'ar' | 'en';
 
 export const CONTENT_KINDS: { id: ContentKind; label: string; icon: string; blurb: string }[] = [
@@ -314,6 +324,7 @@ export interface ContentSummary {
   sourceId: string;
   kind: ContentKind;
   status: ContentStatus;
+  approvalStatus: ApprovalStatus;
   language: string;
   title: string;
   edited: boolean;
@@ -326,6 +337,7 @@ export interface ContentPiece extends Omit<ContentSummary, 'warnings'> {
   content: AnyContent;
   options: Record<string, unknown>;
   usedFactIds: string[];
+  submittedById: string | null;
   model: string | null;
   provider: string | null;
   updatedAt: string;
@@ -357,6 +369,9 @@ export const STYLE_OPTIONS = [
   'conversational',
 ];
 export const TONE_OPTIONS = ['professional', 'friendly', 'inspiring', 'urgent', 'neutral'];
+
+export const canReviewContent = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'APPROVER';
 
 export const canWriteContent = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
