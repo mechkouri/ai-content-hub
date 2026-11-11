@@ -299,6 +299,7 @@ export class StudioService {
       sourceId?: string;
       kind?: Kind;
       approvalStatus?: ApprovalStatus;
+      campaignId?: string;
       scheduledFrom?: Date;
       scheduledTo?: Date;
     },
@@ -309,6 +310,7 @@ export class StudioService {
         ...(filter.sourceId ? { sourceId: filter.sourceId } : {}),
         ...(filter.kind ? { kind: filter.kind } : {}),
         ...(filter.approvalStatus ? { approvalStatus: filter.approvalStatus } : {}),
+        ...(filter.campaignId ? { campaignId: filter.campaignId } : {}),
         ...(filter.scheduledFrom || filter.scheduledTo
           ? {
               scheduledFor: {
@@ -325,6 +327,7 @@ export class StudioService {
         status: true,
         approvalStatus: true,
         scheduledFor: true,
+        campaignId: true,
         language: true,
         title: true,
         edited: true,
