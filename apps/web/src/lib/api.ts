@@ -326,6 +326,7 @@ export interface ContentSummary {
   status: ContentStatus;
   approvalStatus: ApprovalStatus;
   scheduledFor: string | null;
+  campaignId: string | null;
   language: string;
   title: string;
   edited: boolean;
@@ -370,6 +371,45 @@ export const STYLE_OPTIONS = [
   'conversational',
 ];
 export const TONE_OPTIONS = ['professional', 'friendly', 'inspiring', 'urgent', 'neutral'];
+
+export const canWriteCampaigns = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'EDITOR' || role === 'DESIGNER';
+
+export interface CampaignStats {
+  total: number;
+  draft: number;
+  inReview: number;
+  approved: number;
+  scheduled: number;
+}
+export interface Campaign {
+  id: string;
+  name: string;
+  description: string | null;
+  /** ISO timestamp at midnight UTC: it stands for a plain calendar day. */
+  startsOn: string | null;
+  endsOn: string | null;
+  status: 'ACTIVE' | 'ARCHIVED';
+  createdAt: string;
+}
+export interface CampaignSummary extends Campaign {
+  stats: CampaignStats;
+}
+export interface CampaignPiece {
+  id: string;
+  kind: ContentKind;
+  title: string;
+  language: string;
+  status: ContentStatus;
+  approvalStatus: ApprovalStatus;
+  scheduledFor: string | null;
+  createdAt: string;
+}
+export interface CampaignDetail {
+  campaign: Campaign;
+  pieces: CampaignPiece[];
+  stats: CampaignStats;
+}
 
 export const canScheduleContent = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'PUBLISHER';
