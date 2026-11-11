@@ -325,6 +325,7 @@ export interface ContentSummary {
   kind: ContentKind;
   status: ContentStatus;
   approvalStatus: ApprovalStatus;
+  scheduledFor: string | null;
   language: string;
   title: string;
   edited: boolean;
@@ -369,6 +370,9 @@ export const STYLE_OPTIONS = [
   'conversational',
 ];
 export const TONE_OPTIONS = ['professional', 'friendly', 'inspiring', 'urgent', 'neutral'];
+
+export const canScheduleContent = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'PUBLISHER';
 
 export const canReviewContent = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'APPROVER';

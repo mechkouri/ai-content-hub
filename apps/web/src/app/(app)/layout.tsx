@@ -11,6 +11,7 @@ import { useShellData } from '@/lib/use-shell-data';
 const FEATURES: [string, string][] = [
   ['/sources', 'Sources'],
   ['/studio', 'the Content studio'],
+  ['/calendar', 'the Content calendar'],
   ['/brand', 'the Brand kit'],
   ['/media', 'the Media library'],
   ['/ai', 'AI providers'],

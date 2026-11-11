@@ -16,6 +16,7 @@ import {
   SerpPreview,
 } from '@/components/studio/previews';
 import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
+import { ScheduleBox } from '@/components/studio/schedule-box';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
 import {
@@ -23,6 +24,7 @@ import {
   apiFetch,
   ArticleContent,
   canReviewContent,
+  canScheduleContent,
   canWriteContent,
   ContentReview,
   CONTENT_KINDS,
@@ -47,6 +49,7 @@ export default function ContentDetailPage() {
     'Your organization';
   const canWrite = canWriteContent(currentRole);
   const canReview = canReviewContent(currentRole);
+  const canSchedule = canScheduleContent(currentRole);
   const base = `/organizations/${currentOrgId}/content/${id}`;
 
   const [detail, setDetail] = useState<ContentDetail | null>(null);
@@ -437,6 +440,23 @@ export default function ContentDetailPage() {
             )}
             <ReviewHistory reviews={reviews} userId={user?.id} />
           </section>
+
+          {piece.approvalStatus === 'APPROVED' && (
+            <section className="card p-4">
+              <h2 className="text-sm font-display text-base font-semibold">Schedule</h2>
+              {canSchedule ? (
+                <div className="mt-2">
+                  <ScheduleBox base={base} scheduledFor={piece.scheduledFor} onChanged={load} />
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-muted">
+                  {piece.scheduledFor
+                    ? `Planned for ${new Date(piece.scheduledFor).toLocaleString()}.`
+                    : 'Not scheduled yet. Publishers and admins can set the date.'}
+                </p>
+              )}
+            </section>
+          )}
 
           {piece.kind === 'ARTICLE' && <SerpPreview a={draft as ArticleContent} />}
           {piece.kind === 'INSTAGRAM' && (
