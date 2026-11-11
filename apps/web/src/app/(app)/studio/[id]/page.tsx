@@ -24,6 +24,7 @@ import {
   canWriteContent,
   CONTENT_KINDS,
   ContentDetail,
+  ClaimWarning,
   ContentSummary,
   FacebookContent,
   InstagramContent,
@@ -75,6 +76,29 @@ export default function ContentDetailPage() {
   }, [load]);
 
   const dirty = draft !== null && saved !== null && isDirty(draft, saved);
+
+  // Live check: while editing, ask the server (no AI involved) which details are not in the verified facts,
+  // so invented dates, prices and links are highlighted as you type, not only after saving.
+  const [live, setLive] = useState<ClaimWarning[] | null>(null);
+  useEffect(() => {
+    if (!dirty || !draft || !currentOrgId) {
+      setLive(null);
+      return;
+    }
+    let current = true;
+    const timer = setTimeout(() => {
+      apiFetch<{ warnings: ClaimWarning[] }>(`${base}/check`, {
+        method: 'POST',
+        body: JSON.stringify({ content: draft }),
+      })
+        .then((r) => current && setLive(r.warnings))
+        .catch(() => current && setLive(null)); // an unfinished edit may not validate yet: keep the last saved result
+    }, 700);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [dirty, draft, currentOrgId, base]);
 
   // Warn before leaving with unsaved edits.
   useEffect(() => {
@@ -149,7 +173,8 @@ export default function ContentDetailPage() {
   if (!detail || !draft) return <p className="text-sm text-muted">{error || 'Loading…'}</p>;
   const { piece, seoChecks, source } = detail;
   const kind = CONTENT_KINDS.find((k) => k.id === piece.kind)!;
-  const warnings = piece.warnings;
+  // While there are unsaved edits, show the live verdict; otherwise the saved one.
+  const warnings = dirty && live ? live : piece.warnings;
   const siblings = related.filter(
     (p) =>
       p.id !== piece.id &&

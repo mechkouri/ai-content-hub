@@ -692,6 +692,51 @@ describe('content studio API', () => {
         .expect(404);
     });
 
+    it('checks an edit live without saving anything or calling the AI', async () => {
+      const a = await make();
+      const callsBefore = aiMock.generateJson.mock.calls.length;
+      const check = (content: object, user = U_VIEWER, id = a.id, org = ORG_A) =>
+        request(app.getHttpServer())
+          .post(`/api/organizations/${org}/content/${id}/check`)
+          .set('Authorization', as(user))
+          .send({ content });
+
+      const clean = await check(article()).expect(201);
+      expect(clean.body).toEqual({ warnings: [], status: 'DRAFT' });
+
+      const risky = await check(
+        article({ introduction: 'The event moves to 25 June 2031. Fee: 800 MAD.' }),
+      ).expect(201);
+      expect(risky.body.status).toBe('NEEDS_REVIEW');
+      expect(risky.body.warnings.map((w: any) => w.value)).toEqual(
+        expect.arrayContaining(['25', '2031', '800']),
+      );
+
+      // nothing was saved and no AI call was made (read-only users may check, as it changes nothing)
+      expect(pieces.find((p) => p.id === a.id).content.introduction).toBe(article().introduction);
+      expect(pieces.find((p) => p.id === a.id).edited).toBe(false);
+      expect(aiMock.generateJson.mock.calls.length).toBe(callsBefore);
+
+      // same verdict as saving would give
+      const saved = await request(app.getHttpServer())
+        .patch(`${base}/${a.id}`)
+        .set('Authorization', as(U_EDITOR))
+        .send({
+          content: article({ introduction: 'The event moves to 25 June 2031. Fee: 800 MAD.' }),
+        })
+        .expect(200);
+      expect(saved.body.piece.warnings.map((w: any) => w.value).sort()).toEqual(
+        risky.body.warnings.map((w: any) => w.value).sort(),
+      );
+
+      await check({ seoTitle: 'incomplete' }).expect(400);
+      await check(article(), U_OTHER, a.id, ORG_B).expect(404); // other organization cannot see it
+      await request(app.getHttpServer())
+        .post(`${base}/${a.id}/check`)
+        .send({ content: article() })
+        .expect(401);
+    });
+
     it('lets editors edit (re-validating and re-checking claims) but not viewers', async () => {
       const a = await make();
       const edit = (content: object, user = U_EDITOR) =>
