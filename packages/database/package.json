@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "validate": "prisma validate",
+    "db:deploy": "prisma migrate deploy",
     "generate": "prisma generate",
     "build": "prisma generate"
   },
