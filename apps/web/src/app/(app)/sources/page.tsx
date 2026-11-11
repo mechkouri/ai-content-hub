@@ -1,5 +1,6 @@
 'use client';
 
+import { AlignLeft, FileText, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -22,17 +23,8 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function StatusBadge({ s }: { s: SourceSummary }) {
-  if (s.status === 'EXTRACTED')
-    return (
-      <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
-        {s._count.facts} facts
-      </span>
-    );
-  return (
-    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-      Needs extraction
-    </span>
-  );
+  if (s.status === 'EXTRACTED') return <span className="chip-ok">{s._count.facts} facts</span>;
+  return <span className="chip-warn">Needs extraction</span>;
 }
 
 export default function SourcesPage() {
@@ -102,13 +94,17 @@ export default function SourcesPage() {
 
   return (
     <div className="space-y-4">
-      <section className="card p-6">
-        <h1 className="text-xl font-bold">Sources</h1>
-        <p className="text-sm text-slate-500">
+      <section className="pb-1">
+        <h1 className="font-display text-[28px] font-semibold leading-tight">Sources</h1>
+        <p className="text-sm text-muted">
           Start from an announcement, document or web page. We extract the key facts so everything
           you create stays accurate.
         </p>
-        {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
+            {error}
+          </p>
+        )}
       </section>
 
       {canWrite ? (
@@ -174,7 +170,7 @@ export default function SourcesPage() {
               />
               <button
                 type="button"
-                className="flex w-full flex-col items-center rounded-xl border-2 border-dashed border-slate-300 p-8 text-sm text-slate-500 hover:border-brand hover:text-brand"
+                className="flex w-full flex-col items-center rounded-xl border-2 border-dashed border-slate-300 p-8 text-sm text-muted hover:border-brand hover:text-brand"
                 onClick={() => fileRef.current?.click()}
                 disabled={busy}
               >
@@ -213,7 +209,7 @@ export default function SourcesPage() {
               {busy ? 'Working…' : 'Add source & extract facts'}
             </button>
             {busy && (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted">
                 Reading your content and extracting facts. This can take up to a minute.
               </p>
             )}
@@ -226,11 +222,11 @@ export default function SourcesPage() {
       )}
 
       <section className="card p-6">
-        <h2 className="mb-3 font-bold">History</h2>
+        <h2 className="mb-3 font-display text-base font-semibold">History</h2>
         {list === null ? (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-muted">Loading…</p>
         ) : list.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">
+          <div className="py-8 text-center text-sm text-muted">
             <p className="text-3xl">📄</p>
             <p className="mt-2 font-semibold text-slate-700">No sources yet</p>
             <p>Add your first one above.</p>
@@ -241,9 +237,18 @@ export default function SourcesPage() {
               <li key={s.id}>
                 <Link
                   href={`/sources/${s.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-3 hover:bg-slate-50"
+                  className="flex flex-wrap items-center gap-3 rounded-xl px-2 py-3 hover:bg-surface"
                 >
-                  <div className="min-w-0">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                    {s.type === 'URL' ? (
+                      <Globe size={18} aria-hidden />
+                    ) : s.type === 'TEXT' ? (
+                      <AlignLeft size={18} aria-hidden />
+                    ) : (
+                      <FileText size={18} aria-hidden />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{s.title}</p>
                     <p className="text-xs text-slate-400">
                       {TYPE_LABEL[s.type]}

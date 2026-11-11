@@ -19,6 +19,7 @@ import {
   TONE_OPTIONS,
 } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { KindBadge } from '@/components/dashboard/widgets';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { describeError } from '@/lib/errors';
 
@@ -119,13 +120,17 @@ export default function StudioPage() {
 
   return (
     <div className="space-y-4">
-      <section className="card p-6">
-        <h1 className="text-xl font-bold">Content studio</h1>
-        <p className="text-sm text-slate-500">
+      <section className="pb-1">
+        <h1 className="font-display text-[28px] font-semibold leading-tight">Content studio</h1>
+        <p className="text-sm text-muted">
           Turn a verified source into an article or social posts. We only use facts you have
           verified, and we flag anything that does not match them.
         </p>
-        {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
+            {error}
+          </p>
+        )}
       </section>
 
       {canWrite ? (
@@ -205,9 +210,9 @@ export default function StudioPage() {
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <span className="text-2xl">{k.icon}</span>
+                    <KindBadge kind={k.id} />
                     <p className="mt-1 font-semibold">{k.label}</p>
-                    <p className="text-xs text-slate-500">{k.blurb}</p>
+                    <p className="text-xs text-muted">{k.blurb}</p>
                   </button>
                 ))}
               </div>
@@ -319,7 +324,7 @@ export default function StudioPage() {
                 {busy ? 'Writing…' : `Create ${KIND_LABEL[kind].label.toLowerCase()}`}
               </button>
               {busy && (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted">
                   The AI is writing from your verified facts. This can take up to a minute.
                 </p>
               )}
@@ -334,7 +339,7 @@ export default function StudioPage() {
 
       <section className="card p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-bold">Your content</h2>
+          <h2 className="font-display text-base font-semibold">Your content</h2>
           <select
             className="input !w-auto"
             value={filterKind}
@@ -350,9 +355,9 @@ export default function StudioPage() {
           </select>
         </div>
         {pieces === null ? (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-muted">Loading…</p>
         ) : visible.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">
+          <div className="py-8 text-center text-sm text-muted">
             <p className="text-3xl">✍️</p>
             <p className="mt-2 font-semibold text-slate-700">Nothing here yet</p>
             <p>Create your first article or post above.</p>

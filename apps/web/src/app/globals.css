@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --font-display: 'Plus Jakarta Sans';
+    --font-body: 'Inter';
+    --font-label: 'Geist';
+    --font-ar-display: 'Cairo';
+    --font-ar-body: 'Tajawal';
+  }
   body {
     @apply bg-surface font-sans text-ink antialiased;
   }
