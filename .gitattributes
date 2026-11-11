@@ -1,0 +1,5 @@
+# Keep line endings as LF in every checkout (matches Prettier and CI).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
