@@ -14,20 +14,43 @@ export class ApiError extends Error {
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { data } = await supabase().auth.getSession();
   const token = data.session?.access_token;
+  const isForm = typeof FormData !== 'undefined' && init.body instanceof FormData;
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      // For FormData the browser sets the multipart boundary itself.
+      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   });
   const body = await res.json().catch(() => null);
-  if (!res.ok) {
-    const msg = typeof body?.message === 'string' ? body.message : `Request failed (${res.status})`;
-    throw new ApiError(res.status, msg);
-  }
+  if (!res.ok) throw new ApiError(res.status, errorMessage(body, res.status));
   return body as T;
+}
+
+/** Fetches a protected binary (e.g. an image) with the auth header and returns it as a blob. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const { data } = await supabase().auth.getSession();
+  const token = data.session?.access_token;
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
+  return res.blob();
+}
+
+function errorMessage(body: unknown, status: number): string {
+  const b = body as Record<string, unknown> | null;
+  if (b && typeof b.message === 'string') return b.message;
+  if (b && typeof b === 'object') {
+    // Field validation errors: { field: ["message", ...] }
+    const parts = Object.entries(b)
+      .filter(([, v]) => Array.isArray(v))
+      .map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`);
+    if (parts.length) return parts.join(' · ');
+  }
+  return `Request failed (${status})`;
 }
 
 export type Role = 'OWNER' | 'ADMIN' | 'EDITOR' | 'DESIGNER' | 'APPROVER' | 'PUBLISHER' | 'VIEWER';
@@ -60,3 +83,36 @@ export interface MemberRow {
   role: Role;
   user: { id: string; email: string; name: string | null };
 }
+
+export interface MediaAsset {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface BrandKit {
+  id: string;
+  version: number;
+  isActive: boolean;
+  label: string | null;
+  description: string | null;
+  websiteUrl: string | null;
+  defaultLanguage: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  headingFont: string;
+  bodyFont: string;
+  imageStyle: string | null;
+  socialUrls: Record<string, string>;
+  mainLogoId: string | null;
+  altLogoId: string | null;
+  createdAt: string;
+}
+
+export const canWriteBrand = (role: Role | null) =>
+  role === 'OWNER' || role === 'ADMIN' || role === 'DESIGNER';
+export const canUploadMedia = (role: Role | null) => canWriteBrand(role) || role === 'EDITOR';
+export const canDeleteMedia = canWriteBrand;
