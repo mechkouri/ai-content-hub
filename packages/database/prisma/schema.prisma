@@ -39,6 +39,8 @@ model Organization {
   invitations     Invitation[]
   brandKits       BrandKit[]
   mediaAssets     MediaAsset[]
+  aiUsages        AiUsage[]
+  aiSetting       AiSetting?
 }
 
 model Membership {
@@ -112,4 +114,46 @@ model BrandKit {
 
   @@unique([organizationId, version])
   @@index([organizationId, isActive])
+}
+
+enum AiKind {
+  TEXT
+  IMAGE
+}
+
+enum AiStatus {
+  SUCCESS
+  FAILED
+}
+
+// One row per provider call. Successful rows count against organization quotas.
+model AiUsage {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  userId           String       @db.Uuid
+  provider         String
+  model            String
+  kind             AiKind
+  status           AiStatus
+  errorKind        String?
+  promptTokens     Int          @default(0)
+  completionTokens Int          @default(0)
+  latencyMs        Int          @default(0)
+  createdAt        DateTime     @default(now())
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, kind, createdAt])
+}
+
+// Per-organization AI preferences and limits (null = platform default). Limits can only lower platform caps.
+model AiSetting {
+  id                  String       @id @default(uuid()) @db.Uuid
+  organizationId      String       @unique @db.Uuid
+  textModel           String?
+  dailyTextLimit      Int?
+  monthlyTextLimit    Int?
+  dailyImageLimit     Int?
+  monthlyImageLimit   Int?
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
