@@ -3,17 +3,27 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { ChannelsController } from './channels.controller';
 import { ChannelsService } from './channels.service';
 import { PUBLISHERS } from './publisher';
+import { HTTP_CLIENT, makeSafeJsonRequest } from './safe-request';
+import { SecretsService } from './secrets.service';
 import { PublishingService } from './publishing.service';
 import { PublishingWorker } from './publishing.worker';
 import { TestPublisher } from './test.publisher';
+import { WordPressPublisher } from './wordpress.publisher';
 
 @Module({
   imports: [OrganizationsModule],
   controllers: [ChannelsController],
   providers: [
+    SecretsService,
+    { provide: HTTP_CLIENT, useValue: makeSafeJsonRequest() },
     TestPublisher,
-    // Real providers (WordPress, Facebook, Instagram, LinkedIn) are added to this list as they are built.
-    { provide: PUBLISHERS, useFactory: (t: TestPublisher) => [t], inject: [TestPublisher] },
+    WordPressPublisher,
+    // Facebook, Instagram and LinkedIn are added to this list as they are built.
+    {
+      provide: PUBLISHERS,
+      useFactory: (t: TestPublisher, w: WordPressPublisher) => [t, w],
+      inject: [TestPublisher, WordPressPublisher],
+    },
     ChannelsService,
     PublishingService,
     PublishingWorker,

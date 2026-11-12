@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { ApprovalStatus, ChannelStatus, Prisma, PublishStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PermanentPublishError, Publisher, PUBLISHERS } from './publisher';
+import { ChannelAuthError, PermanentPublishError, Publisher, PUBLISHERS } from './publisher';
+import { SecretsService } from './secrets.service';
 import { checkPost, renderPost } from './publishing-rules';
 
 export const MAX_ATTEMPTS = 3;
@@ -24,6 +25,7 @@ export class PublishingService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly secrets: SecretsService,
     @Inject(PUBLISHERS) private readonly publishers: Publisher[],
   ) {}
 
@@ -58,7 +60,7 @@ export class PublishingService {
       runAt = piece.scheduledFor;
     }
 
-    const payload = renderPost(piece.kind, piece.title, piece.content);
+    const payload = renderPost(piece.kind, piece.title, piece.content, piece.language);
     const check = checkPost(piece.kind, piece.content, payload);
     if (check.errors.length) {
       throw new UnprocessableEntityException({
@@ -257,8 +259,12 @@ export class PublishingService {
 
     try {
       // Re-rendered from the current text, so the post is always what was approved.
-      const payload = renderPost(piece.kind, piece.title, piece.content);
-      const result = await publisher.publish(channel, payload);
+      const payload = renderPost(piece.kind, piece.title, piece.content, piece.language);
+      const secret = channel.credentials ? this.secrets.decrypt(channel.credentials) : null;
+      const result = await publisher.publish(
+        { id: channel.id, name: channel.name, config: channel.config, secret },
+        payload,
+      );
       await this.prisma.publishJob.update({
         where: { id: job.id },
         data: {
@@ -274,6 +280,20 @@ export class PublishingService {
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Publishing failed';
       this.log.warn(`Job ${job.id} failed (attempt ${job.attempts}): ${message}`);
+      if (e instanceof ChannelAuthError) {
+        // The login stopped working: stop every further post to this channel until it is reconnected.
+        await this.prisma.channel.update({
+          where: { id: channel.id },
+          data: { status: ChannelStatus.ERROR, lastError: message.slice(0, 500) },
+        });
+        await this.prisma.publishJob.updateMany({
+          where: { channelId: channel.id, status: PublishStatus.QUEUED },
+          data: {
+            status: PublishStatus.CANCELLED,
+            lastError: 'The channel needs to be reconnected',
+          },
+        });
+      }
       await fail(message.slice(0, 500), e instanceof PermanentPublishError);
       return false;
     }

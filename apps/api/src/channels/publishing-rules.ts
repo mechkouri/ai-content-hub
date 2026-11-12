@@ -1,4 +1,5 @@
 import { ContentKind } from '@prisma/client';
+import { articleHtml } from './article-html';
 
 /** What will actually be posted for a piece of content, as plain text. Kept with the job as the audit trail. */
 export interface PostPayload {
@@ -6,6 +7,11 @@ export interface PostPayload {
   title: string;
   text: string;
   link?: string | null;
+  /** Articles only: the body as HTML, plus what a website needs besides the text. */
+  html?: string;
+  slug?: string;
+  excerpt?: string;
+  language?: string;
 }
 
 export interface PostCheck {
@@ -31,7 +37,12 @@ const join = (parts: unknown[]) =>
     .join('\n\n');
 
 /** Builds the final text exactly as a network would receive it (body, call to action, hashtags). */
-export function renderPost(kind: ContentKind, title: string, content: any): PostPayload {
+export function renderPost(
+  kind: ContentKind,
+  title: string,
+  content: any,
+  language?: string,
+): PostPayload {
   switch (kind) {
     case ContentKind.INSTAGRAM:
       return {
@@ -62,6 +73,10 @@ export function renderPost(kind: ContentKind, title: string, content: any): Post
           ...sections.map((s: any) => join([s.heading, s.body])),
           content.conclusion,
         ]),
+        html: articleHtml(content, language),
+        slug: content.slug,
+        excerpt: content.excerpt,
+        language,
       };
     }
   }
