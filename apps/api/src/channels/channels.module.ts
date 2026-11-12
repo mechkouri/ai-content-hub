@@ -4,6 +4,7 @@ import { ChannelsController } from './channels.controller';
 import { ChannelsService } from './channels.service';
 import { PUBLISHERS } from './publisher';
 import { FacebookPublisher } from './facebook.publisher';
+import { LinkedInPublisher } from './linkedin.publisher';
 import { HTTP_CLIENT, makeSafeJsonRequest } from './safe-request';
 import { SecretsService } from './secrets.service';
 import { PublishingService } from './publishing.service';
@@ -20,11 +21,17 @@ import { WordPressPublisher } from './wordpress.publisher';
     TestPublisher,
     WordPressPublisher,
     FacebookPublisher,
-    // Instagram and LinkedIn are added to this list as they are built.
+    LinkedInPublisher,
+    // Instagram is added to this list when public image storage exists.
     {
       provide: PUBLISHERS,
-      useFactory: (t: TestPublisher, w: WordPressPublisher, f: FacebookPublisher) => [t, w, f],
-      inject: [TestPublisher, WordPressPublisher, FacebookPublisher],
+      useFactory: (
+        t: TestPublisher,
+        w: WordPressPublisher,
+        f: FacebookPublisher,
+        l: LinkedInPublisher,
+      ) => [t, w, f, l],
+      inject: [TestPublisher, WordPressPublisher, FacebookPublisher, LinkedInPublisher],
     },
     ChannelsService,
     PublishingService,

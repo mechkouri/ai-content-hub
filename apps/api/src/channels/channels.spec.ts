@@ -853,6 +853,118 @@ describe('channels and publishing', () => {
     });
   });
 
+  describe('LinkedIn channels', () => {
+    const TOKEN = 'AQV' + 'x'.repeat(60);
+    const create = (
+      body: object = { provider: 'LINKEDIN', name: 'My LinkedIn', accessToken: TOKEN },
+      user = U_ADMIN,
+    ) =>
+      request(app.getHttpServer())
+        .post(`${base}/channels`)
+        .set('Authorization', as(user))
+        .send(body);
+    const me = { status: 200, json: { sub: 'abc123', name: 'Said M' } };
+    const liPost = () =>
+      piece({
+        kind: 'LINKEDIN',
+        content: {
+          postText: 'Open Day on 14 March (free).',
+          cta: 'Register',
+          hashtags: ['OpenDay'],
+          imageMode: 'text',
+          images: [],
+        },
+      });
+
+    beforeEach(() => {
+      wpHttp = async () => me;
+    });
+
+    it('verifies the token, stores it encrypted, and never returns it', async () => {
+      const res = await create().expect(201);
+      expect(res.body.config).toEqual({ authorUrn: 'urn:li:person:abc123', memberName: 'Said M' });
+      expect(JSON.stringify(res.body)).not.toContain(TOKEN);
+      expect(channels[0].credentials).toMatch(/^v1:/);
+      expect(channels[0].credentials).not.toContain('AQV');
+
+      wpHttp = async () => ({ status: 401, json: null });
+      const bad = await create({
+        provider: 'LINKEDIN',
+        name: 'Bad token',
+        accessToken: TOKEN,
+      }).expect(422);
+      expect(String(bad.body.message)).toMatch(/did not accept/);
+      await create({ provider: 'LINKEDIN', name: 'No token' }).expect(400);
+      expect(channels).toHaveLength(1);
+    });
+
+    it('publishes a LinkedIn post with pictures, escaped text and the decrypted token, and only that kind', async () => {
+      const ch = (await create().expect(201)).body;
+      const calls: any[] = [];
+      let n = 0;
+      wpHttp = async (url, opts) => {
+        calls.push({ url, opts });
+        if (String(url).includes('initializeUpload')) {
+          n++;
+          return {
+            status: 200,
+            json: {
+              value: { uploadUrl: `https://uploads.example/${n}`, image: `urn:li:image:${n}` },
+            },
+          };
+        }
+        if (opts?.method === 'PUT') return { status: 201, json: null };
+        return { status: 201, json: null, headers: { 'x-restli-id': 'urn:li:share:9' } };
+      };
+      const post = liPost();
+      stored.set('k1', Buffer.from('one'));
+      stored.set('k2', Buffer.from('two'));
+      images.push({
+        contentId: post.id,
+        position: 0,
+        asset: { filename: 'one.png', mimeType: 'image/png', storageKey: 'k1' },
+      });
+      images.push({
+        contentId: post.id,
+        position: 1,
+        asset: { filename: 'two.png', mimeType: 'image/png', storageKey: 'k2' },
+      });
+      await queue({ contentId: post.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await publishing.processDue();
+
+      expect(jobs[0].status).toBe('PUBLISHED');
+      expect(jobs[0].externalId).toBe('urn:li:share:9');
+      expect(jobs[0].payload.imageCount).toBe(2);
+      const posted = calls[calls.length - 1];
+      expect(posted.url).toBe('https://api.linkedin.com/rest/posts');
+      expect(posted.opts.headers.Authorization).toBe(`Bearer ${TOKEN}`);
+      expect(posted.opts.body.commentary).toBe(
+        'Open Day on 14 March \\(free\\).\n\nRegister\n\n{hashtag|\\#|OpenDay}',
+      );
+      expect(posted.opts.body.content.multiImage.images).toHaveLength(2);
+
+      const fb = piece(); // a Facebook post
+      const res = await queue({ contentId: fb.id, channelIds: [ch.id], when: 'now' }).expect(422);
+      expect(String(res.body.message)).toMatch(/cannot publish this type/);
+    });
+
+    it('flags the channel when the 60-day token expires and cancels what was waiting', async () => {
+      const ch = (await create().expect(201)).body;
+      wpHttp = async () => ({ status: 401, json: { message: 'The token has expired' } });
+      const first = liPost();
+      const second = liPost();
+      second.scheduledFor = new Date(Date.now() + 3_600_000);
+      await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await queue({ contentId: second.id, channelIds: [ch.id], when: 'scheduled' }).expect(201);
+      await publishing.processDue();
+      expect(jobs.find((j) => j.contentId === first.id).status).toBe('FAILED');
+      expect(jobs.find((j) => j.contentId === second.id).status).toBe('CANCELLED');
+      expect(channels[0].status).toBe('ERROR');
+      expect(channels[0].lastError).toMatch(/60 days/);
+      await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(409);
+    });
+  });
+
   it('lists jobs for a piece of content', async () => {
     const c = await makeChannel();
     const p = piece();

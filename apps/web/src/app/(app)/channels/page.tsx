@@ -110,6 +110,7 @@ export default function ChannelsPage() {
                     {PROVIDER_LABELS[c.provider].label}
                     {c.config?.siteUrl ? ` · ${c.config.siteUrl.replace(/^https:\/\//, '')}` : ''}
                     {c.config?.pageName ? ` · ${c.config.pageName}` : ''}
+                    {c.config?.memberName ? ` · ${c.config.memberName}` : ''}
                     {c.config?.publishAs === 'draft' ? ' · saves drafts' : ''}
                   </p>
                   {c.status === 'ERROR' && (

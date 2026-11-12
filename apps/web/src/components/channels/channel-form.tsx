@@ -29,6 +29,7 @@ export function ChannelForm({
 }) {
   const wordpress = provider === 'WORDPRESS';
   const facebook = provider === 'FACEBOOK';
+  const linkedin = provider === 'LINKEDIN';
   const [name, setName] = useState(PROVIDER_LABELS[provider].label);
   const [siteUrl, setSiteUrl] = useState('https://');
   const [username, setUsername] = useState('');
@@ -44,12 +45,17 @@ export function ChannelForm({
       (/^https:\/\/\S+\.\S+/i.test(siteUrl.trim()) &&
         username.trim().length > 0 &&
         password.trim().length >= 8)) &&
-    (!facebook || (/^\d{5,25}$/.test(pageId.trim()) && token.trim().length >= 20));
+    (!facebook || (/^\d{5,25}$/.test(pageId.trim()) && token.trim().length >= 20)) &&
+    (!linkedin || token.trim().length >= 20);
 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (facebook) {
       onSubmit({ name: name.trim(), pageId: pageId.trim(), accessToken: token.trim() });
+      return;
+    }
+    if (linkedin) {
+      onSubmit({ name: name.trim(), accessToken: token.trim() });
       return;
     }
     onSubmit(
@@ -204,6 +210,44 @@ export function ChannelForm({
           </details>
         </>
       )}
+      {linkedin && (
+        <>
+          <input
+            className="input"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            required
+            minLength={20}
+            maxLength={2000}
+            autoComplete="new-password"
+            aria-label="LinkedIn access token"
+            placeholder="LinkedIn access token"
+          />
+          <details className="rounded-lg bg-surface p-2.5 text-xs text-slate-600">
+            <summary className="cursor-pointer font-semibold">
+              How do I get an access token?
+            </summary>
+            <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
+              <li>Create an app at linkedin.com/developers and link it to a LinkedIn Page.</li>
+              <li>
+                On the Products tab, request “Share on LinkedIn” and “Sign In with LinkedIn using
+                OpenID Connect”.
+              </li>
+              <li>
+                Open the Token Generator tool, tick the scopes openid, profile and w_member_social,
+                and generate a token for your account.
+              </li>
+              <li>Copy the token and paste it here.</li>
+            </ol>
+            <p className="mt-1.5">
+              Posts are published on your personal profile. LinkedIn tokens last 60 days; when it
+              expires the channel shows “Needs reconnecting” and you add it again with a new token.
+              The token is checked, then stored encrypted and never shown again.
+            </p>
+          </details>
+        </>
+      )}
       {error && (
         <p className="rounded-lg border border-red-200 bg-danger-soft p-2.5 text-xs text-danger-ink">
           {error}
@@ -211,7 +255,7 @@ export function ChannelForm({
       )}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={busy || !ready}>
-          {busy ? (wordpress || facebook ? 'Checking…' : 'Adding…') : 'Add channel'}
+          {busy ? (wordpress || facebook || linkedin ? 'Checking…' : 'Adding…') : 'Add channel'}
         </button>
         <button type="button" className="btn-ghost" onClick={onCancel} disabled={busy}>
           Cancel

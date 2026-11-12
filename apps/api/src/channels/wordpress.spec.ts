@@ -129,7 +129,11 @@ describe('safe JSON requests', () => {
       headers: { Authorization: 'Basic abc' },
       body: { title: 'T' },
     });
-    expect(res).toEqual({ status: 201, json: { id: 7 } });
+    expect(res).toEqual({
+      status: 201,
+      json: { id: 7 },
+      headers: { 'content-type': 'text/plain;charset=UTF-8' }, // headers are returned, lower-cased
+    });
     expect(seen[0].method).toBe('POST');
     expect(seen[0].body).toBe('{"title":"T"}');
     expect(seen[0].headers.Authorization).toBe('Basic abc');

@@ -14,10 +14,12 @@ export interface HttpResponse {
   status: number;
   /** Parsed JSON body, or null when the body was empty or not JSON. */
   json: any;
+  /** Response headers, lower-case names (e.g. the id LinkedIn returns for a new post). */
+  headers?: Record<string, string>;
 }
 
 export interface HttpOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   headers?: Record<string, string>;
   /** JSON body. Ignored when `raw` is set. */
   body?: unknown;
@@ -74,7 +76,7 @@ export function makeSafeJsonRequest(
     } catch {
       json = null;
     }
-    return { status: res.status, json };
+    return { status: res.status, json, headers: Object.fromEntries(res.headers.entries()) };
   };
 }
 

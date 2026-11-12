@@ -433,6 +433,7 @@ export interface Channel {
     wordpressUser?: string;
     pageId?: string;
     pageName?: string;
+    memberName?: string;
   } | null;
   createdAt: string;
 }
