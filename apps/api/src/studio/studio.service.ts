@@ -13,7 +13,9 @@ import { ApprovalsService } from './approvals.service';
 import { ClaimWarning, findUnsupportedClaims, flattenStrings, seoChecks } from './content-guard';
 import { PromptContext, buildPrompt, buildTranslationPrompt } from './content-prompts';
 import {
+  ARTICLE_WORD_TARGET,
   ArticleContent,
+  articleWordCount,
   GenerationOptions,
   Kind,
   LANGUAGES,
@@ -24,6 +26,9 @@ import {
   schemaFor,
   titleOf,
 } from './content-schemas';
+
+/** A first draft under this share of its word target is asked for again, once. */
+const SHORT_ARTICLE_RATIO = 0.8;
 
 const isLanguage = (v: unknown): v is Language => LANGUAGES.includes(v as Language);
 
@@ -46,6 +51,42 @@ export class StudioService {
   ) {}
 
   // ---------- helpers ----------
+
+  /**
+   * Free models often stop an article early. When the first draft is clearly under its target, ask once
+   * more, telling the model exactly how far it fell short, and keep whichever draft is longer.
+   * The second attempt is best effort: if it fails (limits, timeouts), the first draft is still used.
+   */
+  private async lengthenIfShort<T extends { data: { content: unknown } }>(
+    orgId: string,
+    userId: string,
+    request: Parameters<AiService['generateJson']>[1],
+    first: T,
+    options: GenerationOptions,
+  ): Promise<T> {
+    const target = ARTICLE_WORD_TARGET[options.length];
+    const words = (r: T) => {
+      try {
+        return articleWordCount(r.data.content as ArticleContent);
+      } catch {
+        return 0;
+      }
+    };
+    const firstWords = words(first);
+    if (firstWords >= target * SHORT_ARTICLE_RATIO) return first;
+    try {
+      const second = (await this.ai.generateJson(
+        { orgId, userId },
+        {
+          ...request,
+          prompt: `${request.prompt}\n\nIMPORTANT: your previous draft had only ${firstWords} words, but the article body must be AT LEAST ${target} words. Write the complete article again, longer: develop every section with full paragraphs and add useful general explanation (no new facts, dates, numbers or links).`,
+        },
+      )) as unknown as T;
+      return words(second) > firstWords ? second : first;
+    } catch {
+      return first;
+    }
+  }
 
   private async loadSource(orgId: string, sourceId: string) {
     // Scoped by organization: another tenant's source is simply "not found".
@@ -180,10 +221,16 @@ export class StudioService {
     const { system, prompt, maxTokens } = buildPrompt(dto.kind, ctx);
 
     // AI errors (quota, rate limit, not configured...) propagate with their own clear codes.
-    const out = await this.ai.generateJson(
-      { orgId, userId },
-      { system, prompt, maxTokens, temperature: 0.6, schema: generationEnvelope(dto.kind) },
-    );
+    const request = {
+      system,
+      prompt,
+      maxTokens,
+      temperature: 0.6,
+      schema: generationEnvelope(dto.kind),
+    };
+    let out = await this.ai.generateJson({ orgId, userId }, request);
+    if (dto.kind === 'ARTICLE')
+      out = await this.lengthenIfShort(orgId, userId, request, out, options);
 
     const content = this.postProcess(dto.kind, out.data.content as any);
     const allowed = this.corpus(verified, org, brand, options);
