@@ -22,6 +22,11 @@ const schema = z.object({
   AI_MONTHLY_IMAGE_LIMIT: z.coerce.number().int().min(0).default(300),
   // 32 random bytes, base64. Encrypts channel logins (e.g. WordPress application passwords) at rest.
   ENCRYPTION_KEY: z.string().min(40).optional(),
+  // LinkedIn versions its API by month and retires old ones after about a year. Update when LinkedIn says so.
+  LINKEDIN_API_VERSION: z
+    .string()
+    .regex(/^\d{6}$/)
+    .default('202601'),
   // Background publishing. Set PUBLISH_WORKER=off to stop this process from posting (e.g. on a replica).
   PUBLISH_WORKER: z.enum(['on', 'off']).default('on'),
   PUBLISH_POLL_SECONDS: z.coerce.number().int().min(5).max(3600).default(30),
