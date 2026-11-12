@@ -134,6 +134,36 @@ export class PublishingService {
     return { jobs, warnings: check.warnings };
   }
 
+  /**
+   * Queues scheduled content to every connected channel that has automatic publishing on. Each channel is
+   * tried on its own, so one that cannot take this content (wrong type, network rules) never blocks the others.
+   * Channels that already have this content waiting or published are skipped without a message.
+   */
+  async queueAuto(orgId: string, actorId: string, contentId: string, now = new Date()) {
+    const channels = await this.prisma.channel.findMany({
+      where: { organizationId: orgId, autoPublish: true, status: ChannelStatus.CONNECTED },
+    });
+    const queued: string[] = [];
+    const skipped: { channel: string; reason: string }[] = [];
+    for (const c of channels) {
+      try {
+        await this.queue(orgId, actorId, { contentId, channelIds: [c.id], when: 'scheduled' }, now);
+        queued.push(c.name);
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : 'Could not be queued';
+        if (/^Already /.test(reason)) continue;
+        // A kind this channel never publishes (an article for a Facebook page) is expected, not a problem.
+        if (/cannot publish this type/.test(reason)) continue;
+        const detail = (e as any)?.getResponse?.()?.errors;
+        skipped.push({
+          channel: c.name,
+          reason: Array.isArray(detail) && detail.length ? detail.join(' ') : reason,
+        });
+      }
+    }
+    return { queued, skipped };
+  }
+
   list(orgId: string, filter: { contentId?: string; status?: PublishStatus }) {
     return this.prisma.publishJob.findMany({
       where: {

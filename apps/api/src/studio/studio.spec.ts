@@ -397,6 +397,7 @@ const prismaMock: any = {
 
 // Publishing is tested on its own; here it only has to be reachable from approvals and scheduling.
 prismaMock.publishJob = { updateMany: jest.fn(async () => ({ count: 0 })) };
+prismaMock.channel = { findMany: jest.fn(async () => []) };
 prismaMock.contentReview = {
   create: jest.fn(async ({ data }: any) => {
     const r = { id: randomUUID(), createdAt: new Date(), ...data };

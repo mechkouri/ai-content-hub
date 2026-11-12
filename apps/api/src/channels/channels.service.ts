@@ -49,9 +49,12 @@ export class ChannelsService {
   async create(
     orgId: string,
     actorId: string,
-    input: { provider: ChannelProvider; name: string } & Record<string, unknown>,
+    input: { provider: ChannelProvider; name: string; autoPublish?: boolean } & Record<
+      string,
+      unknown
+    >,
   ): Promise<PublicChannel> {
-    const { provider, name, ...details } = input;
+    const { provider, name, autoPublish, ...details } = input;
     const publisher = this.publishers.find((p) => p.provider === provider);
     if (!publisher) {
       throw new UnprocessableEntityException(
@@ -76,6 +79,7 @@ export class ChannelsService {
         status: ChannelStatus.CONNECTED,
         config: config as any,
         credentials,
+        autoPublish: autoPublish ?? false,
       },
     });
     return toPublic(created);
@@ -84,13 +88,14 @@ export class ChannelsService {
   async update(
     orgId: string,
     id: string,
-    input: { name?: string; status?: ChannelStatus },
+    input: { name?: string; status?: ChannelStatus; autoPublish?: boolean },
   ): Promise<PublicChannel> {
     const c = await this.findRaw(orgId, id);
     const updated = await this.prisma.channel.update({
       where: { id: c.id },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.autoPublish !== undefined ? { autoPublish: input.autoPublish } : {}),
         ...(input.status !== undefined ? { status: input.status, lastError: null } : {}),
       },
     });

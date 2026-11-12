@@ -46,7 +46,9 @@ export class ScheduleService {
     });
     // Posts queued "at the scheduled time" move with the date.
     await this.publishing.rescheduleForContent(piece.id, when);
-    return updated;
+    // Channels with automatic publishing take it from here.
+    const auto = await this.publishing.queueAuto(orgId, actorId, piece.id, now);
+    return { ...updated, auto };
   }
 
   async unschedule(orgId: string, id: string) {

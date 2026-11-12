@@ -29,12 +29,14 @@ const createSchema = z
   .object({
     provider: z.enum(['TEST', 'WORDPRESS', 'FACEBOOK', 'INSTAGRAM', 'LINKEDIN']),
     name: z.string().trim().min(2).max(80),
+    autoPublish: z.boolean().optional(),
   })
   // Provider-specific details (site address, login...) are checked by the provider itself.
   .passthrough();
 const updateSchema = z.object({
   name: z.string().trim().min(2).max(80).optional(),
   status: z.enum(['CONNECTED', 'DISCONNECTED']).optional(),
+  autoPublish: z.boolean().optional(),
 });
 const queueSchema = z.object({
   contentId: z.string().uuid(),
