@@ -6,7 +6,9 @@ import request from 'supertest';
 import { AppModule } from '../app.module';
 import { TOKEN_VERIFIER } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { randomBytes } from 'crypto';
 import { PermanentPublishError, PUBLISHERS } from './publisher';
+import { HTTP_CLIENT } from './safe-request';
 import { PublishingService } from './publishing.service';
 import { checkPost, renderPost } from './publishing-rules';
 
@@ -186,13 +188,18 @@ describe('channels and publishing', () => {
   let app: INestApplication;
   let publishing: PublishingService;
   let sent: any[];
+  // The WordPress site is simulated: each test decides how it answers.
+  let wpHttp: (url: string, opts?: any) => Promise<{ status: number; json: any }>;
   const as = (id: string) => `Bearer user:${id}`;
   const base = `/api/organizations/${ORG_A}`;
 
   beforeAll(async () => {
+    process.env.ENCRYPTION_KEY = randomBytes(32).toString('base64');
     const mod = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(HTTP_CLIENT)
+      .useValue((url: string, opts?: any) => wpHttp(url, opts))
       .overrideProvider(TOKEN_VERIFIER)
       .useValue({
         verify: async (t: string) => {
@@ -206,7 +213,10 @@ describe('channels and publishing', () => {
     await app.init();
     publishing = app.get(PublishingService);
   });
-  afterAll(() => app.close());
+  afterAll(async () => {
+    delete process.env.ENCRYPTION_KEY;
+    await app.close();
+  });
 
   const piece = (over: Record<string, unknown> = {}) => {
     const p: any = {
@@ -534,6 +544,186 @@ describe('channels and publishing', () => {
       await jobAction(id, 'retry').expect(201);
       jobs[0].status = 'PUBLISHING';
       await jobAction(id, 'cancel').expect(409);
+    });
+  });
+
+  describe('WordPress channels', () => {
+    const site = 'https://site.example';
+    const login = { username: 'editor', applicationPassword: 'abcd efgh ijkl mnop' };
+    const okMe = {
+      status: 200,
+      json: { id: 3, name: 'Jane', capabilities: { publish_posts: true } },
+    };
+    const wpBody = { provider: 'WORDPRESS', name: 'My website', siteUrl: site + '/', ...login };
+    const create = (body: object = wpBody, user = U_ADMIN) =>
+      request(app.getHttpServer())
+        .post(`${base}/channels`)
+        .set('Authorization', as(user))
+        .send(body);
+    const article = (over: Record<string, unknown> = {}) =>
+      piece({
+        kind: 'ARTICLE',
+        title: 'Open Day at Atlas',
+        language: 'en',
+        content: {
+          seoTitle: 'Open Day at Atlas University',
+          metaDescription: 'Join us on 14 March.',
+          slug: 'open-day-atlas',
+          h1: 'Open Day at Atlas University',
+          excerpt: 'Meet teachers on 14 March.',
+          introduction: 'Atlas University holds its Open Day on 14 March.',
+          sections: [{ heading: 'What to expect', body: 'Tours and talks.' }],
+          conclusion: 'See you there.',
+          faq: [],
+          imageAltText: 'Campus',
+        },
+        ...over,
+      });
+
+    beforeEach(() => {
+      wpHttp = async () => okMe;
+    });
+
+    it('verifies the login, stores it encrypted, and never returns it', async () => {
+      const res = await create().expect(201);
+      expect(res.body.config).toMatchObject({
+        siteUrl: site,
+        publishAs: 'publish',
+        wordpressUser: 'Jane',
+      });
+      expect(res.body).not.toHaveProperty('credentials');
+      expect(JSON.stringify(res.body)).not.toContain('abcd efgh');
+      const stored = channels[0].credentials as string;
+      expect(stored).toMatch(/^v1:/);
+      expect(stored).not.toContain('abcd efgh');
+      expect(stored).not.toContain('editor');
+
+      const list = await request(app.getHttpServer())
+        .get(`${base}/channels`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(JSON.stringify(list.body)).not.toContain('credentials');
+      const renamed = await request(app.getHttpServer())
+        .patch(`${base}/channels/${res.body.id}`)
+        .set('Authorization', as(U_ADMIN))
+        .send({ name: 'Renamed site' })
+        .expect(200);
+      expect(renamed.body).not.toHaveProperty('credentials');
+      const prov = await request(app.getHttpServer())
+        .get(`${base}/channels/providers`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(prov.body.find((p: any) => p.provider === 'WORDPRESS').available).toBe(true);
+    });
+
+    it('saves nothing when the login is wrong or the site is not WordPress', async () => {
+      wpHttp = async () => ({ status: 401, json: { code: 'incorrect_password' } });
+      const bad = await create().expect(422);
+      expect(String(bad.body.message)).toMatch(/did not accept/);
+      wpHttp = async () => ({ status: 404, json: null });
+      await create().expect(422);
+      await create({ ...wpBody, siteUrl: 'http://insecure.example' }).expect(422);
+      await create({ ...wpBody, applicationPassword: 'short' }).expect(400);
+      await create({ provider: 'WORDPRESS', name: 'No details' }).expect(400);
+      expect(channels).toHaveLength(0);
+      await create(wpBody, U_EDITOR).expect(403);
+    });
+
+    it('is unavailable, with a clear reason, when the server has no encryption key', async () => {
+      const key = process.env.ENCRYPTION_KEY;
+      delete process.env.ENCRYPTION_KEY;
+      try {
+        const res = await create().expect(422);
+        expect(String(res.body.message)).toMatch(/ENCRYPTION_KEY/);
+        const prov = await request(app.getHttpServer())
+          .get(`${base}/channels/providers`)
+          .set('Authorization', as(U_VIEWER))
+          .expect(200);
+        expect(prov.body.find((p: any) => p.provider === 'WORDPRESS').available).toBe(false);
+        expect(prov.body.find((p: any) => p.provider === 'TEST').available).toBe(true);
+        expect(channels).toHaveLength(0);
+      } finally {
+        process.env.ENCRYPTION_KEY = key;
+      }
+    });
+
+    it('publishes an approved article with the decrypted login, and only articles', async () => {
+      const ch = (await create().expect(201)).body;
+      const calls: any[] = [];
+      wpHttp = async (url, opts) => {
+        calls.push({ url, opts });
+        if (opts?.method === 'POST')
+          return { status: 201, json: { id: 77, link: site + '/open-day-atlas/' } };
+        return { status: 200, json: [] };
+      };
+      const art = article();
+      await queue({ contentId: art.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await publishing.processDue();
+
+      const job = jobs[0];
+      expect(job.status).toBe('PUBLISHED');
+      expect(job.externalId).toBe('77');
+      expect(job.externalUrl).toBe(site + '/open-day-atlas/');
+      expect(job.payload.html).toContain('<h2>What to expect</h2>');
+      const post = calls.find((c) => c.opts?.method === 'POST');
+      expect(post.url).toBe(site + '/wp-json/wp/v2/posts');
+      expect(post.opts.headers.Authorization).toBe(
+        'Basic ' + Buffer.from('editor:abcd efgh ijkl mnop').toString('base64'),
+      );
+      expect(post.opts.body).toMatchObject({
+        title: 'Open Day at Atlas University',
+        slug: 'open-day-atlas',
+        status: 'publish',
+      });
+
+      const social = piece(); // a Facebook post
+      const res = await queue({ contentId: social.id, channelIds: [ch.id], when: 'now' }).expect(
+        422,
+      );
+      expect(String(res.body.message)).toMatch(/cannot publish this type/);
+    });
+
+    it('stops using a channel whose login was revoked, and keeps nothing waiting on it', async () => {
+      const ch = (await create().expect(201)).body;
+      wpHttp = async (_u, opts) =>
+        opts?.method === 'POST'
+          ? { status: 401, json: { code: 'rest_cannot_create' } }
+          : { status: 200, json: [] };
+      const first = article();
+      const second = article({ title: 'Another article' });
+      await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await queue({ contentId: second.id, channelIds: [ch.id], when: 'scheduled' }).expect(409); // not scheduled: nothing queued
+      second.scheduledFor = new Date(Date.now() + 3_600_000);
+      await queue({ contentId: second.id, channelIds: [ch.id], when: 'scheduled' }).expect(201);
+
+      await publishing.processDue();
+      expect(jobs.find((j) => j.contentId === first.id).status).toBe('FAILED');
+      expect(jobs.find((j) => j.contentId === first.id).lastError).toMatch(/Reconnect/);
+      expect(jobs.find((j) => j.contentId === second.id).status).toBe('CANCELLED');
+      expect(channels[0].status).toBe('ERROR');
+      expect(channels[0].lastError).toMatch(/rejected the saved login/);
+      await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(409); // needs reconnecting
+    });
+
+    it('retries a WordPress outage and then succeeds without posting twice', async () => {
+      const ch = (await create().expect(201)).body;
+      let posts = 0;
+      wpHttp = async (_u, opts) => {
+        if (opts?.method !== 'POST') return { status: 200, json: [] };
+        posts++;
+        return posts === 1
+          ? { status: 503, json: null }
+          : { status: 201, json: { id: 5, link: site + '/p/' } };
+      };
+      const art = article();
+      await queue({ contentId: art.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      const t0 = new Date();
+      await publishing.processDue(t0);
+      expect(jobs[0].status).toBe('QUEUED');
+      expect(jobs[0].lastError).toMatch(/not available right now/);
+      await publishing.processDue(new Date(t0.getTime() + 6 * 60_000));
+      expect(jobs[0].status).toBe('PUBLISHED');
+      expect(posts).toBe(2);
     });
   });
 

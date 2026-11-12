@@ -120,6 +120,8 @@ export async function assertSafeUrl(
 export interface TransportRequest extends SafeTarget {
   timeoutMs: number;
   headers: Record<string, string>;
+  method?: string;
+  body?: string;
 }
 export type Transport = (req: TransportRequest) => Promise<Response>;
 
@@ -140,6 +142,8 @@ export const defaultTransport: Transport = async (req) => {
     const res = await undiciFetch(req.url.toString(), {
       dispatcher: agent,
       redirect: 'manual',
+      method: req.method ?? 'GET',
+      body: req.body,
       headers: req.headers,
       signal: AbortSignal.timeout(req.timeoutMs),
     });

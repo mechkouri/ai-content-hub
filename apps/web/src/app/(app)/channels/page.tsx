@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { ChannelForm, ChannelFormValues } from '@/components/channels/channel-form';
 import { JobBadge, jobWhen } from '@/components/channels/job-parts';
 import {
   apiFetch,
@@ -28,7 +29,7 @@ export default function ChannelsPage() {
   const [jobs, setJobs] = useState<PublishJob[]>([]);
   const [titles, setTitles] = useState<Map<string, ContentSummary>>(new Map());
   const [adding, setAdding] = useState<ChannelProvider | null>(null);
-  const [name, setName] = useState('');
+  const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -105,30 +106,54 @@ export default function ChannelsPage() {
                   <p className="truncate font-semibold" dir="auto">
                     {c.name}
                   </p>
-                  <p className="text-xs text-slate-400">{PROVIDER_LABELS[c.provider].label}</p>
+                  <p className="text-xs text-slate-400">
+                    {PROVIDER_LABELS[c.provider].label}
+                    {c.config?.siteUrl ? ` · ${c.config.siteUrl.replace(/^https:\/\//, '')}` : ''}
+                    {c.config?.publishAs === 'draft' ? ' · saves drafts' : ''}
+                  </p>
+                  {c.status === 'ERROR' && (
+                    <p className="mt-1 text-xs text-danger-ink">
+                      {c.lastError ?? 'The login stopped working.'} Remove this channel and add it
+                      again with a new application password.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={c.status === 'CONNECTED' ? 'chip-ok' : 'chip-draft'}>
-                    {c.status === 'CONNECTED' ? 'Connected' : 'Paused'}
+                  <span
+                    className={
+                      c.status === 'CONNECTED'
+                        ? 'chip-ok'
+                        : c.status === 'ERROR'
+                          ? 'chip-warn'
+                          : 'chip-draft'
+                    }
+                  >
+                    {c.status === 'CONNECTED'
+                      ? 'Connected'
+                      : c.status === 'ERROR'
+                        ? 'Needs reconnecting'
+                        : 'Paused'}
                   </span>
                   {canManage && (
                     <>
-                      <button
-                        className="text-xs font-semibold text-brand"
-                        disabled={busy}
-                        onClick={() =>
-                          run(() =>
-                            apiFetch(`${base}/channels/${c.id}`, {
-                              method: 'PATCH',
-                              body: JSON.stringify({
-                                status: c.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED',
+                      {c.status !== 'ERROR' && (
+                        <button
+                          className="text-xs font-semibold text-brand"
+                          disabled={busy}
+                          onClick={() =>
+                            run(() =>
+                              apiFetch(`${base}/channels/${c.id}`, {
+                                method: 'PATCH',
+                                body: JSON.stringify({
+                                  status: c.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED',
+                                }),
                               }),
-                            }),
-                          )
-                        }
-                      >
-                        {c.status === 'CONNECTED' ? 'Pause' : 'Resume'}
-                      </button>
+                            )
+                          }
+                        >
+                          {c.status === 'CONNECTED' ? 'Pause' : 'Resume'}
+                        </button>
+                      )}
                       <button
                         className="text-xs font-semibold text-slate-400 hover:text-danger"
                         disabled={busy}
@@ -157,7 +182,10 @@ export default function ChannelsPage() {
           {providers.map((p) => {
             const info = PROVIDER_LABELS[p.provider];
             return (
-              <li key={p.provider} className="rounded-xl border border-line p-3">
+              <li
+                key={p.provider}
+                className={`rounded-xl border border-line p-3 ${adding === p.provider && p.provider !== 'TEST' ? 'sm:col-span-2 xl:col-span-2' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold">{info.label}</p>
                   {!p.available && <span className="chip-draft">Soon</span>}
@@ -168,49 +196,37 @@ export default function ChannelsPage() {
                     className="btn-ghost mt-2"
                     onClick={() => {
                       setAdding(p.provider);
-                      setName(info.label);
+                      setFormError('');
                     }}
                   >
                     Add
                   </button>
                 )}
                 {adding === p.provider && (
-                  <form
-                    className="mt-2 space-y-2"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const ok = await run(() =>
-                        apiFetch(`${base}/channels`, {
-                          method: 'POST',
-                          body: JSON.stringify({ provider: p.provider, name: name.trim() }),
-                        }),
-                      );
-                      if (ok) setAdding(null);
+                  <ChannelForm
+                    provider={p.provider}
+                    busy={busy}
+                    error={formError}
+                    onCancel={() => {
+                      setAdding(null);
+                      setFormError('');
                     }}
-                  >
-                    <input
-                      className="input"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      minLength={2}
-                      maxLength={80}
-                      required
-                      aria-label="Channel name"
-                    />
-                    <div className="flex gap-2">
-                      <button className="btn-primary" disabled={busy || name.trim().length < 2}>
-                        Add channel
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        onClick={() => setAdding(null)}
-                        disabled={busy}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+                    onSubmit={async (v: ChannelFormValues) => {
+                      setBusy(true);
+                      setFormError('');
+                      try {
+                        await apiFetch(`${base}/channels`, {
+                          method: 'POST',
+                          body: JSON.stringify({ provider: p.provider, ...v }),
+                        });
+                        setAdding(null);
+                        await load();
+                      } catch (e) {
+                        setFormError(describeError(e));
+                      }
+                      setBusy(false);
+                    }}
+                  />
                 )}
               </li>
             );

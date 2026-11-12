@@ -72,6 +72,8 @@ model Channel {
   /// Non-secret settings (site address, page name...). Secrets never live here.
   config         Json            @default("{}")
   lastError      String?
+  /// Login for the channel, encrypted with ENCRYPTION_KEY. Never returned by the API.
+  credentials    String?
   createdById    String          @db.Uuid
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

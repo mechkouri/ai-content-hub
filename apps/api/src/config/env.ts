@@ -20,6 +20,8 @@ const schema = z.object({
   AI_MONTHLY_TEXT_LIMIT: z.coerce.number().int().min(0).default(3000),
   AI_DAILY_IMAGE_LIMIT: z.coerce.number().int().min(0).default(30),
   AI_MONTHLY_IMAGE_LIMIT: z.coerce.number().int().min(0).default(300),
+  // 32 random bytes, base64. Encrypts channel logins (e.g. WordPress application passwords) at rest.
+  ENCRYPTION_KEY: z.string().min(40).optional(),
   // Background publishing. Set PUBLISH_WORKER=off to stop this process from posting (e.g. on a replica).
   PUBLISH_WORKER: z.enum(['on', 'off']).default('on'),
   PUBLISH_POLL_SECONDS: z.coerce.number().int().min(5).max(3600).default(30),

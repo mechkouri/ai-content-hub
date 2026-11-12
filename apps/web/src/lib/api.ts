@@ -426,6 +426,8 @@ export interface Channel {
   name: string;
   status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
   lastError: string | null;
+  /** Non-secret settings, e.g. the site address of a WordPress channel. */
+  config: { siteUrl?: string; publishAs?: 'publish' | 'draft'; wordpressUser?: string } | null;
   createdAt: string;
 }
 export interface ProviderInfo {
