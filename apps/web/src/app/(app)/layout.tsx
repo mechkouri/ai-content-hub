@@ -13,6 +13,7 @@ const FEATURES: [string, string][] = [
   ['/studio', 'the Content studio'],
   ['/calendar', 'the Content calendar'],
   ['/campaigns', 'Campaigns'],
+  ['/channels', 'Channels'],
   ['/brand', 'the Brand kit'],
   ['/media', 'the Media library'],
   ['/ai', 'AI providers'],

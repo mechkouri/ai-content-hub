@@ -20,6 +20,9 @@ const schema = z.object({
   AI_MONTHLY_TEXT_LIMIT: z.coerce.number().int().min(0).default(3000),
   AI_DAILY_IMAGE_LIMIT: z.coerce.number().int().min(0).default(30),
   AI_MONTHLY_IMAGE_LIMIT: z.coerce.number().int().min(0).default(300),
+  // Background publishing. Set PUBLISH_WORKER=off to stop this process from posting (e.g. on a replica).
+  PUBLISH_WORKER: z.enum(['on', 'off']).default('on'),
+  PUBLISH_POLL_SECONDS: z.coerce.number().int().min(5).max(3600).default(30),
   SUPABASE_JWT_SECRET: z.string().min(1).optional(),
   SUPABASE_JWKS_URL: z.string().url().optional(),
 });

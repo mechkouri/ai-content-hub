@@ -35,6 +35,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/studio', label: 'Content studio', icon: PenLine },
       { href: '/calendar', label: 'Content calendar', icon: CalendarDays },
       { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
+      { href: '/channels', label: 'Channels', icon: Share2 },
     ],
   },
   {
@@ -51,7 +52,6 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: 'Visual design studio', icon: Wand2 },
   { label: 'Workflow automation', icon: Workflow },
-  { label: 'Channels', icon: Share2 },
   { label: 'Analytics', icon: LineChart },
 ];
 

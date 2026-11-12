@@ -71,7 +71,8 @@ export function ScheduleBox({
       </div>
       {error && <p className="text-xs text-danger-ink">{error}</p>}
       <p className="text-[11px] text-slate-400">
-        This plans the date only. Nothing is posted automatically yet.
+        This plans the date. To post at that time, choose “At the scheduled time” in the Publish
+        section.
       </p>
     </div>
   );

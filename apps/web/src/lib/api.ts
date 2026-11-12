@@ -8,6 +8,8 @@ export class ApiError extends Error {
     message: string,
     public code?: string,
     public retryAfterSeconds?: number,
+    /** The raw error body, for details such as a list of rule violations. */
+    public body?: unknown,
   ) {
     super(message);
   }
@@ -29,7 +31,13 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     const b = body as { code?: string; retryAfterSeconds?: number } | null;
-    throw new ApiError(res.status, errorMessage(body, res.status), b?.code, b?.retryAfterSeconds);
+    throw new ApiError(
+      res.status,
+      errorMessage(body, res.status),
+      b?.code,
+      b?.retryAfterSeconds,
+      body,
+    );
   }
   return body as T;
 }
@@ -410,6 +418,49 @@ export interface CampaignDetail {
   pieces: CampaignPiece[];
   stats: CampaignStats;
 }
+
+export type ChannelProvider = 'TEST' | 'WORDPRESS' | 'FACEBOOK' | 'INSTAGRAM' | 'LINKEDIN';
+export interface Channel {
+  id: string;
+  provider: ChannelProvider;
+  name: string;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  lastError: string | null;
+  createdAt: string;
+}
+export interface ProviderInfo {
+  provider: ChannelProvider;
+  available: boolean;
+}
+export type PublishStatus = 'QUEUED' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED' | 'CANCELLED';
+export interface PublishJob {
+  id: string;
+  contentId: string;
+  channelId: string;
+  status: PublishStatus;
+  runAt: string;
+  attempts: number;
+  lastError: string | null;
+  payload: { text?: string; title?: string } | null;
+  externalId: string | null;
+  externalUrl: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+}
+export interface PublishQueued {
+  jobs: PublishJob[];
+  warnings: string[];
+}
+
+export const PROVIDER_LABELS: Record<ChannelProvider, { label: string; blurb: string }> = {
+  TEST: { label: 'Test channel', blurb: 'Posts nothing anywhere. Try the whole workflow safely.' },
+  WORDPRESS: { label: 'WordPress website', blurb: 'Publish articles to your site.' },
+  FACEBOOK: { label: 'Facebook page', blurb: 'Publish posts to your page.' },
+  INSTAGRAM: { label: 'Instagram', blurb: 'Publish posts to your business account.' },
+  LINKEDIN: { label: 'LinkedIn', blurb: 'Publish posts to your page or profile.' },
+};
+
+export const canManageChannels = (role: Role | null) => role === 'OWNER' || role === 'ADMIN';
 
 export const canScheduleContent = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'PUBLISHER';
