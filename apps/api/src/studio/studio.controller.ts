@@ -18,6 +18,7 @@ import { parseBody } from '../common/parse';
 import { OrgAccessGuard, RequirePermission } from '../organizations/org-access.guard';
 import { ApprovalsService } from './approvals.service';
 import { KINDS, LANGUAGES, optionsSchema } from './content-schemas';
+import { ImagesService } from './images.service';
 import { ScheduleService } from './schedule.service';
 import { StudioService } from './studio.service';
 
@@ -44,6 +45,8 @@ const listSchema = z.object({
   scheduledFrom: z.coerce.date().optional(),
   scheduledTo: z.coerce.date().optional(),
 });
+const attachSchema = z.object({ assetId: z.string().uuid() });
+const drawSchema = z.object({ prompt: z.string().trim().min(3).max(500).optional() });
 const scheduleSchema = z.object({ scheduledFor: z.coerce.date() });
 
 @Controller('organizations/:orgId/content')
@@ -53,6 +56,7 @@ export class StudioController {
     private readonly studio: StudioService,
     private readonly approvals: ApprovalsService,
     private readonly schedule: ScheduleService,
+    private readonly images: ImagesService,
   ) {}
 
   @Post('generate')
@@ -111,6 +115,50 @@ export class StudioController {
   @RequirePermission('content:read')
   reviews(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.approvals.history(orgId, uuid(id));
+  }
+
+  @Get(':id/images')
+  @RequirePermission('content:read')
+  listImages(@Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.images.list(orgId, uuid(id));
+  }
+
+  @Post(':id/images')
+  @RequirePermission('content:write')
+  attachImage(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    return this.images.attach(orgId, uuid(id), parseBody(attachSchema, body).assetId, req.user.id);
+  }
+
+  @Post(':id/images/generate')
+  @RequirePermission('ai:use')
+  generateImage(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    return this.images.generate(
+      orgId,
+      uuid(id),
+      req.user.id,
+      parseBody(drawSchema, body ?? {}).prompt,
+    );
+  }
+
+  @Delete(':id/images/:assetId')
+  @RequirePermission('content:write')
+  removeImage(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Param('assetId') assetId: string,
+  ) {
+    return this.images.remove(orgId, uuid(id), uuid(assetId), req.user.id);
   }
 
   @Post(':id/schedule')

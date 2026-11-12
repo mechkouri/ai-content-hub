@@ -8,6 +8,7 @@ import { TOKEN_VERIFIER } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
 import { PermanentPublishError, PUBLISHERS } from './publisher';
+import { STORAGE } from '../storage/storage';
 import { HTTP_CLIENT } from './safe-request';
 import { PublishingService } from './publishing.service';
 import { checkPost, renderPost } from './publishing-rules';
@@ -91,6 +92,8 @@ describe('publishing rules', () => {
 let channels: any[];
 let jobs: any[];
 let pieces: any[];
+let images: any[];
+let stored: Map<string, Buffer>;
 let memberships: { userId: string; organizationId: string; role: Role }[];
 
 const matches = (row: any, where: any): boolean =>
@@ -151,6 +154,11 @@ const prismaMock: any = {
   contentPiece: {
     findFirst: jest.fn(async ({ where }: any) => pieces.find((p) => matches(p, where)) ?? null),
   },
+  contentImage: {
+    findMany: jest.fn(async ({ where }: any) =>
+      images.filter((i) => i.contentId === where.contentId).sort((a, b) => a.position - b.position),
+    ),
+  },
   publishJob: {
     create: jest.fn(async ({ data }: any) => {
       const j = {
@@ -198,6 +206,12 @@ describe('channels and publishing', () => {
     const mod = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(STORAGE)
+      .useValue({
+        put: async (k: string, d: Buffer) => void stored.set(k, d),
+        get: async (k: string) => stored.get(k)!,
+        delete: async (k: string) => void stored.delete(k),
+      })
       .overrideProvider(HTTP_CLIENT)
       .useValue((url: string, opts?: any) => wpHttp(url, opts))
       .overrideProvider(TOKEN_VERIFIER)
@@ -242,6 +256,8 @@ describe('channels and publishing', () => {
     channels = [];
     jobs = [];
     pieces = [];
+    images = [];
+    stored = new Map();
     sent = [];
     memberships = [
       { userId: U_ADMIN, organizationId: ORG_A, role: Role.ADMIN },
@@ -283,7 +299,7 @@ describe('channels and publishing', () => {
         .set('Authorization', as(U_VIEWER))
         .expect(200);
       expect(prov.body.find((p: any) => p.provider === 'TEST').available).toBe(true);
-      expect(prov.body.find((p: any) => p.provider === 'FACEBOOK').available).toBe(false);
+      expect(prov.body.find((p: any) => p.provider === 'INSTAGRAM').available).toBe(false);
 
       const c = await makeChannel('  My test  ');
       expect(c.name).toBe('My test');
@@ -291,7 +307,7 @@ describe('channels and publishing', () => {
       const res = await request(app.getHttpServer())
         .post(`${base}/channels`)
         .set('Authorization', as(U_ADMIN))
-        .send({ provider: 'FACEBOOK', name: 'Page' })
+        .send({ provider: 'INSTAGRAM', name: 'Page' })
         .expect(422);
       expect(String(res.body.message)).toMatch(/not available yet/);
       await request(app.getHttpServer())
@@ -724,6 +740,116 @@ describe('channels and publishing', () => {
       await publishing.processDue(new Date(t0.getTime() + 6 * 60_000));
       expect(jobs[0].status).toBe('PUBLISHED');
       expect(posts).toBe(2);
+    });
+  });
+
+  describe('Facebook channels', () => {
+    const TOKEN = 'EAAB' + 'x'.repeat(40);
+    const fbBody = {
+      provider: 'FACEBOOK',
+      name: 'Atlas page',
+      pageId: '1234567890',
+      accessToken: TOKEN,
+    };
+    const okMe = { status: 200, json: { id: '1234567890', name: 'Atlas University' } };
+    const create = (body: object = fbBody, user = U_ADMIN) =>
+      request(app.getHttpServer())
+        .post(`${base}/channels`)
+        .set('Authorization', as(user))
+        .send(body);
+    const addImage = (contentId: string, name: string, position: number) => {
+      const storageKey = `${ORG_A}/${name}`;
+      stored.set(storageKey, Buffer.from('bytes-of-' + name));
+      images.push({
+        contentId,
+        position,
+        asset: { filename: name, mimeType: 'image/png', storageKey },
+      });
+    };
+
+    beforeEach(() => {
+      wpHttp = async () => okMe;
+    });
+
+    it('verifies the token against the Page, stores it encrypted, and never returns it', async () => {
+      const res = await create().expect(201);
+      expect(res.body.config).toEqual({ pageId: '1234567890', pageName: 'Atlas University' });
+      expect(JSON.stringify(res.body)).not.toContain(TOKEN);
+      expect(res.body).not.toHaveProperty('credentials');
+      expect(channels[0].credentials).toMatch(/^v1:/);
+      expect(channels[0].credentials).not.toContain('EAAB');
+
+      wpHttp = async () => ({ status: 200, json: { id: '999', name: 'Someone else' } });
+      const bad = await create({ ...fbBody, name: 'Wrong page' }).expect(422);
+      expect(String(bad.body.message)).toMatch(/does not belong to that Page/);
+      await create({ ...fbBody, pageId: 'abc' }).expect(400);
+      expect(channels).toHaveLength(1);
+      await create(fbBody, U_EDITOR).expect(403);
+    });
+
+    it('publishes a Facebook post with its pictures, and refuses other kinds of content', async () => {
+      const ch = (await create().expect(201)).body;
+      const calls: any[] = [];
+      let n = 0;
+      wpHttp = async (url, opts) => {
+        calls.push({ url, opts });
+        if (String(url).endsWith('/photos')) return { status: 200, json: { id: `photo-${++n}` } };
+        return { status: 200, json: { id: '1234567890_42' } };
+      };
+      const post = piece({
+        content: {
+          postText: 'Open Day on 14 March at the Rabat campus.',
+          cta: 'Register',
+          hashtags: ['OpenDay'],
+          link: null,
+        },
+      });
+      addImage(post.id, 'one.png', 0);
+      addImage(post.id, 'two.png', 1);
+      await queue({ contentId: post.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await publishing.processDue();
+
+      expect(jobs[0].status).toBe('PUBLISHED');
+      expect(jobs[0].externalId).toBe('1234567890_42');
+      expect(jobs[0].externalUrl).toBe('https://www.facebook.com/1234567890_42');
+      expect(jobs[0].payload.imageCount).toBe(2);
+      const uploads = calls.filter((c) => String(c.url).endsWith('/photos'));
+      expect(uploads).toHaveLength(2);
+      expect(uploads[0].opts.raw.data.toString('latin1')).toContain('bytes-of-one.png'); // read back from storage
+      expect(uploads[1].opts.raw.data.toString('latin1')).toContain('bytes-of-two.png');
+      const feed = calls.find((c) => String(c.url).endsWith('/feed'));
+      expect(feed.opts.body.attached_media).toEqual([
+        { media_fbid: 'photo-1' },
+        { media_fbid: 'photo-2' },
+      ]);
+      expect(feed.opts.headers.Authorization).toBe(`Bearer ${TOKEN}`); // the decrypted token
+
+      const article = piece({
+        kind: 'ARTICLE',
+        content: { slug: 's', h1: 'T', introduction: 'x', sections: [], conclusion: '' },
+      });
+      const res = await queue({ contentId: article.id, channelIds: [ch.id], when: 'now' }).expect(
+        422,
+      );
+      expect(String(res.body.message)).toMatch(/cannot publish this type/);
+    });
+
+    it('publishes a text post without pictures and flags the channel when Facebook revokes the token', async () => {
+      const ch = (await create().expect(201)).body;
+      wpHttp = async () => ({
+        status: 400,
+        json: { error: { code: 190, message: 'Session has expired' } },
+      });
+      const first = piece();
+      const second = piece({ scheduledFor: new Date(Date.now() + 3_600_000) });
+      await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await queue({ contentId: second.id, channelIds: [ch.id], when: 'scheduled' }).expect(201);
+      await publishing.processDue();
+      expect(jobs.find((j) => j.contentId === first.id).status).toBe('FAILED');
+      expect(jobs.find((j) => j.contentId === second.id).status).toBe('CANCELLED');
+      expect(channels[0].status).toBe('ERROR');
+      expect(channels[0].lastError).toMatch(/Reconnect/);
+      await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(409);
     });
   });
 

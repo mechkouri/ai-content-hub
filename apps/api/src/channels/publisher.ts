@@ -28,6 +28,13 @@ export interface PublishChannel {
   secret: Record<string, string> | null;
 }
 
+/** A picture to post, already read from storage. */
+export interface PublishMedia {
+  filename: string;
+  mimeType: string;
+  data: Buffer;
+}
+
 /** One network or website. Real providers (WordPress, Meta, LinkedIn) plug in here. */
 export interface Publisher {
   readonly provider: ChannelProvider;
@@ -35,7 +42,11 @@ export interface Publisher {
   supports(kind: ContentKind): boolean;
   /** Validates and tests the details entered when connecting. Providers without settings omit it. */
   prepare?(input: Record<string, unknown>): Promise<PreparedChannel>;
-  publish(channel: PublishChannel, payload: PostPayload): Promise<PublishResult>;
+  publish(
+    channel: PublishChannel,
+    payload: PostPayload,
+    media: PublishMedia[],
+  ): Promise<PublishResult>;
 }
 
 export const PUBLISHERS = Symbol('PUBLISHERS');

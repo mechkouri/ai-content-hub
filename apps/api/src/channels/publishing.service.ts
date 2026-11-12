@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApprovalStatus, ChannelStatus, Prisma, PublishStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { STORAGE, StorageProvider } from '../storage/storage';
 import { ChannelAuthError, PermanentPublishError, Publisher, PUBLISHERS } from './publisher';
 import { SecretsService } from './secrets.service';
 import { checkPost, renderPost } from './publishing-rules';
@@ -26,6 +27,7 @@ export class PublishingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly secrets: SecretsService,
+    @Inject(STORAGE) private readonly storage: StorageProvider,
     @Inject(PUBLISHERS) private readonly publishers: Publisher[],
   ) {}
 
@@ -261,16 +263,18 @@ export class PublishingService {
       // Re-rendered from the current text, so the post is always what was approved.
       const payload = renderPost(piece.kind, piece.title, piece.content, piece.language);
       const secret = channel.credentials ? this.secrets.decrypt(channel.credentials) : null;
+      const media = await this.loadMedia(piece.id);
       const result = await publisher.publish(
         { id: channel.id, name: channel.name, config: channel.config, secret },
         payload,
+        media,
       );
       await this.prisma.publishJob.update({
         where: { id: job.id },
         data: {
           status: PublishStatus.PUBLISHED,
           publishedAt: new Date(),
-          payload: payload as unknown as Prisma.InputJsonValue,
+          payload: { ...payload, imageCount: media.length } as unknown as Prisma.InputJsonValue,
           externalId: result.externalId,
           externalUrl: result.url ?? null,
           lastError: null,
@@ -297,6 +301,22 @@ export class PublishingService {
       await fail(message.slice(0, 500), e instanceof PermanentPublishError);
       return false;
     }
+  }
+
+  /** The content's pictures, in order, read from storage just before posting. */
+  private async loadMedia(contentId: string) {
+    const rows = await this.prisma.contentImage.findMany({
+      where: { contentId },
+      include: { asset: true },
+      orderBy: { position: 'asc' },
+    });
+    return Promise.all(
+      rows.map(async (r: any) => ({
+        filename: r.asset.filename as string,
+        mimeType: r.asset.mimeType as string,
+        data: await this.storage.get(r.asset.storageKey),
+      })),
+    );
   }
 
   // ---------- keeping jobs in step with their content ----------

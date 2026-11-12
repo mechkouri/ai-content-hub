@@ -427,9 +427,22 @@ export interface Channel {
   status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
   lastError: string | null;
   /** Non-secret settings, e.g. the site address of a WordPress channel. */
-  config: { siteUrl?: string; publishAs?: 'publish' | 'draft'; wordpressUser?: string } | null;
+  config: {
+    siteUrl?: string;
+    publishAs?: 'publish' | 'draft';
+    wordpressUser?: string;
+    pageId?: string;
+    pageName?: string;
+  } | null;
   createdAt: string;
 }
+export interface ContentImage {
+  id: string;
+  assetId: string;
+  position: number;
+  asset: { id: string; filename: string; mimeType: string; sizeBytes: number };
+}
+
 export interface ProviderInfo {
   provider: ChannelProvider;
   available: boolean;

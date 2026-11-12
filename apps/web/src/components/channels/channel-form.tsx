@@ -9,6 +9,8 @@ export interface ChannelFormValues {
   username?: string;
   applicationPassword?: string;
   publishAs?: 'publish' | 'draft';
+  pageId?: string;
+  accessToken?: string;
 }
 
 /** Connect form. Which fields appear depends on the provider; the server checks the login before saving. */
@@ -26,11 +28,14 @@ export function ChannelForm({
   onCancel: () => void;
 }) {
   const wordpress = provider === 'WORDPRESS';
+  const facebook = provider === 'FACEBOOK';
   const [name, setName] = useState(PROVIDER_LABELS[provider].label);
   const [siteUrl, setSiteUrl] = useState('https://');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [publishAs, setPublishAs] = useState<'publish' | 'draft'>('publish');
+  const [pageId, setPageId] = useState('');
+  const [token, setToken] = useState('');
 
   const insecure = wordpress && /^http:\/\//i.test(siteUrl.trim());
   const ready =
@@ -38,10 +43,15 @@ export function ChannelForm({
     (!wordpress ||
       (/^https:\/\/\S+\.\S+/i.test(siteUrl.trim()) &&
         username.trim().length > 0 &&
-        password.trim().length >= 8));
+        password.trim().length >= 8)) &&
+    (!facebook || (/^\d{5,25}$/.test(pageId.trim()) && token.trim().length >= 20));
 
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (facebook) {
+      onSubmit({ name: name.trim(), pageId: pageId.trim(), accessToken: token.trim() });
+      return;
+    }
     onSubmit(
       wordpress
         ? {
@@ -147,6 +157,53 @@ export function ChannelForm({
           </details>
         </>
       )}
+      {facebook && (
+        <>
+          <input
+            className="input"
+            inputMode="numeric"
+            value={pageId}
+            onChange={(e) => setPageId(e.target.value)}
+            required
+            maxLength={25}
+            autoComplete="off"
+            aria-label="Facebook Page ID"
+            placeholder="Page ID (numbers only)"
+          />
+          <input
+            className="input"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            required
+            minLength={20}
+            maxLength={1000}
+            autoComplete="new-password"
+            aria-label="Page access token"
+            placeholder="Page access token"
+          />
+          <details className="rounded-lg bg-surface p-2.5 text-xs text-slate-600">
+            <summary className="cursor-pointer font-semibold">
+              Where do I find the Page ID and token?
+            </summary>
+            <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
+              <li>
+                Create an app at developers.facebook.com (type “Business”) and add yourself as an
+                admin.
+              </li>
+              <li>
+                In the Graph API Explorer, pick your app, choose “Get Page Access Token” and select
+                your Page. Grant pages_manage_posts and pages_read_engagement.
+              </li>
+              <li>Copy the Page ID (shown in your Page’s About section) and the token.</li>
+            </ol>
+            <p className="mt-1.5">
+              It must be a Page access token, not a personal one. It is checked against the Page,
+              then stored encrypted and never shown again.
+            </p>
+          </details>
+        </>
+      )}
       {error && (
         <p className="rounded-lg border border-red-200 bg-danger-soft p-2.5 text-xs text-danger-ink">
           {error}
@@ -154,7 +211,7 @@ export function ChannelForm({
       )}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={busy || !ready}>
-          {busy ? (wordpress ? 'Checking the site…' : 'Adding…') : 'Add channel'}
+          {busy ? (wordpress || facebook ? 'Checking…' : 'Adding…') : 'Add channel'}
         </button>
         <button type="button" className="btn-ghost" onClick={onCancel} disabled={busy}>
           Cancel

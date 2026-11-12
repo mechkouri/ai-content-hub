@@ -172,17 +172,18 @@ model Invitation {
 }
 
 model MediaAsset {
-  id             String       @id @default(uuid()) @db.Uuid
-  organizationId String       @db.Uuid
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
   filename       String
   mimeType       String
   sizeBytes      Int
-  storageKey     String       @unique
-  createdById    String       @db.Uuid
-  createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  mainLogoFor    BrandKit[]   @relation("MainLogo")
-  altLogoFor     BrandKit[]   @relation("AltLogo")
+  storageKey     String         @unique
+  createdById    String         @db.Uuid
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contentImages  ContentImage[]
+  mainLogoFor    BrandKit[]     @relation("MainLogo")
+  altLogoFor     BrandKit[]     @relation("AltLogo")
 
   @@index([organizationId])
 }
@@ -390,9 +391,25 @@ model ContentPiece {
   translations     ContentPiece[]  @relation("Translations")
   reviews          ContentReview[]
   publishJobs      PublishJob[]
+  images           ContentImage[]
 
   @@index([organizationId, sourceId, createdAt])
   @@index([organizationId, approvalStatus])
   @@index([organizationId, scheduledFor])
   @@index([organizationId, campaignId])
+}
+
+// An image attached to a piece of content, in display order. Removing the media deletes the attachment.
+model ContentImage {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  contentId      String       @db.Uuid
+  assetId        String       @db.Uuid
+  position       Int
+  createdAt      DateTime     @default(now())
+  content        ContentPiece @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  asset          MediaAsset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, assetId])
+  @@index([contentId, position])
 }
