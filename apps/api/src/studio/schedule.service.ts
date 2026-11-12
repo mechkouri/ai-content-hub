@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApprovalStatus } from '@prisma/client';
+import { PublishingService } from '../channels/publishing.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const MAX_AHEAD_MS = 366 * 24 * 60 * 60 * 1000;
@@ -15,7 +16,10 @@ const MAX_AHEAD_MS = 366 * 24 * 60 * 60 * 1000;
  */
 @Injectable()
 export class ScheduleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publishing: PublishingService,
+  ) {}
 
   private async find(orgId: string, id: string) {
     const piece = await this.prisma.contentPiece.findFirst({
@@ -36,18 +40,23 @@ export class ScheduleService {
     if (when.getTime() - now.getTime() > MAX_AHEAD_MS) {
       throw new BadRequestException('Schedule at most one year ahead');
     }
-    return this.prisma.contentPiece.update({
+    const updated = await this.prisma.contentPiece.update({
       where: { id: piece.id },
       data: { scheduledFor: when, scheduledById: actorId },
     });
+    // Posts queued "at the scheduled time" move with the date.
+    await this.publishing.rescheduleForContent(piece.id, when);
+    return updated;
   }
 
   async unschedule(orgId: string, id: string) {
     const piece = await this.find(orgId, id);
     if (!piece.scheduledFor) throw new ConflictException('This content is not scheduled');
-    return this.prisma.contentPiece.update({
+    const updated = await this.prisma.contentPiece.update({
       where: { id: piece.id },
       data: { scheduledFor: null, scheduledById: null },
     });
+    await this.publishing.cancelScheduledForContent(piece.id);
+    return updated;
   }
 }

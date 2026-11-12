@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApprovalStatus, ContentStatus, ReviewAction, Role } from '@prisma/client';
+import { PublishingService } from '../channels/publishing.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -14,7 +15,10 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 @Injectable()
 export class ApprovalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publishing: PublishingService,
+  ) {}
 
   private async find(orgId: string, id: string) {
     const piece = await this.prisma.contentPiece.findFirst({
@@ -42,6 +46,10 @@ export class ApprovalsService {
         ...(submittedById !== undefined ? { submittedById } : {}),
       },
     });
+    if (to !== ApprovalStatus.APPROVED) {
+      // Nothing waiting to be published may go out once the approval is gone.
+      await this.publishing.cancelForContent(piece.id, 'The content is no longer approved');
+    }
     await this.prisma.contentReview.create({
       data: {
         organizationId: orgId,

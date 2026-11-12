@@ -44,6 +44,78 @@ model Organization {
   sources         Source[]
   contentPieces   ContentPiece[]
   campaigns       Campaign[]
+  channels        Channel[]
+  publishJobs     PublishJob[]
+}
+
+enum ChannelProvider {
+  TEST
+  WORDPRESS
+  FACEBOOK
+  INSTAGRAM
+  LINKEDIN
+}
+
+enum ChannelStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+// A place content can be published to: a social page, a website, or the built-in test channel.
+model Channel {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @db.Uuid
+  provider       ChannelProvider
+  name           String
+  status         ChannelStatus   @default(CONNECTED)
+  /// Non-secret settings (site address, page name...). Secrets never live here.
+  config         Json            @default("{}")
+  lastError      String?
+  createdById    String          @db.Uuid
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobs           PublishJob[]
+
+  @@index([organizationId, status])
+}
+
+enum PublishStatus {
+  QUEUED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+// One publication of one piece of content to one channel. The unique pair is what stops double posting.
+model PublishJob {
+  id              String        @id @default(uuid()) @db.Uuid
+  organizationId  String        @db.Uuid
+  contentId       String        @db.Uuid
+  channelId       String        @db.Uuid
+  status          PublishStatus @default(QUEUED)
+  runAt           DateTime
+  /// True when the job follows the content's scheduled date (moved or cancelled with it).
+  followsSchedule Boolean       @default(false)
+  attempts        Int           @default(0)
+  lastError       String?
+  /// What is (or would be) posted, kept for the audit trail and for test channels.
+  payload         Json?
+  externalId      String?
+  externalUrl     String?
+  publishedAt     DateTime?
+  createdById     String        @db.Uuid
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  content         ContentPiece  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  channel         Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, channelId])
+  @@index([status, runAt])
+  @@index([organizationId, createdAt])
 }
 
 enum CampaignStatus {
@@ -315,6 +387,7 @@ model ContentPiece {
   translatedFrom   ContentPiece?   @relation("Translations", fields: [translatedFromId], references: [id], onDelete: SetNull)
   translations     ContentPiece[]  @relation("Translations")
   reviews          ContentReview[]
+  publishJobs      PublishJob[]
 
   @@index([organizationId, sourceId, createdAt])
   @@index([organizationId, approvalStatus])
