@@ -16,6 +16,7 @@ import {
   SerpPreview,
 } from '@/components/studio/previews';
 import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
+import { PublishPanel } from '@/components/channels/publish-panel';
 import { ScheduleBox } from '@/components/studio/schedule-box';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
@@ -455,6 +456,20 @@ export default function ContentDetailPage() {
                     : 'Not scheduled yet. Publishers and admins can set the date.'}
                 </p>
               )}
+            </section>
+          )}
+
+          {piece.approvalStatus === 'APPROVED' && currentOrgId && (
+            <section className="card p-4">
+              <h2 className="text-sm font-display text-base font-semibold">Publish</h2>
+              <div className="mt-2">
+                <PublishPanel
+                  orgId={currentOrgId}
+                  contentId={piece.id}
+                  scheduledFor={piece.scheduledFor}
+                  canPublish={canSchedule}
+                />
+              </div>
             </section>
           )}
 
