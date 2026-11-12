@@ -679,6 +679,85 @@ describe('content studio API', () => {
     });
   });
 
+  describe('article length', () => {
+    const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ');
+    // A "short" article targets 350 words; a first draft under 80% of that (280) is asked for again once.
+    const draftOf = (n: number) => ({
+      usedFacts: ['F1'],
+      content: article({ sections: [{ heading: 'What to expect', body: words(n) }] }),
+    });
+    const reply = (raw: any) => async (_ctx: any, opts: any) => ({
+      data: opts.schema.parse(raw),
+      model: 'free-model',
+      provider: 'openrouter',
+    });
+    const gen = () => generate({ sourceId: SRC, kind: 'ARTICLE', options: { length: 'short' } });
+
+    it('asks once more when the first draft is far too short, tells the model how short it was, and keeps the longer draft', async () => {
+      const prompts: string[] = [];
+      aiMock.generateJson
+        .mockImplementationOnce(async (c: any, o: any) => {
+          prompts.push(o.prompt);
+          return reply(draftOf(40))(c, o);
+        })
+        .mockImplementationOnce(async (c: any, o: any) => {
+          prompts.push(o.prompt);
+          return reply(draftOf(320))(c, o);
+        });
+      const res = await gen().expect(201);
+      expect(aiMock.generateJson).toHaveBeenCalledTimes(2);
+      expect(prompts[1]).toContain('previous draft had only');
+      expect(prompts[1]).toContain('AT LEAST 350 words');
+      expect(prompts[1].startsWith(prompts[0])).toBe(true); // same facts and rules, plus the correction
+      expect(res.body.piece.content.sections[0].body.split(' ')).toHaveLength(320);
+      expect(res.body.seoChecks.find((c: any) => c.id === 'word-count').ok).toBe(true);
+    });
+
+    it('does not ask again when the draft is long enough', async () => {
+      aiMock.generateJson.mockImplementationOnce(reply(draftOf(300)));
+      await gen().expect(201);
+      expect(aiMock.generateJson).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the first draft when the second is no better, and when the second attempt fails', async () => {
+      aiMock.generateJson
+        .mockImplementationOnce(reply(draftOf(100)))
+        .mockImplementationOnce(reply(draftOf(50)));
+      const a = await gen().expect(201);
+      expect(a.body.piece.content.sections[0].body.split(' ')).toHaveLength(100);
+
+      aiMock.generateJson.mockClear();
+      aiMock.generateJson
+        .mockImplementationOnce(reply(draftOf(100)))
+        .mockImplementationOnce(async () => {
+          throw new HttpException(
+            { code: 'QUOTA_EXHAUSTED', message: 'Limit reached' },
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        });
+      const b = await gen().expect(201); // the request still succeeds with what it has
+      expect(b.body.piece.content.sections[0].body.split(' ')).toHaveLength(100);
+      expect(aiMock.generateJson).toHaveBeenCalledTimes(2);
+    });
+
+    it('still reports the first failure when there is no first draft at all', async () => {
+      aiMock.generateJson.mockImplementationOnce(async () => {
+        throw new HttpException(
+          { code: 'QUOTA_EXHAUSTED', message: 'Limit reached' },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      });
+      await gen().expect(429);
+      expect(aiMock.generateJson).toHaveBeenCalledTimes(1); // no retry on a failure
+    });
+
+    it('never retries social posts', async () => {
+      nextRaw = { usedFacts: [], content: instagram() };
+      await generate({ sourceId: SRC, kind: 'INSTAGRAM' }).expect(201);
+      expect(aiMock.generateJson).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('reading, editing and translating', () => {
     const make = async () =>
       (await generate({ sourceId: SRC, kind: 'ARTICLE' }).expect(201)).body.piece;
