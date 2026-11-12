@@ -8,5 +8,6 @@ import { MediaService } from './media.service';
   imports: [OrganizationsModule],
   controllers: [BrandController],
   providers: [BrandKitService, MediaService],
+  exports: [MediaService],
 })
 export class BrandModule {}
