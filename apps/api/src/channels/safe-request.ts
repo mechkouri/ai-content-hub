@@ -19,7 +19,10 @@ export interface HttpResponse {
 export interface HttpOptions {
   method?: 'GET' | 'POST';
   headers?: Record<string, string>;
+  /** JSON body. Ignored when `raw` is set. */
   body?: unknown;
+  /** A ready-made body such as a multipart file upload. */
+  raw?: { contentType: string; data: Buffer };
 }
 
 /** Sends one request to a website. Tests replace this; production uses {@link safeJsonRequest}. */
@@ -42,16 +45,18 @@ export function makeSafeJsonRequest(
 
   return async (url, opts = {}) => {
     const target = await assertSafeUrl(url, resolver);
-    const hasBody = opts.body !== undefined;
+    const hasBody = opts.raw !== undefined || opts.body !== undefined;
     const res = await transport({
       ...target,
       timeoutMs,
       method: opts.method ?? 'GET',
-      body: hasBody ? JSON.stringify(opts.body) : undefined,
+      body: opts.raw ? opts.raw.data : hasBody ? JSON.stringify(opts.body) : undefined,
       headers: {
         'User-Agent': 'AIContentHub/1.0 (publishing)',
         Accept: 'application/json',
-        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+        ...(hasBody
+          ? { 'Content-Type': opts.raw ? opts.raw.contentType : 'application/json' }
+          : {}),
         ...opts.headers,
       },
     });
@@ -89,4 +94,31 @@ async function readLimited(res: Response): Promise<string> {
     chunks.push(value);
   }
   return Buffer.concat(chunks).toString('utf8');
+}
+
+/** Builds a multipart/form-data body with text fields and one file. */
+export function buildMultipart(
+  fields: Record<string, string>,
+  file: { field: string; filename: string; mimeType: string; data: Buffer },
+): { contentType: string; data: Buffer } {
+  const boundary = '----aich' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+  const safe = (s: string) => s.replace(/[\r\n"]/g, '_');
+  const parts: Buffer[] = [];
+  for (const [k, v] of Object.entries(fields)) {
+    parts.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${safe(k)}"\r\n\r\n${v}\r\n`,
+        'utf8',
+      ),
+    );
+  }
+  parts.push(
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="${safe(file.field)}"; filename="${safe(file.filename)}"\r\nContent-Type: ${safe(file.mimeType)}\r\n\r\n`,
+      'utf8',
+    ),
+    file.data,
+    Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'),
+  );
+  return { contentType: `multipart/form-data; boundary=${boundary}`, data: Buffer.concat(parts) };
 }

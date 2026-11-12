@@ -121,7 +121,7 @@ export interface TransportRequest extends SafeTarget {
   timeoutMs: number;
   headers: Record<string, string>;
   method?: string;
-  body?: string;
+  body?: string | Uint8Array;
 }
 export type Transport = (req: TransportRequest) => Promise<Response>;
 
