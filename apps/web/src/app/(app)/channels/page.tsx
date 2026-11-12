@@ -109,6 +109,7 @@ export default function ChannelsPage() {
                   <p className="text-xs text-slate-400">
                     {PROVIDER_LABELS[c.provider].label}
                     {c.config?.siteUrl ? ` · ${c.config.siteUrl.replace(/^https:\/\//, '')}` : ''}
+                    {c.config?.pageName ? ` · ${c.config.pageName}` : ''}
                     {c.config?.publishAs === 'draft' ? ' · saves drafts' : ''}
                   </p>
                   {c.status === 'ERROR' && (

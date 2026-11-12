@@ -17,6 +17,7 @@ import {
 } from '@/components/studio/previews';
 import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
 import { PublishPanel } from '@/components/channels/publish-panel';
+import { ImagesPanel } from '@/components/studio/images-panel';
 import { ScheduleBox } from '@/components/studio/schedule-box';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
@@ -40,6 +41,18 @@ import {
 import { useApp } from '@/lib/app-context';
 import { contentToText, isDirty } from '@/lib/content-text';
 import { describeError } from '@/lib/errors';
+
+/** Whether the writer produced an image idea, so "Draw with AI" can work without a description. */
+function hasImageIdea(kind: string, content: unknown): boolean {
+  const c = content as Record<string, any> | null;
+  const idea =
+    kind === 'ARTICLE'
+      ? c?.featuredImageBrief
+      : kind === 'INSTAGRAM'
+        ? c?.imageBrief
+        : c?.images?.[0]?.brief;
+  return typeof idea === 'string' && idea.trim().length > 0;
+}
 
 export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -362,6 +375,23 @@ export default function ContentDetailPage() {
               </>
             )}
           </section>
+
+          {currentOrgId && (
+            <section className="card p-4">
+              <h2 className="text-sm font-display text-base font-semibold">Pictures</h2>
+              <div className="mt-2">
+                <ImagesPanel
+                  orgId={currentOrgId}
+                  contentId={piece.id}
+                  kind={piece.kind}
+                  hasIdea={hasImageIdea(piece.kind, draft)}
+                  canEdit={canWrite}
+                  canDraw={canWrite}
+                  onChanged={load}
+                />
+              </div>
+            </section>
+          )}
 
           <section className="card p-4">
             <div className="flex items-center justify-between gap-2">
