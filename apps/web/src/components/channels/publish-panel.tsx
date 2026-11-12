@@ -40,9 +40,10 @@ export function PublishPanel({
     }
   }, [base, contentId]);
 
+  // Scheduling can queue posts automatically, so look again whenever the date changes.
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, scheduledFor]);
 
   // A schedule can be removed while this panel is open: fall back to "now".
   useEffect(() => {

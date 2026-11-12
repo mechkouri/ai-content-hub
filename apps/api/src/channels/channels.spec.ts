@@ -153,6 +153,12 @@ const prismaMock: any = {
   },
   contentPiece: {
     findFirst: jest.fn(async ({ where }: any) => pieces.find((p) => matches(p, where)) ?? null),
+    update: jest.fn(async ({ where, data }: any) =>
+      Object.assign(
+        pieces.find((p) => p.id === where.id),
+        data,
+      ),
+    ),
   },
   contentImage: {
     findMany: jest.fn(async ({ where }: any) =>
@@ -962,6 +968,164 @@ describe('channels and publishing', () => {
       expect(channels[0].status).toBe('ERROR');
       expect(channels[0].lastError).toMatch(/60 days/);
       await queue({ contentId: first.id, channelIds: [ch.id], when: 'now' }).expect(409);
+    });
+  });
+
+  describe('automatic publishing', () => {
+    const schedule = (id: string, when: Date, user = U_PUBLISHER) =>
+      request(app.getHttpServer())
+        .post(`${base}/content/${id}/schedule`)
+        .set('Authorization', as(user))
+        .send({ scheduledFor: when.toISOString() });
+    const auto = async (name: string, on = true) => {
+      const ch = await makeChannel(name);
+      await request(app.getHttpServer())
+        .patch(`${base}/channels/${ch.id}`)
+        .set('Authorization', as(U_ADMIN))
+        .send({ autoPublish: on })
+        .expect(200);
+      return ch;
+    };
+    const inHours = (h: number) => new Date(Date.now() + h * 3_600_000);
+
+    it('is switched on and off by admins, and is off by default', async () => {
+      const ch = await makeChannel('Plain channel');
+      expect(ch.autoPublish).toBe(false);
+      const on = await request(app.getHttpServer())
+        .patch(`${base}/channels/${ch.id}`)
+        .set('Authorization', as(U_ADMIN))
+        .send({ autoPublish: true })
+        .expect(200);
+      expect(on.body.autoPublish).toBe(true);
+      await request(app.getHttpServer())
+        .patch(`${base}/channels/${ch.id}`)
+        .set('Authorization', as(U_EDITOR))
+        .send({ autoPublish: false })
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(`${base}/channels/${ch.id}`)
+        .set('Authorization', as(U_ADMIN))
+        .send({ autoPublish: 'yes' })
+        .expect(400);
+      const created = await request(app.getHttpServer())
+        .post(`${base}/channels`)
+        .set('Authorization', as(U_ADMIN))
+        .send({ provider: 'TEST', name: 'Born automatic', autoPublish: true })
+        .expect(201);
+      expect(created.body.autoPublish).toBe(true);
+    });
+
+    it('queues scheduled content only to channels with automatic publishing, and posts it at that time', async () => {
+      const on = await auto('Automatic channel');
+      await makeChannel('Manual channel'); // off
+      const p = piece();
+      const at = inHours(2);
+      const res = await schedule(p.id, at).expect(201);
+      expect(res.body.auto).toEqual({ queued: ['Automatic channel'], skipped: [] });
+
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].channelId).toBe(on.id);
+      expect(jobs[0].followsSchedule).toBe(true);
+      expect(new Date(jobs[0].runAt).getTime()).toBe(at.getTime());
+
+      expect((await publishing.processDue(new Date())).due).toBe(0); // not yet
+      expect((await publishing.processDue(new Date(at.getTime() + 1000))).published).toBe(1);
+      expect(jobs[0].status).toBe('PUBLISHED');
+      expect(sent).toHaveLength(1);
+    });
+
+    it('moves the post when the date changes, never duplicates it, and cancels it when the schedule is removed', async () => {
+      await auto('Automatic channel');
+      const p = piece();
+      await schedule(p.id, inHours(2)).expect(201);
+      const later = inHours(5);
+      const again = await schedule(p.id, later).expect(201);
+      expect(again.body.auto.queued).toEqual([]); // already waiting: nothing new
+      expect(jobs).toHaveLength(1);
+      expect(new Date(jobs[0].runAt).getTime()).toBe(later.getTime());
+
+      await request(app.getHttpServer())
+        .post(`${base}/content/${p.id}/unschedule`)
+        .set('Authorization', as(U_PUBLISHER))
+        .expect(201);
+      expect(jobs[0].status).toBe('CANCELLED');
+
+      // Scheduling again brings it back.
+      const back = await schedule(p.id, inHours(6)).expect(201);
+      expect(back.body.auto.queued).toEqual(['Automatic channel']);
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].status).toBe('QUEUED');
+    });
+
+    it('skips a channel that cannot take the content and says why, without blocking the others', async () => {
+      await auto('Good channel');
+      const strict = await auto('Strict channel');
+      // A LinkedIn post over the network limit is refused for every channel: report it once per channel.
+      const tooLong = piece({
+        kind: 'LINKEDIN',
+        content: { postText: 'z'.repeat(3100), cta: '', hashtags: [] },
+      });
+      const res = await schedule(tooLong.id, inHours(2)).expect(201);
+      expect(res.body.auto.queued).toEqual([]);
+      expect(res.body.auto.skipped).toHaveLength(2);
+      expect(res.body.auto.skipped[0].reason).toMatch(/3000/);
+      expect(jobs).toHaveLength(0);
+      expect(strict.id).toBeTruthy();
+    });
+
+    it('stays quiet about channels that never publish this kind of content', async () => {
+      // The test publisher takes everything, so pause it and use a real-kind restriction instead:
+      // an automatic WordPress channel only takes articles, so a Facebook post is simply not for it.
+      wpHttp = async () => ({
+        status: 200,
+        json: { id: 3, name: 'Jane', capabilities: { publish_posts: true } },
+      });
+      const wp = (
+        await request(app.getHttpServer())
+          .post(`${base}/channels`)
+          .set('Authorization', as(U_ADMIN))
+          .send({
+            provider: 'WORDPRESS',
+            name: 'My site',
+            siteUrl: 'https://site.example',
+            username: 'editor',
+            applicationPassword: 'abcd efgh ijkl mnop',
+            autoPublish: true,
+          })
+          .expect(201)
+      ).body;
+      const fbPost = piece();
+      const res = await schedule(fbPost.id, inHours(2)).expect(201);
+      expect(res.body.auto).toEqual({ queued: [], skipped: [] });
+      expect(jobs).toHaveLength(0);
+      expect(wp.autoPublish).toBe(true);
+    });
+
+    it('ignores paused channels, and scheduling still works with none configured', async () => {
+      const ch = await auto('Paused channel');
+      await request(app.getHttpServer())
+        .patch(`${base}/channels/${ch.id}`)
+        .set('Authorization', as(U_ADMIN))
+        .send({ status: 'DISCONNECTED' })
+        .expect(200);
+      const p = piece();
+      const res = await schedule(p.id, inHours(2)).expect(201);
+      expect(res.body.auto).toEqual({ queued: [], skipped: [] });
+      expect(res.body.scheduledFor).toBeTruthy();
+
+      channels = [];
+      const q = piece();
+      await schedule(q.id, inHours(3)).expect(201);
+      expect(jobs).toHaveLength(0);
+    });
+
+    it('does not queue anything for content that is not approved, or from people who cannot schedule', async () => {
+      await auto('Automatic channel');
+      const draft = piece({ approvalStatus: 'DRAFT' });
+      await schedule(draft.id, inHours(2)).expect(409);
+      const p = piece();
+      await schedule(p.id, inHours(2), U_EDITOR).expect(403);
+      expect(jobs).toHaveLength(0);
     });
   });
 

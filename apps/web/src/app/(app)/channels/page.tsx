@@ -136,6 +136,27 @@ export default function ChannelsPage() {
                         ? 'Needs reconnecting'
                         : 'Paused'}
                   </span>
+                  {canManage && c.status !== 'ERROR' && (
+                    <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={c.autoPublish}
+                        disabled={busy}
+                        onChange={(e) =>
+                          run(() =>
+                            apiFetch(`${base}/channels/${c.id}`, {
+                              method: 'PATCH',
+                              body: JSON.stringify({ autoPublish: e.target.checked }),
+                            }),
+                          )
+                        }
+                      />
+                      Auto-post scheduled content
+                    </label>
+                  )}
+                  {!canManage && c.autoPublish && (
+                    <span className="text-xs text-slate-500">Auto-posts scheduled content</span>
+                  )}
                   {canManage && (
                     <>
                       {c.status !== 'ERROR' && (

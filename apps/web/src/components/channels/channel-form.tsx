@@ -11,6 +11,7 @@ export interface ChannelFormValues {
   publishAs?: 'publish' | 'draft';
   pageId?: string;
   accessToken?: string;
+  autoPublish?: boolean;
 }
 
 /** Connect form. Which fields appear depends on the provider; the server checks the login before saving. */
@@ -37,6 +38,7 @@ export function ChannelForm({
   const [publishAs, setPublishAs] = useState<'publish' | 'draft'>('publish');
   const [pageId, setPageId] = useState('');
   const [token, setToken] = useState('');
+  const [autoPublish, setAutoPublish] = useState(false);
 
   const insecure = wordpress && /^http:\/\//i.test(siteUrl.trim());
   const ready =
@@ -51,11 +53,16 @@ export function ChannelForm({
   function submit(e: FormEvent) {
     e.preventDefault();
     if (facebook) {
-      onSubmit({ name: name.trim(), pageId: pageId.trim(), accessToken: token.trim() });
+      onSubmit({
+        name: name.trim(),
+        pageId: pageId.trim(),
+        accessToken: token.trim(),
+        autoPublish,
+      });
       return;
     }
     if (linkedin) {
-      onSubmit({ name: name.trim(), accessToken: token.trim() });
+      onSubmit({ name: name.trim(), accessToken: token.trim(), autoPublish });
       return;
     }
     onSubmit(
@@ -66,8 +73,9 @@ export function ChannelForm({
             username: username.trim(),
             applicationPassword: password,
             publishAs,
+            autoPublish,
           }
-        : { name: name.trim() },
+        : { name: name.trim(), autoPublish },
     );
   }
 
@@ -248,6 +256,21 @@ export function ChannelForm({
           </details>
         </>
       )}
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={autoPublish}
+          onChange={(e) => setAutoPublish(e.target.checked)}
+        />
+        <span>
+          Post scheduled content here automatically
+          <span className="block text-xs text-slate-500">
+            When approved content is scheduled in the calendar, it is queued for this channel and
+            posted at that time. You can change this later.
+          </span>
+        </span>
+      </label>
       {error && (
         <p className="rounded-lg border border-red-200 bg-danger-soft p-2.5 text-xs text-danger-ink">
           {error}

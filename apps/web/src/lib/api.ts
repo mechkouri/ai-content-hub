@@ -426,6 +426,8 @@ export interface Channel {
   name: string;
   status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
   lastError: string | null;
+  /** Content scheduled in the calendar is queued to this channel automatically. */
+  autoPublish: boolean;
   /** Non-secret settings, e.g. the site address of a WordPress channel. */
   config: {
     siteUrl?: string;
@@ -462,6 +464,11 @@ export interface PublishJob {
   externalUrl: string | null;
   publishedAt: string | null;
   createdAt: string;
+}
+/** What happened to the channels with automatic publishing when content was scheduled. */
+export interface AutoQueueResult {
+  queued: string[];
+  skipped: { channel: string; reason: string }[];
 }
 export interface PublishQueued {
   jobs: PublishJob[];

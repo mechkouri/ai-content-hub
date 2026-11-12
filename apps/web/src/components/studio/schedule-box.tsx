@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, AutoQueueResult } from '@/lib/api';
 import { nextHour, toLocalInput } from '@/lib/calendar';
 import { describeError } from '@/lib/errors';
 
@@ -21,17 +21,20 @@ export function ScheduleBox({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [auto, setAuto] = useState<AutoQueueResult | null>(null);
 
   async function run(path: 'schedule' | 'unschedule') {
     setBusy(true);
     setError('');
+    setAuto(null);
     try {
-      await apiFetch(`${base}/${path}`, {
+      const res = await apiFetch<{ auto?: AutoQueueResult }>(`${base}/${path}`, {
         method: 'POST',
         body: JSON.stringify(
           path === 'schedule' ? { scheduledFor: new Date(value).toISOString() } : {},
         ),
       });
+      if (path === 'schedule') setAuto(res.auto ?? null);
       await onChanged();
     } catch (e) {
       setError(describeError(e));
@@ -70,9 +73,23 @@ export function ScheduleBox({
         )}
       </div>
       {error && <p className="text-xs text-danger-ink">{error}</p>}
+      {auto && auto.queued.length > 0 && (
+        <p className="rounded-lg bg-ok-soft p-2 text-xs text-ok-ink">
+          It will be posted automatically to {auto.queued.join(', ')}.
+        </p>
+      )}
+      {auto && auto.skipped.length > 0 && (
+        <ul className="space-y-1 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+          {auto.skipped.map((s) => (
+            <li key={s.channel}>
+              <strong>{s.channel}:</strong> not queued. {s.reason}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="text-[11px] text-slate-400">
-        This plans the date. To post at that time, choose “At the scheduled time” in the Publish
-        section.
+        Channels with auto-posting on will post at that time. For other channels, choose “At the
+        scheduled time” in the Publish section.
       </p>
     </div>
   );
