@@ -408,6 +408,8 @@ model ContentImage {
   contentId      String       @db.Uuid
   assetId        String       @db.Uuid
   position       Int
+  /// Description for people who cannot see the picture (screen readers) and for search. Sent with the post.
+  altText        String?
   createdAt      DateTime     @default(now())
   content        ContentPiece @relation(fields: [contentId], references: [id], onDelete: Cascade)
   asset          MediaAsset   @relation(fields: [assetId], references: [id], onDelete: Cascade)

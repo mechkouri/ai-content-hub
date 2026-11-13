@@ -45,6 +45,7 @@ const listSchema = z.object({
   scheduledFrom: z.coerce.date().optional(),
   scheduledTo: z.coerce.date().optional(),
 });
+const altSchema = z.object({ altText: z.string().max(500) });
 const attachSchema = z.object({ assetId: z.string().uuid() });
 const drawSchema = z.object({ prompt: z.string().trim().min(3).max(500).optional() });
 const scheduleSchema = z.object({ scheduledFor: z.coerce.date() });
@@ -147,6 +148,24 @@ export class StudioController {
       uuid(id),
       req.user.id,
       parseBody(drawSchema, body ?? {}).prompt,
+    );
+  }
+
+  @Patch(':id/images/:assetId')
+  @RequirePermission('content:write')
+  describeImage(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Param('assetId') assetId: string,
+    @Body() body: unknown,
+  ) {
+    return this.images.setAltText(
+      orgId,
+      uuid(id),
+      uuid(assetId),
+      req.user.id,
+      parseBody(altSchema, body).altText,
     );
   }
 

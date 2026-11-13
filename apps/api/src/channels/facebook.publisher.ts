@@ -35,6 +35,10 @@ const inputSchema = z.object({
 /** Graph API error codes that mean "slow down", where trying again later is safe. */
 const RATE_LIMIT_CODES = new Set([4, 17, 32, 613]);
 
+/** Facebook takes the picture description as a separate field of the upload. */
+const altField = (m: PublishMedia): Record<string, string> =>
+  m.altText ? { alt_text_custom: m.altText } : {};
+
 const authHeader = (token: string) => ({ Authorization: `Bearer ${token}` });
 const clean = (s: unknown) =>
   String(s ?? '')
@@ -134,7 +138,7 @@ export class FacebookPublisher implements Publisher {
         method: 'POST',
         headers,
         raw: buildMultipart(
-          { caption: message, published: 'true' },
+          { caption: message, published: 'true', ...altField(media[0]) },
           { field: 'source', ...media[0] },
         ),
       });
@@ -148,7 +152,7 @@ export class FacebookPublisher implements Publisher {
           {
             method: 'POST',
             headers,
-            raw: buildMultipart({ published: 'false' }, { field: 'source', ...m }),
+            raw: buildMultipart({ published: 'false', ...altField(m) }, { field: 'source', ...m }),
           },
           true,
         );

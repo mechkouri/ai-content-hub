@@ -8,7 +8,7 @@ import { AppModule } from '../app.module';
 import { TOKEN_VERIFIER } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE } from '../storage/storage';
-import { imageBriefOf, MAX_IMAGES } from './images.service';
+import { altTextOf, imageBriefOf, MAX_IMAGES } from './images.service';
 
 const ORG_A = '11111111-1111-4111-8111-111111111111';
 const ORG_B = '22222222-2222-4222-8222-222222222222';
@@ -33,6 +33,24 @@ describe('image briefs and limits', () => {
     );
     expect(imageBriefOf('LINKEDIN', { images: [] })).toBeNull();
     expect(imageBriefOf('ARTICLE', { featuredImageBrief: '  ' })).toBeNull();
+  });
+
+  it('finds the description the writer produced for each picture', () => {
+    expect(altTextOf('ARTICLE', { imageAltText: ' Students on campus ' }, 0)).toBe(
+      'Students on campus',
+    );
+    expect(altTextOf('INSTAGRAM', { altText: 'A courtyard' }, 0)).toBe('A courtyard');
+    const fb = {
+      images: [
+        { brief: 'x', altText: 'First' },
+        { brief: 'y', altText: 'Second' },
+      ],
+    };
+    expect(altTextOf('FACEBOOK', fb, 0)).toBe('First');
+    expect(altTextOf('LINKEDIN', fb, 1)).toBe('Second');
+    expect(altTextOf('FACEBOOK', fb, 2)).toBeNull(); // more pictures than descriptions
+    expect(altTextOf('ARTICLE', {}, 0)).toBeNull();
+    expect(altTextOf('INSTAGRAM', { altText: 'x'.repeat(900) }, 0)).toHaveLength(500);
   });
 
   it('knows how many images each kind can carry', () => {
@@ -98,6 +116,16 @@ const prismaMock: any = {
       const c = { id: randomUUID(), createdAt: new Date(), ...data };
       attached.push(c);
       return c;
+    }),
+    updateMany: jest.fn(async ({ where, data }: any) => {
+      const hit = attached.filter(
+        (c) =>
+          c.contentId === where.contentId &&
+          c.assetId === where.assetId &&
+          c.organizationId === where.organizationId,
+      );
+      hit.forEach((c) => Object.assign(c, data));
+      return { count: hit.length };
     }),
     deleteMany: jest.fn(async ({ where }: any) => {
       const before = attached.length;
@@ -285,6 +313,79 @@ describe('content images API', () => {
     expect(p.approvalStatus).toBe('DRAFT');
   });
 
+  describe('picture descriptions', () => {
+    const describe_ = (id: string, assetId: string, altText: string, user = U_EDITOR) =>
+      request(app.getHttpServer())
+        .patch(`${base}/${id}/images/${assetId}`)
+        .set('Authorization', as(user))
+        .send({ altText });
+
+    it('starts from the writer’s description, in order, and shows it in the list', async () => {
+      const p = piece({
+        content: {
+          postText: 'Hello',
+          images: [
+            { brief: 'a', altText: 'Crowd at the open day' },
+            { brief: 'b', altText: 'Teacher in a lab' },
+          ],
+        },
+      });
+      const [a, b, c] = [asset(), asset(), asset()];
+      await attach(p.id, a.id).expect(201);
+      await attach(p.id, b.id).expect(201);
+      const res = await attach(p.id, c.id).expect(201);
+      expect(res.body.map((i: any) => i.altText)).toEqual([
+        'Crowd at the open day',
+        'Teacher in a lab',
+        null,
+      ]);
+    });
+
+    it('is changed or cleared by editors, and a drawn picture gets the description of its idea', async () => {
+      const p = piece({
+        content: { postText: 'Hi', images: [{ brief: 'Open day crowd', altText: 'Crowd' }] },
+      });
+      const drawn = await draw(p.id).expect(201);
+      expect(drawn.body[0].altText).toBe('Crowd'); // the writer's description wins over the picture idea text
+      const id = drawn.body[0].assetId;
+
+      const changed = await describe_(
+        p.id,
+        id,
+        '  A crowd of students at the Rabat campus  ',
+      ).expect(200);
+      expect(changed.body[0].altText).toBe('A crowd of students at the Rabat campus');
+      const cleared = await describe_(p.id, id, '   ').expect(200);
+      expect(cleared.body[0].altText).toBeNull();
+    });
+
+    it('rejects bad input, strangers and pictures that are not attached', async () => {
+      const p = piece();
+      const a = asset();
+      await attach(p.id, a.id).expect(201);
+      await describe_(p.id, a.id, 'x'.repeat(501)).expect(400);
+      await request(app.getHttpServer())
+        .patch(`${base}/${p.id}/images/${a.id}`)
+        .set('Authorization', as(U_EDITOR))
+        .send({})
+        .expect(400);
+      await describe_(p.id, asset().id, 'Not attached').expect(404);
+      await describe_(p.id, a.id, 'Nope', U_VIEWER).expect(403);
+      await describe_(p.id, a.id, 'Nope', U_APPROVER).expect(403);
+      await describe_(p.id, a.id, 'Nope', U_OTHER).expect(404);
+      await describe_('not-a-uuid', a.id, 'Nope').expect(404);
+    });
+
+    it('voids an approval, because the post would no longer be what was approved', async () => {
+      const p = piece();
+      const a = asset();
+      await attach(p.id, a.id).expect(201);
+      p.approvalStatus = 'APPROVED';
+      await describe_(p.id, a.id, 'A new description').expect(200);
+      expect(p.approvalStatus).toBe('DRAFT');
+    });
+  });
+
   describe('drawing a picture', () => {
     it('uses the content’s own image idea, saves it to the media library and attaches it', async () => {
       const p = piece();
@@ -304,7 +405,8 @@ describe('content images API', () => {
       const bare = piece({ content: { postText: 'Hello', images: [] } });
       await draw(bare.id).expect(400);
       expect(aiMock.generateImage).not.toHaveBeenCalled();
-      await draw(bare.id, { prompt: 'A bright lecture hall' }).expect(201);
+      const drawn = await draw(bare.id, { prompt: 'A bright lecture hall' }).expect(201);
+      expect(drawn.body[0].altText).toBe('A bright lecture hall'); // the content has no description of its own
       expect(aiMock.generateImage).toHaveBeenCalledWith(expect.anything(), {
         prompt: 'A bright lecture hall',
       });

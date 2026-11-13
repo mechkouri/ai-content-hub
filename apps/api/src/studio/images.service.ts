@@ -29,6 +29,17 @@ export function imageBriefOf(kind: ContentKind, content: any): string | null {
   return typeof pick === 'string' && pick.trim() ? pick.trim() : null;
 }
 
+/** The description the writer produced for the picture at this position, used until a person edits it. */
+export function altTextOf(kind: ContentKind, content: any, index: number): string | null {
+  const pick =
+    kind === ContentKind.ARTICLE
+      ? content?.imageAltText
+      : kind === ContentKind.INSTAGRAM
+        ? content?.altText
+        : content?.images?.[index]?.altText;
+  return typeof pick === 'string' && pick.trim() ? pick.trim().slice(0, 500) : null;
+}
+
 /**
  * Pictures attached to a piece of content. Attaching, removing or generating one is an edit:
  * it voids any pending review or approval, because the post is no longer what was approved.
@@ -57,7 +68,14 @@ export class ImagesService {
     });
   }
 
-  async attach(orgId: string, contentId: string, assetId: string, actorId: string) {
+  async attach(
+    orgId: string,
+    contentId: string,
+    assetId: string,
+    actorId: string,
+    /** Used as the description when the content has none of its own for this picture. */
+    fallbackAlt?: string,
+  ) {
     const piece = await this.piece(orgId, contentId);
     const asset = await this.prisma.mediaAsset.findFirst({
       where: { id: assetId, organizationId: orgId },
@@ -85,6 +103,9 @@ export class ImagesService {
         contentId: piece.id,
         assetId: asset.id,
         position: current.length ? current[current.length - 1].position + 1 : 0,
+        altText:
+          altTextOf(piece.kind, piece.content, current.length) ??
+          (fallbackAlt?.trim().slice(0, 500) || null),
       },
     });
     await this.approvals.invalidateAfterEdit(orgId, piece, actorId);
@@ -95,6 +116,24 @@ export class ImagesService {
     const piece = await this.piece(orgId, contentId);
     const res = await this.prisma.contentImage.deleteMany({
       where: { contentId: piece.id, assetId, organizationId: orgId },
+    });
+    if (res.count === 0) throw new NotFoundException('That image is not attached');
+    await this.approvals.invalidateAfterEdit(orgId, piece, actorId);
+    return this.list(orgId, piece.id);
+  }
+
+  /** Changes the description of one picture. An empty text removes it. Counts as an edit of the content. */
+  async setAltText(
+    orgId: string,
+    contentId: string,
+    assetId: string,
+    actorId: string,
+    altText: string,
+  ) {
+    const piece = await this.piece(orgId, contentId);
+    const res = await this.prisma.contentImage.updateMany({
+      where: { contentId: piece.id, assetId, organizationId: orgId },
+      data: { altText: altText.trim() || null },
     });
     if (res.count === 0) throw new NotFoundException('That image is not attached');
     await this.approvals.invalidateAfterEdit(orgId, piece, actorId);
@@ -122,6 +161,7 @@ export class ImagesService {
       buffer: img.data,
       originalname: `generated-${piece.id.slice(0, 8)}.${ext}`,
     });
-    return this.attach(orgId, piece.id, asset.id, actorId);
+    // A description the person wrote is a fair starting point for the picture's description.
+    return this.attach(orgId, piece.id, asset.id, actorId, prompt);
   }
 }

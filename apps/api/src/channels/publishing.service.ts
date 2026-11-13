@@ -345,6 +345,7 @@ export class PublishingService {
         filename: r.asset.filename as string,
         mimeType: r.asset.mimeType as string,
         data: await this.storage.get(r.asset.storageKey),
+        altText: (r.altText as string | null) ?? undefined,
       })),
     );
   }
