@@ -5,6 +5,7 @@ import { FormEvent, useState } from 'react';
 import { AuthCard } from '@/components/auth-card';
 import { apiFetch, Organization } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { describeError } from '@/lib/errors';
 import { useT } from '@/lib/i18n';
 import { useRequireAuth } from '@/lib/use-require-auth';
 
@@ -38,7 +39,7 @@ export default function Onboarding() {
       setCurrentOrg(org.id);
       router.replace('/dashboard');
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
       setBusy(false);
     }
   }

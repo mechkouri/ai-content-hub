@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AuthImage } from '@/components/auth-image';
 import { ApiError, apiFetch, BrandKit, canWriteBrand, MediaAsset } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 
@@ -96,7 +97,7 @@ export default function BrandPage() {
       const active = list.find((k) => k.isActive);
       setForm(active ? fromKit(active) : EMPTY);
     } catch (e) {
-      if (!(e instanceof ApiError && e.status === 404)) setError((e as Error).message);
+      if (!(e instanceof ApiError && e.status === 404)) setError(describeError(e));
     }
     setLoaded(true);
   }, [currentOrgId]);
@@ -139,7 +140,7 @@ export default function BrandPage() {
       setNotice(t('brand.saved', { n: kit.version }));
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
     setSaving(false);
   }
@@ -153,7 +154,7 @@ export default function BrandPage() {
       });
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }
 

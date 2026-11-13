@@ -5,6 +5,7 @@ import { Suspense, useState } from 'react';
 import { AuthCard } from '@/components/auth-card';
 import { apiFetch } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import { useRequireAuth } from '@/lib/use-require-auth';
 
@@ -36,7 +37,7 @@ function Accept() {
       setCurrentOrg(m.organizationId);
       router.replace('/dashboard');
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
       setBusy(false);
     }
   }
