@@ -18,6 +18,7 @@ const FEATURES: [string, MessageKey][] = [
   ['/channels', 'gate.channels'],
   ['/analytics', 'gate.analytics'],
   ['/brand', 'gate.brand'],
+  ['/design', 'gate.design'],
   ['/media', 'gate.media'],
   ['/ai', 'gate.ai'],
   ['/members', 'gate.members'],
@@ -26,22 +27,43 @@ const featureKey = (path: string): MessageKey =>
   FEATURES.find(([p]) => path === p || path.startsWith(`${p}/`))?.[1] ?? 'gate.page';
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { user, memberships, currentOrgId, setCurrentOrg, signOut, loading } = useApp();
+  const {
+    user,
+    memberships,
+    membershipsStatus,
+    currentOrgId,
+    setCurrentOrg,
+    signOut,
+    refresh,
+    loading,
+  } = useApp();
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
   const shell = useShellData(currentOrgId);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Visitors can browse; only a signed-in user without any organization is sent to create one.
+  // Visitors can browse. A signed-in user is sent to create an organization only once we KNOW they have none
+  // (the list was fetched and is empty), never because the list is still loading or failed to load.
+  const noOrganization = membershipsStatus === 'ready' && memberships.length === 0;
   useEffect(() => {
-    if (!loading && user && memberships.length === 0) router.replace('/onboarding');
-  }, [loading, user, memberships.length, router]);
+    if (!loading && user && noOrganization) router.replace('/onboarding');
+  }, [loading, user, noOrganization, router]);
 
   // Close the mobile menu after navigating.
   useEffect(() => setMenuOpen(false), [pathname]);
 
   const guest = !loading && !user;
+  if (user && !loading && membershipsStatus === 'error' && memberships.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="max-w-sm text-sm text-muted">{t('app.loadFailed')}</p>
+        <button className="btn-primary" onClick={() => void refresh()}>
+          {t('ch.tryAgain')}
+        </button>
+      </div>
+    );
+  }
   if (loading || (user && memberships.length === 0)) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted">

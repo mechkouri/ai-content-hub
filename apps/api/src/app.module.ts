@@ -3,6 +3,7 @@ import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { DesignModule } from './design/design.module';
 import { ChannelsModule } from './channels/channels.module';
 import { BrandModule } from './brand/brand.module';
 import { HealthController } from './health/health.controller';
@@ -23,6 +24,7 @@ import { StorageModule } from './storage/storage.module';
     SourcesModule,
     StudioModule,
     CampaignsModule,
+    DesignModule,
     ChannelsModule,
     AnalyticsModule,
   ],

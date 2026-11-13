@@ -45,6 +45,7 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
     title: 'nav.aiStudio',
     items: [
       { href: '/brand', label: 'nav.brand', icon: Palette },
+      { href: '/design', label: 'nav.designStudio', icon: Wand2 },
       { href: '/media', label: 'nav.media', icon: ImageIcon },
       { href: '/ai', label: 'nav.aiProviders', icon: Sparkles },
     ],
@@ -53,7 +54,6 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
 
 /** Planned features from the design that are not built yet. They are shown disabled, never faked. */
 export const SOON_ITEMS: { label: MessageKey; icon: LucideIcon }[] = [
-  { label: 'nav.designStudio', icon: Wand2 },
   { label: 'nav.workflow', icon: Workflow },
 ];
 
