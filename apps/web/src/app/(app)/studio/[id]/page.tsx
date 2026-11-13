@@ -41,6 +41,8 @@ import {
 import { useApp } from '@/lib/app-context';
 import { contentToText, isDirty } from '@/lib/content-text';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
 /** Whether the writer produced an image idea, so "Draw with AI" can work without a description. */
 function hasImageIdea(kind: string, content: unknown): boolean {
@@ -58,9 +60,10 @@ export default function ContentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { currentOrgId, currentRole, memberships, user } = useApp();
+  const { t, dateLocale } = useI18n();
   const orgName =
     memberships.find((m) => m.organizationId === currentOrgId)?.organization.name ??
-    'Your organization';
+    t('det.yourOrg');
   const canWrite = canWriteContent(currentRole);
   const canReview = canReviewContent(currentRole);
   const canSchedule = canScheduleContent(currentRole);
@@ -151,11 +154,7 @@ export default function ContentDetailPage() {
       apiFetch<ContentReview[]>(`${base}/reviews`)
         .then(setReviews)
         .catch(() => undefined);
-      setNotice(
-        res.piece.warnings.length
-          ? 'Saved. Some details still need checking.'
-          : 'Saved. Everything matches your verified facts.',
-      );
+      setNotice(res.piece.warnings.length ? t('det.savedWarn') : t('det.savedOk'));
     } catch (e) {
       setError(describeError(e));
     }
@@ -175,12 +174,12 @@ export default function ContentDetailPage() {
       await load();
       setNotice(
         action === 'submit'
-          ? 'Submitted for review.'
+          ? t('det.submitted')
           : action === 'withdraw'
-            ? 'Submission withdrawn.'
+            ? t('det.withdrawn')
             : action === 'approve'
-              ? 'Approved.'
-              : 'Sent back with your comment.',
+              ? t('det.approved')
+              : t('det.sentBack'),
       );
     } catch (e) {
       setError(describeError(e));
@@ -205,7 +204,7 @@ export default function ContentDetailPage() {
   }
 
   async function remove() {
-    if (!confirm('Delete this content? This cannot be undone.')) return;
+    if (!confirm(t('det.confirmDelete'))) return;
     try {
       await apiFetch(base, { method: 'DELETE' });
       router.replace('/studio');
@@ -218,15 +217,20 @@ export default function ContentDetailPage() {
     if (!detail || !draft) return;
     try {
       await navigator.clipboard.writeText(contentToText(detail.piece.kind, draft));
-      setNotice('Copied to the clipboard.');
+      setNotice(t('det.copied'));
     } catch {
-      setError('Copying is not allowed by your browser here.');
+      setError(t('det.copyDenied'));
     }
   }
 
-  if (!detail || !draft) return <p className="text-sm text-muted">{error || 'Loading…'}</p>;
+  if (!detail || !draft)
+    return <p className="text-sm text-muted">{error || t('common.loading')}</p>;
   const { piece, seoChecks, source } = detail;
   const kind = CONTENT_KINDS.find((k) => k.id === piece.kind)!;
+  const nFacts = piece.usedFactIds.length;
+  const factsUsed =
+    nFacts === 1 ? t('det.step.factsUsed1') : t('det.step.factsUsedN', { n: nFacts });
+  const checkLabel = (n: number) => (n === 1 ? t('det.check1') : t('det.checkN', { n }));
   // While there are unsaved edits, show the live verdict; otherwise the saved one.
   const warnings = dirty && live ? live : piece.warnings;
   const siblings = related.filter(
@@ -242,7 +246,13 @@ export default function ContentDetailPage() {
   return (
     <div className="space-y-4">
       <Link href="/studio" className="text-sm font-semibold text-brand">
-        ← Content studio
+        <span aria-hidden className="rtl:hidden">
+          ←
+        </span>
+        <span aria-hidden className="hidden rtl:inline">
+          →
+        </span>{' '}
+        {t('det.back')}
       </Link>
 
       <section className="card p-6">
@@ -253,37 +263,38 @@ export default function ContentDetailPage() {
             </h1>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
               <span>
-                {kind.icon} {kind.label} · {LANG_LABELS[piece.language] ?? piece.language}
+                {kind.icon} {t(`kind.${piece.kind}` as MessageKey)} ·{' '}
+                {LANG_LABELS[piece.language] ?? piece.language}
               </span>
               <StatusBadge status={piece.status} />
               <ApprovalBadge status={piece.approvalStatus} />
-              {piece.edited && <span className="text-xs">edited</span>}
+              {piece.edited && <span className="text-xs">{t('studio.edited')}</span>}
               {source && (
                 <Link href={`/sources/${source.id}`} className="text-brand underline">
-                  Source: {source.title}
+                  {t('det.source', { title: source.title })}
                 </Link>
               )}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="btn-ghost" onClick={copy}>
-              Copy
+              {t('det.copy')}
             </button>
             {canWrite && (
               <>
                 <button className="btn-primary" onClick={save} disabled={saving || !dirty}>
-                  {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+                  {saving ? t('det.saving') : dirty ? t('det.saveChanges') : t('det.saved')}
                 </button>
                 <button
                   className="btn-ghost"
                   onClick={save}
                   disabled={saving}
-                  title="Re-check the text against the current verified facts"
+                  title={t('det.recheckTitle')}
                 >
-                  Re-check facts
+                  {t('det.recheck')}
                 </button>
                 <button className="btn-danger" onClick={remove}>
-                  Delete
+                  {t('common.delete')}
                 </button>
               </>
             )}
@@ -301,31 +312,35 @@ export default function ContentDetailPage() {
         )}
         {dirty && (
           <p className="mt-3 rounded-lg bg-slate-100 p-3 text-xs text-slate-600">
-            You have unsaved changes.
+            {t('det.unsaved')}
           </p>
         )}
       </section>
 
       <PipelineSteps
         steps={[
-          { label: 'Source parsed', detail: source?.title ?? 'Original saved', state: 'done' },
           {
-            label: 'Facts verified',
-            detail: `${piece.usedFactIds.length} verified fact${piece.usedFactIds.length === 1 ? '' : 's'} used`,
+            label: t('det.step.source'),
+            detail: source?.title ?? t('det.step.original'),
             state: 'done',
           },
-          { label: 'Draft written', detail: piece.model ?? 'AI draft', state: 'done' },
+          { label: t('det.step.facts'), detail: factsUsed, state: 'done' },
           {
-            label: 'Human review',
+            label: t('det.step.draft'),
+            detail: piece.model ?? t('det.step.aiDraft'),
+            state: 'done',
+          },
+          {
+            label: t('det.step.review'),
             detail: warnings.length
-              ? `${warnings.length} detail${warnings.length === 1 ? '' : 's'} to check`
+              ? checkLabel(warnings.length)
               : piece.approvalStatus === 'APPROVED'
-                ? 'Approved'
+                ? t('approval.APPROVED')
                 : piece.approvalStatus === 'IN_REVIEW'
-                  ? 'Waiting for an approver'
+                  ? t('det.step.waiting')
                   : piece.approvalStatus === 'CHANGES_REQUESTED'
-                    ? 'Changes requested'
-                    : 'Ready to submit',
+                    ? t('approval.CHANGES_REQUESTED')
+                    : t('det.step.ready'),
             state: piece.approvalStatus === 'APPROVED' && !warnings.length ? 'done' : 'active',
           },
         ]}
@@ -350,21 +365,13 @@ export default function ContentDetailPage() {
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <section className={`card p-4 ${warnings.length ? 'ring-2 ring-amber-300' : ''}`}>
             <h2 className="text-sm font-display text-base font-semibold">
-              {warnings.length
-                ? `⚠ ${warnings.length} detail${warnings.length > 1 ? 's' : ''} to check`
-                : '✓ Facts match'}
+              {warnings.length ? `⚠ ${checkLabel(warnings.length)}` : `✓ ${t('det.factsMatch')}`}
             </h2>
             {warnings.length === 0 ? (
-              <p className="mt-1 text-xs text-muted">
-                Every number, date, link and email matches your verified facts.
-              </p>
+              <p className="mt-1 text-xs text-muted">{t('det.factsMatchHint')}</p>
             ) : (
               <>
-                <p className="mt-1 text-xs text-muted">
-                  These are not in your verified facts, so they may be invented. Highlighted in the
-                  text. Fix or remove them, or add them as a fact on the source if they are correct,
-                  then use “Re-check facts”.
-                </p>
+                <p className="mt-1 text-xs text-muted">{t('det.flagHint')}</p>
                 <ul className="mt-2 space-y-1.5">
                   {warnings.map((w, i) => (
                     <li key={i} className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -378,7 +385,7 @@ export default function ContentDetailPage() {
 
           {currentOrgId && (
             <section className="card p-4">
-              <h2 className="text-sm font-display text-base font-semibold">Pictures</h2>
+              <h2 className="text-sm font-display text-base font-semibold">{t('det.pictures')}</h2>
               <div className="mt-2">
                 <ImagesPanel
                   orgId={currentOrgId}
@@ -395,14 +402,11 @@ export default function ContentDetailPage() {
 
           <section className="card p-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-display text-base font-semibold">Approval</h2>
+              <h2 className="text-sm font-display text-base font-semibold">{t('det.approval')}</h2>
               <ApprovalBadge status={piece.approvalStatus} />
             </div>
             {piece.approvalStatus === 'APPROVED' && (
-              <p className="mt-1 text-xs text-muted">
-                Approved. Any edit will send it back to draft so the approved text is always the
-                saved text.
-              </p>
+              <p className="mt-1 text-xs text-muted">{t('det.approvedHint')}</p>
             )}
             {(canWrite || canReview) && piece.approvalStatus !== 'APPROVED' && (
               <div className="mt-3 space-y-2">
@@ -410,8 +414,8 @@ export default function ContentDetailPage() {
                   className="input min-h-[64px]"
                   placeholder={
                     piece.approvalStatus === 'IN_REVIEW'
-                      ? 'Comment (required to request changes)'
-                      : 'Add a note for the reviewer (optional)'
+                      ? t('det.commentRequired')
+                      : t('det.noteReviewer')
                   }
                   maxLength={1000}
                   value={comment}
@@ -425,13 +429,11 @@ export default function ContentDetailPage() {
                       onClick={() => decide('submit')}
                       disabled={deciding || dirty || warnings.length > 0}
                     >
-                      Submit for review
+                      {t('det.submitReview')}
                     </button>
                     {(dirty || warnings.length > 0) && (
                       <p className="text-[11px] text-amber-700">
-                        {dirty
-                          ? 'Save your changes before submitting.'
-                          : 'Fix the details flagged above before submitting.'}
+                        {dirty ? t('det.saveBeforeSubmit') : t('det.fixBeforeSubmit')}
                       </p>
                     )}
                   </>
@@ -445,14 +447,14 @@ export default function ContentDetailPage() {
                           onClick={() => decide('approve')}
                           disabled={deciding || dirty}
                         >
-                          Approve
+                          {t('det.approve')}
                         </button>
                         <button
                           className="btn-ghost flex-1"
                           onClick={() => decide('request-changes')}
                           disabled={deciding || dirty || comment.trim().length < 3}
                         >
-                          Request changes
+                          {t('det.requestChanges')}
                         </button>
                       </div>
                     )}
@@ -462,7 +464,7 @@ export default function ContentDetailPage() {
                         onClick={() => decide('withdraw')}
                         disabled={deciding}
                       >
-                        Withdraw
+                        {t('det.withdraw')}
                       </button>
                     )}
                   </>
@@ -474,7 +476,7 @@ export default function ContentDetailPage() {
 
           {piece.approvalStatus === 'APPROVED' && (
             <section className="card p-4">
-              <h2 className="text-sm font-display text-base font-semibold">Schedule</h2>
+              <h2 className="text-sm font-display text-base font-semibold">{t('det.schedule')}</h2>
               {canSchedule ? (
                 <div className="mt-2">
                   <ScheduleBox base={base} scheduledFor={piece.scheduledFor} onChanged={load} />
@@ -482,8 +484,10 @@ export default function ContentDetailPage() {
               ) : (
                 <p className="mt-1 text-xs text-muted">
                   {piece.scheduledFor
-                    ? `Planned for ${new Date(piece.scheduledFor).toLocaleString()}.`
-                    : 'Not scheduled yet. Publishers and admins can set the date.'}
+                    ? t('det.plannedFor', {
+                        date: new Date(piece.scheduledFor).toLocaleString(dateLocale),
+                      })
+                    : t('det.notScheduled')}
                 </p>
               )}
             </section>
@@ -491,7 +495,7 @@ export default function ContentDetailPage() {
 
           {piece.approvalStatus === 'APPROVED' && currentOrgId && (
             <section className="card p-4">
-              <h2 className="text-sm font-display text-base font-semibold">Publish</h2>
+              <h2 className="text-sm font-display text-base font-semibold">{t('det.publish')}</h2>
               <div className="mt-2">
                 <PublishPanel
                   orgId={currentOrgId}
@@ -516,8 +520,8 @@ export default function ContentDetailPage() {
 
           {seoChecks && (
             <section className="card p-4">
-              <h2 className="text-sm font-display text-base font-semibold">SEO checklist</h2>
-              <p className="text-[11px] text-slate-400">Based on the last saved version.</p>
+              <h2 className="text-sm font-display text-base font-semibold">{t('det.seo')}</h2>
+              <p className="text-[11px] text-slate-400">{t('det.seoBased')}</p>
               <ul className="mt-2 space-y-1.5">
                 {seoChecks.map((c) => (
                   <li key={c.id} className="flex gap-2 text-xs">
@@ -533,10 +537,8 @@ export default function ContentDetailPage() {
 
           {canWrite && (
             <section className="card space-y-3 p-4">
-              <h2 className="text-sm font-display text-base font-semibold">Translate</h2>
-              <p className="text-xs text-muted">
-                Creates a new copy in another language. Numbers, dates and links stay unchanged.
-              </p>
+              <h2 className="text-sm font-display text-base font-semibold">{t('det.translate')}</h2>
+              <p className="text-xs text-muted">{t('det.translateHint')}</p>
               <div className="flex gap-2">
                 <select
                   className="input"
@@ -544,7 +546,7 @@ export default function ContentDetailPage() {
                   onChange={(e) => setTarget(e.target.value)}
                   disabled={translating}
                 >
-                  <option value="">Choose a language…</option>
+                  <option value="">{t('det.chooseLang')}</option>
                   {languagesLeft.map((l) => (
                     <option key={l} value={l}>
                       {LANG_LABELS[l]}
@@ -556,23 +558,19 @@ export default function ContentDetailPage() {
                   onClick={translate}
                   disabled={!target || translating || dirty}
                 >
-                  {translating ? '…' : 'Translate'}
+                  {translating ? '…' : t('det.translate')}
                 </button>
               </div>
-              {dirty && (
-                <p className="text-[11px] text-amber-700">
-                  Save your changes first so they are included.
-                </p>
-              )}
-              {translating && (
-                <p className="text-xs text-muted">Translating. This can take up to a minute.</p>
-              )}
+              {dirty && <p className="text-[11px] text-amber-700">{t('det.saveFirst')}</p>}
+              {translating && <p className="text-xs text-muted">{t('det.translating')}</p>}
             </section>
           )}
 
           {siblings.length > 0 && (
             <section className="card p-4">
-              <h2 className="text-sm font-display text-base font-semibold">Other languages</h2>
+              <h2 className="text-sm font-display text-base font-semibold">
+                {t('det.otherLangs')}
+              </h2>
               <ul className="mt-2 space-y-1">
                 {siblings.map((p) => (
                   <li key={p.id}>
@@ -590,8 +588,16 @@ export default function ContentDetailPage() {
           )}
 
           <p className="px-1 text-[11px] text-slate-400">
-            Written by {piece.model ?? 'AI'} on {new Date(piece.createdAt).toLocaleString()} from{' '}
-            {piece.usedFactIds.length} verified fact{piece.usedFactIds.length === 1 ? '' : 's'}.
+            {nFacts === 1
+              ? t('det.written1', {
+                  model: piece.model ?? t('det.modelAi'),
+                  date: new Date(piece.createdAt).toLocaleString(dateLocale),
+                })
+              : t('det.writtenN', {
+                  model: piece.model ?? t('det.modelAi'),
+                  date: new Date(piece.createdAt).toLocaleString(dateLocale),
+                  n: nFacts,
+                })}
           </p>
         </aside>
       </div>
