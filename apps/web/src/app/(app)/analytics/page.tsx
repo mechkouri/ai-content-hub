@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AnalyticsOverview, apiFetch, LANG_LABELS, PROVIDER_LABELS } from '@/lib/api';
+import { AnalyticsOverview, apiFetch, LANG_LABELS } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
@@ -211,9 +211,7 @@ export default function AnalyticsPage() {
                             {c.name}
                           </p>
                           {c.provider && (
-                            <p className="text-xs text-slate-400">
-                              {PROVIDER_LABELS[c.provider].label}
-                            </p>
+                            <p className="text-xs text-slate-400">{t(`provider.${c.provider}`)}</p>
                           )}
                         </td>
                         <td className="py-2 text-end tabular-nums">{c.published}</td>

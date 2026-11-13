@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AuthImage } from '@/components/auth-image';
 import { apiFetch, ContentImage, ContentKind, MediaAsset } from '@/lib/api';
 import { describeError } from '@/lib/errors';
+import { useT } from '@/lib/i18n';
 
 const LIMITS: Record<ContentKind, number> = {
   ARTICLE: 1,
@@ -32,6 +33,7 @@ export function ImagesPanel({
   /** Called after any change: attaching or removing a picture can void an approval. */
   onChanged: () => void | Promise<void>;
 }) {
+  const t = useT();
   const base = `/organizations/${orgId}/content/${contentId}/images`;
   const max = LIMITS[kind];
   const [images, setImages] = useState<ContentImage[] | null>(null);
@@ -85,13 +87,10 @@ export function ImagesPanel({
   return (
     <div className="space-y-3">
       {images === null ? (
-        <p className="text-xs text-muted">Loading…</p>
+        <p className="text-xs text-muted">{t('common.loading')}</p>
       ) : images.length === 0 ? (
         <p className="text-xs text-muted">
-          No pictures yet.{' '}
-          {kind === 'INSTAGRAM'
-            ? 'Instagram posts need at least one.'
-            : 'A picture helps a post stand out.'}
+          {t('pic.none')} {kind === 'INSTAGRAM' ? t('pic.instagramNeeds') : t('pic.helps')}
         </p>
       ) : (
         <ul className="space-y-2.5">
@@ -122,9 +121,7 @@ export function ImagesPanel({
         <div className="space-y-2">
           {full ? (
             <p className="text-[11px] text-slate-400">
-              {max === 1
-                ? 'This content takes one picture. Remove it to use another.'
-                : `The limit of ${max} pictures is reached.`}
+              {max === 1 ? t('pic.limitOne') : t('pic.limitN', { n: max })}
             </p>
           ) : (
             <>
@@ -134,7 +131,7 @@ export function ImagesPanel({
                   onClick={openLibrary}
                   disabled={busy || picking}
                 >
-                  From library
+                  {t('pic.fromLibrary')}
                 </button>
                 {canDraw && (
                   <button
@@ -142,7 +139,7 @@ export function ImagesPanel({
                     onClick={() => setDrawing((v) => !v)}
                     disabled={busy}
                   >
-                    Draw with AI
+                    {t('pic.draw')}
                   </button>
                 )}
               </div>
@@ -153,12 +150,8 @@ export function ImagesPanel({
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     maxLength={500}
-                    placeholder={
-                      hasIdea
-                        ? 'Leave empty to use the picture idea written for this post'
-                        : 'Describe the picture you want'
-                    }
-                    aria-label="Picture description"
+                    placeholder={hasIdea ? t('pic.leaveEmpty') : t('pic.describePicture')}
+                    aria-label={t('pic.promptLabel')}
                   />
                   <button
                     className="btn-primary w-full"
@@ -176,9 +169,9 @@ export function ImagesPanel({
                       }
                     }}
                   >
-                    {busy ? 'Drawing… this can take a few seconds' : 'Draw and attach'}
+                    {busy ? t('pic.drawing') : t('pic.drawAttach')}
                   </button>
-                  <p className="text-[11px] text-slate-400">Uses one of your daily AI images.</p>
+                  <p className="text-[11px] text-slate-400">{t('pic.usesOne')}</p>
                 </div>
               )}
             </>
@@ -187,11 +180,9 @@ export function ImagesPanel({
           {picking && (
             <div className="rounded-lg border border-line p-2.5">
               {library === null ? (
-                <p className="text-xs text-muted">Loading your library…</p>
+                <p className="text-xs text-muted">{t('pic.loadingLibrary')}</p>
               ) : choices.length === 0 ? (
-                <p className="text-xs text-muted">
-                  Nothing left to add. Upload pictures on the Media library page.
-                </p>
+                <p className="text-xs text-muted">{t('pic.nothingLeft')}</p>
               ) : (
                 <ul className="grid max-h-56 grid-cols-4 gap-1.5 overflow-y-auto">
                   {choices.map((a) => (
@@ -225,7 +216,7 @@ export function ImagesPanel({
                 className="mt-2 text-xs font-semibold text-slate-500"
                 onClick={() => setPicking(false)}
               >
-                Close
+                {t('common.close')}
               </button>
             </div>
           )}
@@ -233,9 +224,7 @@ export function ImagesPanel({
       )}
 
       {error && <p className="text-xs text-danger-ink">{error}</p>}
-      <p className="text-[11px] text-slate-400">
-        Changing the pictures of approved content sends it back to draft.
-      </p>
+      <p className="text-[11px] text-slate-400">{t('pic.voidsApproval')}</p>
     </div>
   );
 }
@@ -256,6 +245,7 @@ function PictureRow({
   onRemove: () => void;
   onDescribe: (altText: string) => void;
 }) {
+  const t = useT();
   const [alt, setAlt] = useState(image.altText ?? '');
   // Follow the server (e.g. after another change), but never overwrite what is being typed.
   useEffect(() => setAlt(image.altText ?? ''), [image.altText]);
@@ -277,22 +267,22 @@ function PictureRow({
           onBlur={() => changed && onDescribe(alt)}
           maxLength={500}
           disabled={!canEdit || busy}
-          placeholder="Describe the picture for people who cannot see it"
-          aria-label={`Description of ${image.asset.filename}`}
+          placeholder={t('pic.altPlaceholder')}
+          aria-label={t('pic.altLabel', { name: image.asset.filename })}
           dir="auto"
         />
         <div className="flex items-center justify-between text-[11px]">
           <span className={image.altText ? 'text-ok-ink' : 'text-amber-700'}>
-            {image.altText ? 'Description saved' : 'No description yet'}
+            {image.altText ? t('pic.altSaved') : t('pic.altNone')}
           </span>
           {canEdit && (
             <button
               className="font-semibold text-slate-500 hover:text-danger"
               onClick={onRemove}
               disabled={busy}
-              aria-label={`Remove ${image.asset.filename}`}
+              aria-label={t('pic.removeLabel', { name: image.asset.filename })}
             >
-              Remove
+              {t('common.remove')}
             </button>
           )}
         </div>
