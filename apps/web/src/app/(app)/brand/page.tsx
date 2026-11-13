@@ -4,8 +4,11 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AuthImage } from '@/components/auth-image';
 import { ApiError, apiFetch, BrandKit, canWriteBrand, MediaAsset } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
 const SOCIALS = ['facebook', 'instagram', 'linkedin', 'x', 'youtube', 'tiktok'] as const;
+
 const FONTS = [
   'Inter',
   'Poppins',
@@ -67,9 +70,10 @@ const fromKit = (k: BrandKit): FormState => ({
 
 export default function BrandPage() {
   const { currentOrgId, currentRole, memberships } = useApp();
+  const { t, dateLocale } = useI18n();
   const orgName =
     memberships.find((m) => m.organizationId === currentOrgId)?.organization.name ??
-    'Your organization';
+    t('det.yourOrg');
   const canWrite = canWriteBrand(currentRole);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [versions, setVersions] = useState<BrandKit[]>([]);
@@ -132,7 +136,7 @@ export default function BrandPage() {
         method: 'POST',
         body: JSON.stringify(body),
       });
-      setNotice(`Saved as version ${kit.version} and set active.`);
+      setNotice(t('brand.saved', { n: kit.version }));
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -153,7 +157,7 @@ export default function BrandPage() {
     }
   }
 
-  if (!loaded) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (!loaded) return <p className="text-sm text-slate-500">{t('common.loading')}</p>;
   const dis = !canWrite;
   const logoId = form.mainLogoId || form.altLogoId;
 
@@ -161,16 +165,16 @@ export default function BrandPage() {
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <form onSubmit={save} className="space-y-4">
         <section className="card p-6">
-          <h1 className="text-xl font-bold">Brand kit</h1>
+          <h1 className="text-xl font-bold">{t('brand.title')}</h1>
           <p className="text-sm text-slate-500">
-            Applied automatically to AI-generated content and designs.{' '}
+            {t('brand.subtitle')}{' '}
             {versions.length === 0
-              ? 'No brand kit yet — set up the first one below.'
-              : `Active: version ${versions.find((k) => k.isActive)?.version}.`}
+              ? t('brand.noKit')
+              : t('brand.activeV', { n: versions.find((k) => k.isActive)?.version ?? '' })}
           </p>
           {!canWrite && (
             <p className="mt-3 rounded-lg bg-slate-100 p-3 text-sm text-slate-600">
-              You have read-only access. Owners, admins and designers can edit the brand kit.
+              {t('brand.readOnly')}
             </p>
           )}
           {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -180,17 +184,17 @@ export default function BrandPage() {
         </section>
 
         <section className="card space-y-4 p-6">
-          <h2 className="font-bold">Colors</h2>
+          <h2 className="font-bold">{t('brand.colors')}</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {(
               [
-                ['primaryColor', 'Primary'],
-                ['secondaryColor', 'Secondary'],
-                ['accentColor', 'Accent'],
+                ['primaryColor', 'brand.primary'],
+                ['secondaryColor', 'brand.secondary'],
+                ['accentColor', 'brand.accent'],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="block text-sm">
-                <span className="font-semibold">{label}</span>
+                <span className="font-semibold">{t(label)}</span>
                 <div className="mt-1 flex items-center gap-2">
                   <input
                     type="color"
@@ -214,16 +218,16 @@ export default function BrandPage() {
         </section>
 
         <section className="card space-y-4 p-6">
-          <h2 className="font-bold">Typography & style</h2>
+          <h2 className="font-bold">{t('brand.typography')}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {(
               [
-                ['headingFont', 'Heading font'],
-                ['bodyFont', 'Body font'],
+                ['headingFont', 'brand.headingFont'],
+                ['bodyFont', 'brand.bodyFont'],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="block text-sm">
-                <span className="font-semibold">{label}</span>
+                <span className="font-semibold">{t(label)}</span>
                 <input
                   className="input mt-1"
                   list="fonts"
@@ -240,12 +244,12 @@ export default function BrandPage() {
             </datalist>
           </div>
           <label className="block text-sm">
-            <span className="font-semibold">Preferred image style</span>
+            <span className="font-semibold">{t('brand.imageStyle')}</span>
             <input
               className="input mt-1"
               disabled={dis}
               maxLength={300}
-              placeholder="e.g. bright, natural light, real students, minimal"
+              placeholder={t('brand.imageStylePh')}
               value={form.imageStyle}
               onChange={(e) => set('imageStyle', e.target.value)}
             />
@@ -253,23 +257,23 @@ export default function BrandPage() {
         </section>
 
         <section className="card space-y-4 p-6">
-          <h2 className="font-bold">Logos</h2>
+          <h2 className="font-bold">{t('brand.logos')}</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {(
               [
-                ['mainLogoId', 'Main logo'],
-                ['altLogoId', 'Alternative logo'],
+                ['mainLogoId', 'brand.mainLogo'],
+                ['altLogoId', 'brand.altLogo'],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="block text-sm">
-                <span className="font-semibold">{label}</span>
+                <span className="font-semibold">{t(label)}</span>
                 <select
                   className="input mt-1"
                   disabled={dis}
                   value={form[key]}
                   onChange={(e) => set(key, e.target.value)}
                 >
-                  <option value="">None</option>
+                  <option value="">{t('brand.none')}</option>
                   {media.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.filename}
@@ -280,24 +284,20 @@ export default function BrandPage() {
                   <AuthImage
                     orgId={currentOrgId!}
                     assetId={form[key]}
-                    alt={label}
+                    alt={t(label)}
                     className="mt-2 h-20 w-full rounded-lg border border-slate-200 bg-slate-50 object-contain"
                   />
                 )}
               </label>
             ))}
           </div>
-          {media.length === 0 && (
-            <p className="text-xs text-slate-500">
-              Upload images in the Media library first, then pick them here.
-            </p>
-          )}
+          {media.length === 0 && <p className="text-xs text-slate-500">{t('brand.uploadFirst')}</p>}
         </section>
 
         <section className="card space-y-4 p-6">
-          <h2 className="font-bold">Organization details</h2>
+          <h2 className="font-bold">{t('brand.orgDetails')}</h2>
           <label className="block text-sm">
-            <span className="font-semibold">Description</span>
+            <span className="font-semibold">{t('brand.description')}</span>
             <textarea
               className="input mt-1"
               rows={3}
@@ -309,7 +309,7 @@ export default function BrandPage() {
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="font-semibold">Website</span>
+              <span className="font-semibold">{t('brand.website')}</span>
               <input
                 className="input mt-1"
                 type="url"
@@ -320,7 +320,7 @@ export default function BrandPage() {
               />
             </label>
             <label className="block text-sm">
-              <span className="font-semibold">Default language</span>
+              <span className="font-semibold">{t('brand.defaultLang')}</span>
               <select
                 className="input mt-1"
                 disabled={dis}
@@ -336,7 +336,7 @@ export default function BrandPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {SOCIALS.map((s) => (
               <label key={s} className="block text-sm">
-                <span className="font-semibold capitalize">{s === 'x' ? 'X (Twitter)' : s}</span>
+                <span className="font-semibold">{t(`brand.s.${s}` as MessageKey)}</span>
                 <input
                   className="input mt-1"
                   type="url"
@@ -355,12 +355,12 @@ export default function BrandPage() {
             <input
               className="input !w-64"
               maxLength={100}
-              placeholder="Version label (optional)"
+              placeholder={t('brand.versionLabelPh')}
               value={form.label}
               onChange={(e) => set('label', e.target.value)}
             />
             <button className="btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : 'Save as new version'}
+              {saving ? t('det.saving') : t('brand.saveNew')}
             </button>
           </section>
         )}
@@ -374,7 +374,7 @@ export default function BrandPage() {
                 <AuthImage
                   orgId={currentOrgId!}
                   assetId={logoId}
-                  alt="Logo"
+                  alt={t('brand.logoAlt')}
                   className="h-10 w-10 rounded-lg bg-white/90 object-contain p-1"
                 />
               ) : (
@@ -401,27 +401,25 @@ export default function BrandPage() {
                 fontFamily: `"${form.headingFont}", system-ui, sans-serif`,
               }}
             >
-              Open day: meet our teachers
+              {t('brand.sampleTitle')}
             </p>
-            <p className="text-sm text-slate-600">
-              {form.description || 'Your description appears here in the body font.'}
-            </p>
+            <p className="text-sm text-slate-600">{form.description || t('brand.sampleBody')}</p>
             <span
               className="inline-block rounded-full px-4 py-1.5 text-sm font-semibold text-white"
               style={{ background: form.accentColor }}
             >
-              Register now
+              {t('brand.sampleCta')}
             </span>
           </div>
           <p className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
-            Live preview
+            {t('brand.livePreview')}
           </p>
         </section>
 
         <section className="card p-4">
-          <h2 className="mb-2 text-sm font-bold">Versions</h2>
+          <h2 className="mb-2 text-sm font-bold">{t('brand.versions')}</h2>
           {versions.length === 0 ? (
-            <p className="text-sm text-slate-500">None yet.</p>
+            <p className="text-sm text-slate-500">{t('brand.noneYet')}</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {versions.map((k) => (
@@ -430,13 +428,13 @@ export default function BrandPage() {
                     <p className="font-semibold">
                       v{k.version}{' '}
                       {k.isActive && (
-                        <span className="ml-1 rounded-full bg-green-100 px-2 text-[11px] text-green-800">
-                          Active
+                        <span className="ms-1 rounded-full bg-green-100 px-2 text-[11px] text-green-800">
+                          {t('brand.active')}
                         </span>
                       )}
                     </p>
                     <p className="truncate text-xs text-slate-400">
-                      {k.label || new Date(k.createdAt).toLocaleDateString()}
+                      {k.label || new Date(k.createdAt).toLocaleDateString(dateLocale)}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -453,7 +451,7 @@ export default function BrandPage() {
                         className="btn-ghost btn-sm"
                         onClick={() => activate(k.id)}
                       >
-                        Use
+                        {t('brand.use')}
                       </button>
                     )}
                   </div>
