@@ -7,29 +7,28 @@ import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from
 import { apiFetch, canWriteSources, SourceDetail, SourceSummary } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError, describeStoredExtractionError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
 type Tab = 'text' | 'file' | 'url';
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'text', label: 'Paste text', icon: '📝' },
-  { id: 'file', label: 'Upload PDF / DOCX', icon: '📎' },
-  { id: 'url', label: 'Web page', icon: '🔗' },
+const TABS: { id: Tab; label: MessageKey; icon: string }[] = [
+  { id: 'text', label: 'src.tab.text', icon: '📝' },
+  { id: 'file', label: 'src.tab.file', icon: '📎' },
+  { id: 'url', label: 'src.tab.url', icon: '🔗' },
 ];
 
-const TYPE_LABEL: Record<string, string> = {
-  TEXT: 'Text',
-  PDF: 'PDF',
-  DOCX: 'DOCX',
-  URL: 'Web page',
-};
-
 function StatusBadge({ s }: { s: SourceSummary }) {
-  if (s.status === 'EXTRACTED') return <span className="chip-ok">{s._count.facts} facts</span>;
-  return <span className="chip-warn">Needs extraction</span>;
+  const { t } = useI18n();
+  if (s.status === 'EXTRACTED') {
+    return <span className="chip-ok">{t('src.factsCount', { n: s._count.facts })}</span>;
+  }
+  return <span className="chip-warn">{t('status.needsExtraction')}</span>;
 }
 
 export default function SourcesPage() {
   const router = useRouter();
   const { currentOrgId, currentRole } = useApp();
+  const { t, dateLocale } = useI18n();
   const canWrite = canWriteSources(currentRole);
   const [list, setList] = useState<SourceSummary[] | null>(null);
   const [tab, setTab] = useState<Tab>('text');
@@ -73,7 +72,7 @@ export default function SourcesPage() {
           body: JSON.stringify({ url: url.trim() }),
         });
       } else {
-        if (!file) throw new Error('Choose a PDF or DOCX file first.');
+        if (!file) throw new Error(t('src.chooseFileFirst'));
         const form = new FormData();
         form.append('file', file);
         result = await apiFetch(`${base}/file`, { method: 'POST', body: form });
@@ -95,11 +94,8 @@ export default function SourcesPage() {
   return (
     <div className="space-y-4">
       <section className="pb-1">
-        <h1 className="font-display text-[28px] font-semibold leading-tight">Sources</h1>
-        <p className="text-sm text-muted">
-          Start from an announcement, document or web page. We extract the key facts so everything
-          you create stays accurate.
-        </p>
+        <h1 className="font-display text-[28px] font-semibold leading-tight">{t('nav.sources')}</h1>
+        <p className="text-sm text-muted">{t('src.subtitle')}</p>
         {error && (
           <p className="mt-3 rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
             {error}
@@ -110,24 +106,24 @@ export default function SourcesPage() {
       {canWrite ? (
         <form onSubmit={submit} className="card space-y-4 p-6">
           <div className="flex flex-wrap gap-2" role="tablist">
-            {TABS.map((t) => (
+            {TABS.map((tb) => (
               <button
-                key={t.id}
+                key={tb.id}
                 type="button"
                 role="tab"
-                aria-selected={tab === t.id}
+                aria-selected={tab === tb.id}
                 disabled={busy}
                 onClick={() => {
-                  setTab(t.id);
+                  setTab(tb.id);
                   setError('');
                 }}
                 className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  tab === t.id
+                  tab === tb.id
                     ? 'bg-brand text-white'
                     : 'bg-slate-200/70 text-slate-700 hover:bg-slate-300/70'
                 }`}
               >
-                {t.icon} {t.label}
+                {tb.icon} {t(tb.label)}
               </button>
             ))}
           </div>
@@ -137,7 +133,7 @@ export default function SourcesPage() {
               <input
                 className="input"
                 maxLength={150}
-                placeholder="Title (optional)"
+                placeholder={t('src.titlePh')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={busy}
@@ -145,14 +141,14 @@ export default function SourcesPage() {
               <textarea
                 className="input"
                 rows={9}
-                placeholder="Paste the announcement, article or notes here (French, Arabic or English)…"
+                placeholder={t('src.textPh')}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 disabled={busy}
                 maxLength={200000}
               />
               <p className="text-xs text-slate-400">
-                {text.length.toLocaleString()} / 200,000 characters
+                {t('src.chars', { n: text.length.toLocaleString(dateLocale) })}
               </p>
             </div>
           )}
@@ -175,13 +171,9 @@ export default function SourcesPage() {
                 disabled={busy}
               >
                 <span className="text-3xl">📎</span>
-                <span className="mt-2 font-semibold">
-                  {file ? file.name : 'Choose a PDF or DOCX file'}
-                </span>
+                <span className="mt-2 font-semibold">{file ? file.name : t('src.chooseFile')}</span>
                 <span className="text-xs">
-                  {file
-                    ? `${(file.size / 1024).toFixed(0)} KB`
-                    : 'Up to 10 MB. Scanned images are not supported yet.'}
+                  {file ? t('src.kb', { n: (file.size / 1024).toFixed(0) }) : t('src.fileHint')}
                 </span>
               </button>
             </div>
@@ -197,39 +189,30 @@ export default function SourcesPage() {
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={busy}
               />
-              <p className="text-xs text-slate-400">
-                Public web pages only. Pages that block automated access can’t be imported: paste
-                the text instead.
-              </p>
+              <p className="text-xs text-slate-400">{t('src.urlHint')}</p>
             </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn-primary" disabled={busy || !ready}>
-              {busy ? 'Working…' : 'Add source & extract facts'}
+              {busy ? t('src.working') : t('src.add')}
             </button>
-            {busy && (
-              <p className="text-sm text-muted">
-                Reading your content and extracting facts. This can take up to a minute.
-              </p>
-            )}
+            {busy && <p className="text-sm text-muted">{t('src.reading')}</p>}
           </div>
         </form>
       ) : (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">
-          You have read-only access. Owners, admins, editors and designers can add sources.
-        </p>
+        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('src.readOnly')}</p>
       )}
 
       <section className="card p-6">
-        <h2 className="mb-3 font-display text-base font-semibold">History</h2>
+        <h2 className="mb-3 font-display text-base font-semibold">{t('src.history')}</h2>
         {list === null ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <p className="text-sm text-muted">{t('common.loading')}</p>
         ) : list.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted">
             <p className="text-3xl">📄</p>
-            <p className="mt-2 font-semibold text-slate-700">No sources yet</p>
-            <p>Add your first one above.</p>
+            <p className="mt-2 font-semibold text-slate-700">{t('src.none')}</p>
+            <p>{t('src.addFirst')}</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -251,10 +234,10 @@ export default function SourcesPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{s.title}</p>
                     <p className="text-xs text-slate-400">
-                      {TYPE_LABEL[s.type]}
+                      {t(`src.type.${s.type}` as MessageKey)}
                       {s.language ? ` · ${s.language.toUpperCase()}` : ''}
                       {s.classification ? ` · ${s.classification.replace('_', ' ')}` : ''} ·{' '}
-                      {new Date(s.createdAt).toLocaleDateString()}
+                      {new Date(s.createdAt).toLocaleDateString(dateLocale)}
                     </p>
                     {s.status !== 'EXTRACTED' && s.extractionError && (
                       <p className="mt-0.5 text-xs text-amber-700">

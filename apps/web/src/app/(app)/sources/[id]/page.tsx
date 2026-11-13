@@ -3,16 +3,11 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  apiFetch,
-  canWriteSources,
-  FACT_KINDS,
-  FACT_LABELS,
-  SourceDetail,
-  SourceFactRow,
-} from '@/lib/api';
+import { apiFetch, canWriteSources, FACT_KINDS, SourceDetail, SourceFactRow } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError, describeStoredExtractionError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -32,16 +27,18 @@ function locate(text: string, quote: string): [number, number] | null {
 }
 
 function Trust({ f }: { f: SourceFactRow }) {
-  if (f.manual) return <span className="chip-draft">Added by you</span>;
-  if (f.edited) return <span className="chip-info">Edited by you</span>;
-  if (f.verified) return <span className="chip-ok">✓ Found in source</span>;
-  return <span className="chip-warn">⚠ Not found in source — check it</span>;
+  const { t } = useI18n();
+  if (f.manual) return <span className="chip-draft">{t('src.trust.manual')}</span>;
+  if (f.edited) return <span className="chip-info">{t('src.trust.edited')}</span>;
+  if (f.verified) return <span className="chip-ok">{t('src.trust.verified')}</span>;
+  return <span className="chip-warn">{t('src.trust.unverified')}</span>;
 }
 
 export default function SourceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { currentOrgId, currentRole } = useApp();
+  const { t } = useI18n();
   const canWrite = canWriteSources(currentRole);
   const base = `/organizations/${currentOrgId}/sources/${id}`;
 
@@ -96,9 +93,9 @@ export default function SourceDetailPage() {
       if (res.extraction && !res.extraction.ok)
         setError(
           describeStoredExtractionError(`${res.extraction.code}: ${res.extraction.message}`) ??
-            'Extraction failed.',
+            t('src.extractFailed'),
         );
-      else setNotice('Facts extracted. Please review them below.');
+      else setNotice(t('src.extracted'));
     } catch (e) {
       setError(describeError(e));
     }
@@ -127,7 +124,7 @@ export default function SourceDetailPage() {
   }
 
   async function removeSource() {
-    if (!confirm('Delete this source and all its facts? This cannot be undone.')) return;
+    if (!confirm(t('src.confirmDelete'))) return;
     try {
       await apiFetch(base, { method: 'DELETE' });
       router.replace('/sources');
@@ -136,7 +133,7 @@ export default function SourceDetailPage() {
     }
   }
 
-  if (!data) return <p className="text-sm text-muted">{error || 'Loading…'}</p>;
+  if (!data) return <p className="text-sm text-muted">{error || t('common.loading')}</p>;
   const { source, facts, missing, unverifiedCount } = data;
   const activeFact = facts.find((f) => f.id === highlight);
   const range = activeFact?.quote ? locate(source.originalText, activeFact.quote) : null;
@@ -149,7 +146,7 @@ export default function SourceDetailPage() {
   return (
     <div className="space-y-4">
       <Link href="/sources" className="text-sm font-semibold text-brand">
-        ← All sources
+        {t('src.back')}
       </Link>
 
       <section className="card p-6">
@@ -167,7 +164,7 @@ export default function SourceDetailPage() {
                   {source.url}
                 </a>
               ) : (
-                (source.fileName ?? 'Pasted text')
+                (source.fileName ?? t('src.pasted'))
               )}
               {source.language ? ` · ${source.language.toUpperCase()}` : ''}
               {source.classification ? ` · ${source.classification.replace('_', ' ')}` : ''}
@@ -177,18 +174,18 @@ export default function SourceDetailPage() {
             <div className="flex flex-wrap gap-2">
               {source.status === 'EXTRACTED' && (
                 <Link href={`/studio?sourceId=${source.id}`} className="btn-primary">
-                  ✍️ Create content
+                  {t('src.createContent')}
                 </Link>
               )}
               <button className="btn-ghost" disabled={extracting} onClick={extract}>
                 {extracting
-                  ? 'Extracting…'
+                  ? t('src.extracting')
                   : source.status === 'EXTRACTED'
-                    ? 'Re-extract facts'
-                    : 'Extract facts'}
+                    ? t('src.reextract')
+                    : t('src.extract')}
               </button>
               <button className="btn-danger" onClick={removeSource}>
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           )}
@@ -206,31 +203,29 @@ export default function SourceDetailPage() {
         )}
         {source.status !== 'EXTRACTED' && (
           <p className="mt-3 rounded-lg border border-amber-200 bg-warn-soft p-3 text-sm text-warn-ink">
-            Your content is saved, but facts have not been extracted yet.
-            {storedError ? ` Last attempt: ${storedError}` : ''}{' '}
-            {canWrite ? 'Use “Extract facts” to try again.' : ''}
+            {t('src.notExtracted')}
+            {storedError ? ` ${t('src.lastAttempt', { error: storedError })}` : ''}{' '}
+            {canWrite ? t('src.useExtract') : ''}
           </p>
         )}
         {source.truncated && (
           <p className="mt-3 rounded-lg bg-slate-100 p-3 text-xs text-slate-600">
-            This document is long: only the first part was analysed. Add any missing facts manually.
+            {t('src.truncated')}
           </p>
         )}
         {unverifiedCount > 0 && (
           <p className="mt-3 rounded-lg border border-amber-200 bg-warn-soft p-3 text-sm text-warn-ink">
-            {unverifiedCount} fact{unverifiedCount > 1 ? 's' : ''} could not be matched to the
-            original text. Please confirm, edit or delete them before using them.
+            {t(unverifiedCount === 1 ? 'src.unverifiedOne' : 'src.unverifiedMany', {
+              n: unverifiedCount,
+            })}
           </p>
         )}
       </section>
 
       {missing.length > 0 && (
         <section className="card p-6">
-          <h2 className="font-display text-base font-semibold">Possibly missing information</h2>
-          <p className="text-sm text-muted">
-            This kind of document usually includes the following, but we did not find it. We will
-            never invent it.
-          </p>
+          <h2 className="font-display text-base font-semibold">{t('src.missingTitle')}</h2>
+          <p className="text-sm text-muted">{t('src.missingHint')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {missing.map((k) => (
               <button
@@ -243,8 +238,8 @@ export default function SourceDetailPage() {
                 }}
                 className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-200 disabled:cursor-default"
               >
-                {FACT_LABELS[k] ?? k}
-                {canWrite ? ' · add' : ''}
+                {t(`fact.${k}` as MessageKey)}
+                {canWrite ? ` · ${t('src.addShort')}` : ''}
               </button>
             ))}
           </div>
@@ -253,7 +248,9 @@ export default function SourceDetailPage() {
 
       {grouped.map(({ kind, items }) => (
         <section key={kind} className="card p-6">
-          <h2 className="mb-2 font-display text-base font-semibold">{FACT_LABELS[kind]}</h2>
+          <h2 className="mb-2 font-display text-base font-semibold">
+            {t(`fact.${kind}` as MessageKey)}
+          </h2>
           <ul className="divide-y divide-slate-100">
             {items.map((f) => (
               <li key={f.id} className="space-y-2 py-3">
@@ -269,10 +266,10 @@ export default function SourceDetailPage() {
                         onKeyDown={(e) => e.key === 'Enter' && saveEdit(f.id)}
                       />
                       <button className="btn-primary" onClick={() => saveEdit(f.id)}>
-                        Save
+                        {t('common.save')}
                       </button>
                       <button className="btn-ghost" onClick={() => setEditingId(null)}>
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   ) : (
@@ -290,7 +287,7 @@ export default function SourceDetailPage() {
                           setShowText(true);
                         }}
                       >
-                        {highlight === f.id ? 'Hide in source' : 'Show in source'}
+                        {highlight === f.id ? t('src.hideInSource') : t('src.showInSource')}
                       </button>
                     )}
                     {canWrite && (
@@ -300,7 +297,7 @@ export default function SourceDetailPage() {
                             className="font-semibold text-green-700"
                             onClick={() => patch(f.id, { verified: true })}
                           >
-                            This is correct
+                            {t('src.isCorrect')}
                           </button>
                         )}
                         <button
@@ -310,23 +307,23 @@ export default function SourceDetailPage() {
                             setDraft(f.value);
                           }}
                         >
-                          Edit
+                          {t('common.edit')}
                         </button>
                         <button
                           className="font-semibold text-red-600"
                           onClick={() =>
-                            confirm('Delete this fact?') &&
+                            confirm(t('src.confirmDeleteFact')) &&
                             run(() => apiFetch(`${base}/facts/${f.id}`, { method: 'DELETE' }))
                           }
                         >
-                          Delete
+                          {t('common.delete')}
                         </button>
                       </>
                     )}
                   </div>
                 )}
                 {f.quote && highlight === f.id && (
-                  <blockquote className="border-l-4 border-brand/40 bg-slate-50 p-2 text-xs italic text-slate-600">
+                  <blockquote className="border-s-4 border-brand/40 bg-slate-50 p-2 text-xs italic text-slate-600">
                     “{f.quote}”
                   </blockquote>
                 )}
@@ -337,21 +334,17 @@ export default function SourceDetailPage() {
       ))}
 
       {source.status === 'EXTRACTED' && facts.length === 0 && (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">
-          No facts were found in this document.
-        </p>
+        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('src.noFacts')}</p>
       )}
 
       {canWrite && (
         <form id="add-fact" onSubmit={addFact} className="card flex flex-wrap items-end gap-3 p-6">
           <div className="w-full">
-            <h2 className="font-display text-base font-semibold">Add a fact yourself</h2>
-            <p className="text-sm text-muted">
-              Facts you add are marked as yours and are kept when facts are re-extracted.
-            </p>
+            <h2 className="font-display text-base font-semibold">{t('src.addYourself')}</h2>
+            <p className="text-sm text-muted">{t('src.addYourselfHint')}</p>
           </div>
           <label className="text-xs font-semibold text-slate-600">
-            Type
+            {t('src.type')}
             <select
               className="input mt-1 !w-auto"
               value={newKind}
@@ -359,35 +352,37 @@ export default function SourceDetailPage() {
             >
               {FACT_KINDS.map((k) => (
                 <option key={k} value={k}>
-                  {FACT_LABELS[k]}
+                  {t(`fact.${k}` as MessageKey)}
                 </option>
               ))}
             </select>
           </label>
           <label className="min-w-[200px] flex-1 text-xs font-semibold text-slate-600">
-            Value
+            {t('src.value')}
             <input
               className="input mt-1"
               maxLength={500}
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
-              placeholder="e.g. admissions@school.example"
+              placeholder={t('src.valuePh')}
             />
           </label>
           <button className="btn-primary" disabled={!newValue.trim()}>
-            Add fact
+            {t('src.addFact')}
           </button>
         </form>
       )}
 
       <section className="card p-6">
         <button
-          className="flex w-full items-center justify-between text-left font-bold"
+          className="flex w-full items-center justify-between text-start font-bold"
           onClick={() => setShowText((v) => !v)}
           aria-expanded={showText}
         >
-          Original text
-          <span className="text-sm font-normal text-slate-400">{showText ? 'Hide' : 'Show'}</span>
+          {t('src.originalText')}
+          <span className="text-sm font-normal text-slate-400">
+            {showText ? t('common.hide') : t('common.show')}
+          </span>
         </button>
         {showText && (
           <div

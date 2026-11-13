@@ -61,7 +61,9 @@ describe('translations', () => {
     }
     // Arabic text is Arabic script (apart from product names and numbers).
     const arabic = /[؀-ۿ]/;
-    for (const k of keys.filter((x) => !/^kind\.(INSTAGRAM|FACEBOOK|LINKEDIN)$/.test(x))) {
+    for (const k of keys.filter(
+      (x) => !/^(kind\.(INSTAGRAM|FACEBOOK|LINKEDIN)|src\.type\.(PDF|DOCX))$/.test(x),
+    )) {
       expect(arabic.test(ar[k])).toBe(true);
     }
   });

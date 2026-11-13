@@ -24,13 +24,15 @@ import { KindBadge } from '@/components/dashboard/widgets';
 import { ApprovalBadge } from '@/components/studio/approval';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
-const KIND_LABEL = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k]));
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const KIND_ICON = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k.icon]));
 
 export default function StudioPage() {
   const router = useRouter();
   const { currentOrgId, currentRole } = useApp();
+  const { t, dateLocale } = useI18n();
   const canWrite = canWriteContent(currentRole);
   const base = `/organizations/${currentOrgId}`;
 
@@ -128,11 +130,8 @@ export default function StudioPage() {
   return (
     <div className="space-y-4">
       <section className="pb-1">
-        <h1 className="font-display text-[28px] font-semibold leading-tight">Content studio</h1>
-        <p className="text-sm text-muted">
-          Turn a verified source into an article or social posts. We only use facts you have
-          verified, and we flag anything that does not match them.
-        </p>
+        <h1 className="font-display text-[28px] font-semibold leading-tight">{t('nav.studio')}</h1>
+        <p className="text-sm text-muted">{t('studio.subtitle')}</p>
         {error && (
           <p className="mt-3 rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
             {error}
@@ -143,19 +142,17 @@ export default function StudioPage() {
       {canWrite ? (
         sources && sources.length === 0 ? (
           <section className="card p-6 text-sm text-slate-600">
-            <p className="font-semibold text-slate-800">You need a source first</p>
-            <p className="mt-1">
-              Add a source and extract its facts, then come back to create content.
-            </p>
+            <p className="font-semibold text-slate-800">{t('studio.needSource')}</p>
+            <p className="mt-1">{t('studio.needSourceHint')}</p>
             <Link href="/sources" className="btn-primary mt-3">
-              Go to Sources
+              {t('studio.goSources')}
             </Link>
           </section>
         ) : (
           <form onSubmit={generate} className="card space-y-5 p-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="font-semibold">Source</span>
+                <span className="font-semibold">{t('studio.source')}</span>
                 <select
                   className="input mt-1"
                   value={sourceId}
@@ -170,23 +167,23 @@ export default function StudioPage() {
                 </select>
               </label>
               <div className="text-sm">
-                <span className="font-semibold">Facts we will use</span>
+                <span className="font-semibold">{t('studio.factsUse')}</span>
                 <p className="mt-2 text-slate-600">
                   {facts === null ? (
-                    'Checking…'
+                    t('form.checking')
                   ) : (
                     <>
                       <span className="font-semibold text-green-700">
-                        {facts.verified} verified
+                        {t('studio.verifiedN', { n: facts.verified })}
                       </span>
                       {facts.unverified > 0 && (
                         <>
                           {' · '}
                           <span className="font-semibold text-amber-700">
-                            {facts.unverified} unverified (not used)
+                            {t('studio.unverifiedN', { n: facts.unverified })}
                           </span>{' '}
                           <Link href={`/sources/${sourceId}`} className="text-brand underline">
-                            review
+                            {t('studio.review')}
                           </Link>
                         </>
                       )}
@@ -194,15 +191,13 @@ export default function StudioPage() {
                   )}
                 </p>
                 {noFacts && (
-                  <p className="mt-1 text-xs text-amber-700">
-                    Confirm or add facts on the source first.
-                  </p>
+                  <p className="mt-1 text-xs text-amber-700">{t('studio.confirmFirst')}</p>
                 )}
               </div>
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-semibold">What do you want to create?</p>
+              <p className="mb-2 text-sm font-semibold">{t('studio.whatCreate')}</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {CONTENT_KINDS.map((k) => (
                   <button
@@ -211,15 +206,15 @@ export default function StudioPage() {
                     disabled={busy}
                     onClick={() => setKind(k.id)}
                     aria-pressed={kind === k.id}
-                    className={`rounded-xl border-2 p-4 text-left transition ${
+                    className={`rounded-xl border-2 p-4 text-start transition ${
                       kind === k.id
                         ? 'border-brand bg-brand-soft'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <KindBadge kind={k.id} />
-                    <p className="mt-1 font-semibold">{k.label}</p>
-                    <p className="text-xs text-muted">{k.blurb}</p>
+                    <p className="mt-1 font-semibold">{t(`kind.${k.id}`)}</p>
+                    <p className="text-xs text-muted">{t(`kind.blurb.${k.id}`)}</p>
                   </button>
                 ))}
               </div>
@@ -227,14 +222,14 @@ export default function StudioPage() {
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <label className="block text-sm">
-                <span className="font-semibold">Language</span>
+                <span className="font-semibold">{t('studio.language')}</span>
                 <select
                   className="input mt-1"
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as '' | Lang)}
                   disabled={busy}
                 >
-                  <option value="">Automatic (brand default)</option>
+                  <option value="">{t('studio.langAuto')}</option>
                   {Object.entries(LANG_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
@@ -243,7 +238,7 @@ export default function StudioPage() {
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="font-semibold">Writing style</span>
+                <span className="font-semibold">{t('studio.style')}</span>
                 <select
                   className="input mt-1"
                   value={style}
@@ -252,13 +247,13 @@ export default function StudioPage() {
                 >
                   {STYLE_OPTIONS.map((s) => (
                     <option key={s} value={s}>
-                      {cap(s)}
+                      {t(`style.${s}` as MessageKey)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="font-semibold">Tone</span>
+                <span className="font-semibold">{t('studio.tone')}</span>
                 <select
                   className="input mt-1"
                   value={tone}
@@ -267,33 +262,33 @@ export default function StudioPage() {
                 >
                   {TONE_OPTIONS.map((s) => (
                     <option key={s} value={s}>
-                      {cap(s)}
+                      {t(`tone.${s}` as MessageKey)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="font-semibold">Length</span>
+                <span className="font-semibold">{t('studio.length')}</span>
                 <select
                   className="input mt-1"
                   value={length}
                   onChange={(e) => setLength(e.target.value as GenerateOptions['length'])}
                   disabled={busy}
                 >
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="long">Long</option>
+                  <option value="short">{t('len.short')}</option>
+                  <option value="medium">{t('len.medium')}</option>
+                  <option value="long">{t('len.long')}</option>
                 </select>
               </label>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="font-semibold">Target audience</span>
+                <span className="font-semibold">{t('studio.audience')}</span>
                 <input
                   className="input mt-1"
                   maxLength={150}
-                  placeholder="e.g. future students and their parents"
+                  placeholder={t('studio.audiencePh')}
                   value={audience}
                   onChange={(e) => setAudience(e.target.value)}
                   disabled={busy}
@@ -301,11 +296,11 @@ export default function StudioPage() {
               </label>
               {kind === 'ARTICLE' && (
                 <label className="block text-sm">
-                  <span className="font-semibold">Primary SEO keyword</span>
+                  <span className="font-semibold">{t('studio.keyword')}</span>
                   <input
                     className="input mt-1"
                     maxLength={80}
-                    placeholder="e.g. open day Rabat"
+                    placeholder={t('studio.keywordPh')}
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     disabled={busy}
@@ -314,12 +309,12 @@ export default function StudioPage() {
               )}
             </div>
             <label className="block text-sm">
-              <span className="font-semibold">Extra instructions</span>
+              <span className="font-semibold">{t('studio.extra')}</span>
               <textarea
                 className="input mt-1"
                 rows={2}
                 maxLength={500}
-                placeholder="Optional. e.g. mention that places are limited"
+                placeholder={t('studio.extraPh')}
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 disabled={busy}
@@ -328,60 +323,54 @@ export default function StudioPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <button className="btn-primary" disabled={busy || !sourceId || noFacts}>
-                {busy ? 'Writing…' : `Create ${KIND_LABEL[kind].label.toLowerCase()}`}
+                {busy ? t('studio.writing') : t(`studio.create.${kind}`)}
               </button>
-              {busy && (
-                <p className="text-sm text-muted">
-                  The AI is writing from your verified facts. This can take up to a minute.
-                </p>
-              )}
+              {busy && <p className="text-sm text-muted">{t('studio.aiWriting')}</p>}
             </div>
           </form>
         )
       ) : (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">
-          You have read-only access. Owners, admins, editors and designers can create content.
-        </p>
+        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('studio.readOnly')}</p>
       )}
 
       <section className="card p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold">Your content</h2>
+          <h2 className="font-display text-base font-semibold">{t('studio.yourContent')}</h2>
           <div className="flex flex-wrap gap-2">
             <select
               className="input !w-auto"
               value={filterApproval}
               onChange={(e) => setFilterApproval(e.target.value as '' | ApprovalStatus)}
-              aria-label="Filter by approval"
+              aria-label={t('studio.filterApproval')}
             >
-              <option value="">Any approval state</option>
-              <option value="IN_REVIEW">In review</option>
-              <option value="CHANGES_REQUESTED">Changes requested</option>
-              <option value="APPROVED">Approved</option>
-              <option value="DRAFT">Not submitted</option>
+              <option value="">{t('studio.anyApproval')}</option>
+              <option value="IN_REVIEW">{t('approval.IN_REVIEW')}</option>
+              <option value="CHANGES_REQUESTED">{t('approval.CHANGES_REQUESTED')}</option>
+              <option value="APPROVED">{t('approval.APPROVED')}</option>
+              <option value="DRAFT">{t('approval.DRAFT')}</option>
             </select>
             <select
               className="input !w-auto"
               value={filterKind}
               onChange={(e) => setFilterKind(e.target.value as '' | ContentKind)}
-              aria-label="Filter by type"
+              aria-label={t('studio.filterType')}
             >
-              <option value="">All types</option>
+              <option value="">{t('studio.allTypes')}</option>
               {CONTENT_KINDS.map((k) => (
                 <option key={k.id} value={k.id}>
-                  {k.label}
+                  {t(`kind.${k.id}`)}
                 </option>
               ))}
             </select>
           </div>
         </div>
         {pieces === null ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <p className="text-sm text-muted">{t('common.loading')}</p>
         ) : visible.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted">
             <p className="text-3xl">✍️</p>
-            <p className="mt-2 font-semibold text-slate-700">Nothing here yet</p>
-            <p>Create your first article or post above.</p>
+            <p className="mt-2 font-semibold text-slate-700">{t('studio.nothingYet')}</p>
+            <p>{t('studio.createFirst')}</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -396,15 +385,18 @@ export default function StudioPage() {
                       {p.title}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {KIND_LABEL[p.kind].icon} {KIND_LABEL[p.kind].label} ·{' '}
+                      {KIND_ICON[p.kind]} {t(`kind.${p.kind}`)} ·{' '}
                       {LANG_LABELS[p.language] ?? p.language}
-                      {p.translatedFromId ? ' · translation' : ''}
-                      {p.edited ? ' · edited' : ''} · {new Date(p.createdAt).toLocaleDateString()}
+                      {p.translatedFromId ? ` · ${t('studio.translation')}` : ''}
+                      {p.edited ? ` · ${t('studio.edited')}` : ''} ·{' '}
+                      {new Date(p.createdAt).toLocaleDateString(dateLocale)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {p.warnings.length > 0 && (
-                      <span className="text-xs text-amber-700">{p.warnings.length} to check</span>
+                      <span className="text-xs text-amber-700">
+                        {t('studio.toCheck', { n: p.warnings.length })}
+                      </span>
                     )}
                     <StatusBadge status={p.status} />
                     <ApprovalBadge status={p.approvalStatus} />
