@@ -347,6 +347,101 @@ describe('WordPress publisher', () => {
     const failing = (status: number, json: any = null) =>
       make(async (_u, o) => (o?.method === 'POST' ? { status, json } : { status: 200, json: [] }));
 
+    describe('featured image', () => {
+      const photo = { filename: 'campus.png', mimeType: 'image/png', data: Buffer.from('PNGDATA') };
+      /** A site that accepts uploads and posts, and remembers what it was sent. */
+      const site_ = (over: Record<string, any> = {}) =>
+        make(async (url, o) => {
+          if (over[url]) return over[url];
+          if (String(url).includes('/wp/v2/media/')) return { status: 200, json: { id: 55 } };
+          if (String(url).endsWith('/wp/v2/media')) return { status: 201, json: { id: 55 } };
+          return o?.method === 'POST'
+            ? { status: 201, json: { id: 42, link: `${site}/open-day/` } }
+            : { status: 200, json: [] };
+        });
+
+      it('uploads the first picture, sets its description, and makes it the featured image', async () => {
+        const { wp, http } = site_();
+        await wp.publish(channel(), payload, [{ ...photo, altText: 'Students on the campus' }]);
+        const calls = http.mock.calls.map(([u, o]) => [o?.method ?? 'GET', String(u)]);
+        expect(calls.map((c) => c[0] + ' ' + c[1].replace(site, ''))).toEqual([
+          expect.stringContaining('GET /wp-json/wp/v2/posts?slug=open-day'), // duplicate check first
+          'POST /wp-json/wp/v2/media',
+          'POST /wp-json/wp/v2/media/55',
+          'POST /wp-json/wp/v2/posts',
+        ]);
+        const upload = http.mock.calls[1][1]!;
+        expect(upload.raw).toEqual({ contentType: 'image/png', data: photo.data });
+        expect(upload.headers?.['Content-Disposition']).toBe('attachment; filename="campus.png"');
+        expect(upload.headers?.Authorization).toMatch(/^Basic /);
+        expect(http.mock.calls[2][1]?.body).toEqual({ alt_text: 'Students on the campus' });
+        expect(http.mock.calls[3][1]?.body).toMatchObject({ featured_media: 55, slug: 'open-day' });
+      });
+
+      it('skips the description request when there is none, and uses only the first of several pictures', async () => {
+        const { wp, http } = site_();
+        await wp.publish(channel(), payload, [photo, { ...photo, filename: 'second.png' }]);
+        expect(http.mock.calls.filter(([u]) => String(u).endsWith('/media'))).toHaveLength(1);
+        expect(http.mock.calls.some(([u]) => String(u).includes('/media/55'))).toBe(false);
+        expect(http.mock.calls[http.mock.calls.length - 1][1]?.body).toMatchObject({
+          featured_media: 55,
+        });
+      });
+
+      it('sends no featured image and makes no upload for an article without pictures', async () => {
+        const { wp, http } = site_();
+        await wp.publish(channel(), payload, []);
+        expect(http.mock.calls.some(([u]) => String(u).includes('/media'))).toBe(false);
+        expect(http.mock.calls[1][1]?.body).not.toHaveProperty('featured_media');
+      });
+
+      it('does not upload anything when the post already exists', async () => {
+        const { wp, http } = make(async () => ({
+          status: 200,
+          json: [
+            { id: 9, slug: 'open-day', link: `${site}/open-day/`, title: { raw: 'Open Day' } },
+          ],
+        }));
+        await wp.publish(channel(), payload, [photo]);
+        expect(http.mock.calls.some(([u]) => String(u).includes('/media'))).toBe(false);
+      });
+
+      it('cleans the file name so it cannot break the upload header', async () => {
+        const { wp, http } = site_();
+        await wp.publish(channel(), payload, [{ ...photo, filename: 'a"b\r\nX-Evil: 1.png' }]);
+        const disposition = http.mock.calls[1][1]!.headers!['Content-Disposition'];
+        expect(disposition).toBe('attachment; filename="a_b__X-Evil: 1.png"');
+        expect(disposition).not.toMatch(/[\r\n]/);
+      });
+
+      it('retries a failed upload (nothing is public yet) and stops on a refused one', async () => {
+        const down = site_({ [`${site}/wp-json/wp/v2/media`]: { status: 503, json: null } });
+        const e = await down.wp.publish(channel(), payload, [photo]).catch((x) => x);
+        expect(e).not.toBeInstanceOf(PermanentPublishError);
+        expect(down.http.mock.calls.some(([, o]) => o?.method === 'POST' && !o.raw)).toBe(false); // no post was created
+
+        const refused = site_({
+          [`${site}/wp-json/wp/v2/media`]: {
+            status: 415,
+            json: { message: 'Sorry, you are not allowed to upload this file type.' },
+          },
+        });
+        const e2 = await refused.wp.publish(channel(), payload, [photo]).catch((x) => x);
+        expect(e2).toBeInstanceOf(PermanentPublishError);
+        expect(e2.message).toMatch(/not allowed to upload this file type/);
+
+        const noId = site_({ [`${site}/wp-json/wp/v2/media`]: { status: 201, json: {} } });
+        const e3 = await noId.wp.publish(channel(), payload, [photo]).catch((x) => x);
+        expect(e3).not.toBeInstanceOf(PermanentPublishError);
+        expect(e3.message).toMatch(/did not confirm the picture upload/);
+
+        const noPerm = site_({ [`${site}/wp-json/wp/v2/media`]: { status: 401, json: null } });
+        await expect(noPerm.wp.publish(channel(), payload, [photo])).rejects.toThrow(
+          ChannelAuthError,
+        );
+      });
+    });
+
     it('treats a rejected login as permanent and tells the channel to be reconnected', async () => {
       await expect(failing(401).wp.publish(channel(), payload)).rejects.toThrow(ChannelAuthError);
       await expect(failing(403).wp.publish(channel(), payload)).rejects.toThrow(/Reconnect/);

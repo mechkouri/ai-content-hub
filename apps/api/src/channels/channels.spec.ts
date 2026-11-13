@@ -705,6 +705,42 @@ describe('channels and publishing', () => {
       expect(String(res.body.message)).toMatch(/cannot publish this type/);
     });
 
+    it('uploads the article picture as the featured image, read back from storage, with its description', async () => {
+      const ch = (await create().expect(201)).body;
+      const calls: any[] = [];
+      wpHttp = async (url, opts) => {
+        calls.push({ url: String(url), opts });
+        if (String(url).endsWith('/wp/v2/media')) return { status: 201, json: { id: 88 } };
+        if (String(url).includes('/wp/v2/media/')) return { status: 200, json: { id: 88 } };
+        if (opts?.method === 'POST')
+          return { status: 201, json: { id: 77, link: site + '/open-day-atlas/' } };
+        return { status: 200, json: [] };
+      };
+      const art = article();
+      stored.set('wpkey', Buffer.from('picture-bytes'));
+      images.push({
+        contentId: art.id,
+        position: 0,
+        altText: 'Atlas campus courtyard',
+        asset: { filename: 'courtyard.png', mimeType: 'image/png', storageKey: 'wpkey' },
+      });
+      await queue({ contentId: art.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await publishing.processDue();
+
+      expect(jobs[0].status).toBe('PUBLISHED');
+      expect(jobs[0].payload.imageCount).toBe(1);
+      const upload = calls.find((c) => c.url.endsWith('/wp/v2/media'));
+      expect(upload.opts.raw.data.toString()).toBe('picture-bytes');
+      expect(upload.opts.headers.Authorization).toBe(
+        'Basic ' + Buffer.from('editor:abcd efgh ijkl mnop').toString('base64'),
+      );
+      expect(calls.find((c) => c.url.endsWith('/media/88')).opts.body).toEqual({
+        alt_text: 'Atlas campus courtyard',
+      });
+      const post = calls.find((c) => c.url.endsWith('/wp/v2/posts') && c.opts?.method === 'POST');
+      expect(post.opts.body.featured_media).toBe(88);
+    });
+
     it('stops using a channel whose login was revoked, and keeps nothing waiting on it', async () => {
       const ch = (await create().expect(201)).body;
       wpHttp = async (_u, opts) =>

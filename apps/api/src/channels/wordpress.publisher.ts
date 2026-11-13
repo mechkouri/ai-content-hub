@@ -8,6 +8,7 @@ import {
   PreparedChannel,
   Publisher,
   PublishChannel,
+  PublishMedia,
   PublishResult,
 } from './publisher';
 import {
@@ -135,7 +136,11 @@ export class WordPressPublisher implements Publisher {
 
   // ---------- publishing ----------
 
-  async publish(channel: PublishChannel, payload: PostPayload): Promise<PublishResult> {
+  async publish(
+    channel: PublishChannel,
+    payload: PostPayload,
+    media: PublishMedia[] = [],
+  ): Promise<PublishResult> {
     const cfg = channel.config as Partial<WpConfig> | null;
     const secret = channel.secret;
     if (!cfg?.siteUrl || !secret?.username || !secret.applicationPassword) {
@@ -160,6 +165,12 @@ export class WordPressPublisher implements Publisher {
       if (same?.id) return { externalId: String(same.id), url: same.link ?? null };
     }
 
+    // The first picture becomes the featured image. It is uploaded only now, after the duplicate check,
+    // so a retry never re-uploads for a post that already exists. A failure here is safe to retry.
+    const featured = media[0]
+      ? await this.uploadFeatured(cfg.siteUrl, headers, media[0])
+      : undefined;
+
     const res = await this.call(api, {
       method: 'POST',
       headers,
@@ -169,10 +180,32 @@ export class WordPressPublisher implements Publisher {
         excerpt: payload.excerpt ?? '',
         slug: payload.slug,
         status: cfg.publishAs === 'draft' ? 'draft' : 'publish',
+        ...(featured ? { featured_media: featured } : {}),
       },
     });
     if (!res.json?.id) throw new Error('WordPress did not confirm the post.');
     return { externalId: String(res.json.id), url: res.json.link ?? null };
+  }
+
+  /** Adds the picture to the site's media library, with its description, and returns its id. */
+  private async uploadFeatured(
+    siteUrl: string,
+    headers: Record<string, string>,
+    m: PublishMedia,
+  ): Promise<number> {
+    const media = `${siteUrl}/wp-json/wp/v2/media`;
+    const filename = m.filename.replace(/[\r\n"\\]/g, '_') || 'image';
+    const up = await this.call(media, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Disposition': `attachment; filename="${filename}"` },
+      raw: { contentType: m.mimeType, data: m.data },
+    });
+    const id = up.json?.id;
+    if (typeof id !== 'number') throw new Error('WordPress did not confirm the picture upload.');
+    if (m.altText) {
+      await this.call(`${media}/${id}`, { method: 'POST', headers, body: { alt_text: m.altText } });
+    }
+    return id;
   }
 
   /** One request, with failures sorted into "try again later" and "will never work". */
