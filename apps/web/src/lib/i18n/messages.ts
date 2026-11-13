@@ -762,6 +762,61 @@ export const en = {
   'brand.noneYet': 'None yet.',
   'brand.active': 'Active',
   'brand.use': 'Use',
+  'aip.err.QUOTA_EXHAUSTED':
+    'Your organization reached its generation limit. It resets automatically.',
+  'aip.err.RATE_LIMITED': 'Too many requests in a short time. Wait a moment and try again.',
+  'aip.err.PROVIDER_QUOTA_EXHAUSTED':
+    'The free allowance of the AI provider is used up. Try again later.',
+  'aip.err.PROVIDER_RATE_LIMITED': 'The AI provider is busy. Try again in a moment.',
+  'aip.err.PROVIDER_TIMEOUT': 'The AI provider took too long. Try again.',
+  'aip.err.PROVIDER_AUTH_FAILED':
+    'The server key for this provider is wrong or expired. Check the server settings.',
+  'aip.err.PROVIDER_NOT_CONFIGURED':
+    'This provider is not set up on the server yet (missing API key).',
+  'aip.err.PROVIDER_UNAVAILABLE': 'The AI provider is temporarily unavailable.',
+  'aip.err.MODEL_NOT_FREE': 'That model is not free. Only free models can be used.',
+  'aip.retry': '(retry in ~{n}s)',
+  'aip.connected': 'Connected',
+  'aip.notConfiguredShort': 'Not configured',
+  'aip.title': 'AI providers',
+  'aip.titleShort': 'AI',
+  'aip.noAccess': 'Only owners, admins, editors and designers can use AI features.',
+  'aip.freeOnly': 'Free models only · never falls back to paid',
+  'aip.subtitle':
+    'Text and image generation for your organization. API keys live on the server and are never shown here.',
+  'aip.text': 'Text',
+  'aip.images': 'Images',
+  'aip.activeModel': 'Active model:',
+  'aip.model': 'Model:',
+  'aip.today': 'Today',
+  'aip.month': 'This month',
+  'aip.textNotConfigured': 'Not configured. Add OPENROUTER_API_KEY to the server environment.',
+  'aip.imageNotConfigured':
+    'Not configured. Add the Cloudflare Worker URL and token, or the Cloudflare account ID and API token, to the server environment.',
+  'aip.settings': 'Settings',
+  'aip.textModel': 'Text model',
+  'aip.defaultModel': 'Platform default (openrouter/free)',
+  'aip.modelsFailed': 'Could not load free models: {error}',
+  'aip.modelsLive':
+    'Live list of {n} free models. Paid models are not offered and are rejected by the server.',
+  'aip.limits': 'Usage limits for this organization',
+  'aip.limitsHint':
+    'Leave blank for the platform default. You can lower a limit but not raise it above the platform cap.',
+  'aip.textDay': 'Text / day',
+  'aip.textMonth': 'Text / month',
+  'aip.imageDay': 'Images / day',
+  'aip.imageMonth': 'Images / month',
+  'aip.now': 'Now: {n}',
+  'aip.saveSettings': 'Save settings',
+  'aip.saved': 'Settings saved.',
+  'aip.adminOnly': 'Only owners and admins can change AI settings and run provider tests.',
+  'aip.testText': 'Test text generation',
+  'aip.testImage': 'Test image generation',
+  'aip.generating': 'Generating…',
+  'aip.runText': 'Run text test',
+  'aip.runImage': 'Run image test',
+  'aip.steps': 'Quality steps',
+  'aip.generatedAlt': 'Generated test',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1538,6 +1593,65 @@ export const fr: Messages = {
   'brand.noneYet': 'Aucune pour l’instant.',
   'brand.active': 'Active',
   'brand.use': 'Utiliser',
+  'aip.err.QUOTA_EXHAUSTED':
+    'Votre organisation a atteint sa limite de génération. Elle se réinitialise automatiquement.',
+  'aip.err.RATE_LIMITED': 'Trop de requêtes en peu de temps. Patientez un instant puis réessayez.',
+  'aip.err.PROVIDER_QUOTA_EXHAUSTED':
+    'Le quota gratuit du fournisseur d’IA est épuisé. Réessayez plus tard.',
+  'aip.err.PROVIDER_RATE_LIMITED': 'Le fournisseur d’IA est occupé. Réessayez dans un instant.',
+  'aip.err.PROVIDER_TIMEOUT': 'Le fournisseur d’IA a mis trop de temps. Réessayez.',
+  'aip.err.PROVIDER_AUTH_FAILED':
+    'La clé serveur de ce fournisseur est incorrecte ou expirée. Vérifiez les paramètres du serveur.',
+  'aip.err.PROVIDER_NOT_CONFIGURED':
+    'Ce fournisseur n’est pas encore configuré sur le serveur (clé API manquante).',
+  'aip.err.PROVIDER_UNAVAILABLE': 'Le fournisseur d’IA est temporairement indisponible.',
+  'aip.err.MODEL_NOT_FREE':
+    'Ce modèle n’est pas gratuit. Seuls les modèles gratuits peuvent être utilisés.',
+  'aip.retry': '(réessayez dans ~{n} s)',
+  'aip.connected': 'Connecté',
+  'aip.notConfiguredShort': 'Non configuré',
+  'aip.title': 'Fournisseurs d’IA',
+  'aip.titleShort': 'IA',
+  'aip.noAccess':
+    'Seuls les propriétaires, administrateurs, éditeurs et designers peuvent utiliser les fonctions d’IA.',
+  'aip.freeOnly': 'Modèles gratuits uniquement · jamais de repli vers le payant',
+  'aip.subtitle':
+    'Génération de texte et d’images pour votre organisation. Les clés API restent sur le serveur et ne sont jamais affichées ici.',
+  'aip.text': 'Texte',
+  'aip.images': 'Images',
+  'aip.activeModel': 'Modèle actif :',
+  'aip.model': 'Modèle :',
+  'aip.today': 'Aujourd’hui',
+  'aip.month': 'Ce mois-ci',
+  'aip.textNotConfigured':
+    'Non configuré. Ajoutez OPENROUTER_API_KEY à l’environnement du serveur.',
+  'aip.imageNotConfigured':
+    'Non configuré. Ajoutez l’URL et le jeton du Worker Cloudflare, ou l’identifiant de compte et le jeton API Cloudflare, à l’environnement du serveur.',
+  'aip.settings': 'Paramètres',
+  'aip.textModel': 'Modèle de texte',
+  'aip.defaultModel': 'Valeur par défaut de la plateforme (openrouter/free)',
+  'aip.modelsFailed': 'Impossible de charger les modèles gratuits : {error}',
+  'aip.modelsLive':
+    'Liste en direct de {n} modèles gratuits. Les modèles payants ne sont pas proposés et sont refusés par le serveur.',
+  'aip.limits': 'Limites d’utilisation de cette organisation',
+  'aip.limitsHint':
+    'Laissez vide pour la valeur par défaut de la plateforme. Vous pouvez abaisser une limite, mais pas la relever au-dessus du plafond de la plateforme.',
+  'aip.textDay': 'Texte / jour',
+  'aip.textMonth': 'Texte / mois',
+  'aip.imageDay': 'Images / jour',
+  'aip.imageMonth': 'Images / mois',
+  'aip.now': 'Actuel : {n}',
+  'aip.saveSettings': 'Enregistrer les paramètres',
+  'aip.saved': 'Paramètres enregistrés.',
+  'aip.adminOnly':
+    'Seuls les propriétaires et les administrateurs peuvent modifier les paramètres d’IA et lancer des tests.',
+  'aip.testText': 'Tester la génération de texte',
+  'aip.testImage': 'Tester la génération d’images',
+  'aip.generating': 'Génération…',
+  'aip.runText': 'Lancer le test de texte',
+  'aip.runImage': 'Lancer le test d’image',
+  'aip.steps': 'Étapes de qualité',
+  'aip.generatedAlt': 'Image de test générée',
 };
 
 export const ar: Messages = {
@@ -2286,6 +2400,60 @@ export const ar: Messages = {
   'brand.noneYet': 'لا شيء بعد.',
   'brand.active': 'نشطة',
   'brand.use': 'استخدام',
+  'aip.err.QUOTA_EXHAUSTED': 'بلغت مؤسستك حد التوليد. تتم إعادة التعيين تلقائيًا.',
+  'aip.err.RATE_LIMITED': 'طلبات كثيرة في وقت قصير. انتظر قليلًا ثم حاول مجددًا.',
+  'aip.err.PROVIDER_QUOTA_EXHAUSTED':
+    'استُنفدت الحصة المجانية لمزوّد الذكاء الاصطناعي. حاول لاحقًا.',
+  'aip.err.PROVIDER_RATE_LIMITED': 'مزوّد الذكاء الاصطناعي مشغول. حاول مجددًا بعد قليل.',
+  'aip.err.PROVIDER_TIMEOUT': 'استغرق مزوّد الذكاء الاصطناعي وقتًا طويلًا. حاول مجددًا.',
+  'aip.err.PROVIDER_AUTH_FAILED':
+    'مفتاح الخادم لهذا المزوّد خاطئ أو منتهي. تحقق من إعدادات الخادم.',
+  'aip.err.PROVIDER_NOT_CONFIGURED': 'لم يتم إعداد هذا المزوّد على الخادم بعد (مفتاح API مفقود).',
+  'aip.err.PROVIDER_UNAVAILABLE': 'مزوّد الذكاء الاصطناعي غير متاح مؤقتًا.',
+  'aip.err.MODEL_NOT_FREE': 'هذا النموذج ليس مجانيًا. يمكن استخدام النماذج المجانية فقط.',
+  'aip.retry': '(أعد المحاولة بعد ~{n} ث)',
+  'aip.connected': 'متصل',
+  'aip.notConfiguredShort': 'غير مُعدّ',
+  'aip.title': 'مزوّدو الذكاء الاصطناعي',
+  'aip.titleShort': 'الذكاء الاصطناعي',
+  'aip.noAccess':
+    'يمكن للمالكين والمسؤولين والمحررين والمصممين فقط استخدام ميزات الذكاء الاصطناعي.',
+  'aip.freeOnly': 'نماذج مجانية فقط · لا يتم الانتقال إلى المدفوع أبدًا',
+  'aip.subtitle': 'توليد النصوص والصور لمؤسستك. مفاتيح API تبقى على الخادم ولا تُعرض هنا أبدًا.',
+  'aip.text': 'النص',
+  'aip.images': 'الصور',
+  'aip.activeModel': 'النموذج النشط:',
+  'aip.model': 'النموذج:',
+  'aip.today': 'اليوم',
+  'aip.month': 'هذا الشهر',
+  'aip.textNotConfigured': 'غير مُعدّ. أضف OPENROUTER_API_KEY إلى بيئة الخادم.',
+  'aip.imageNotConfigured':
+    'غير مُعدّ. أضف رابط Cloudflare Worker والرمز، أو معرّف حساب Cloudflare ورمز API، إلى بيئة الخادم.',
+  'aip.settings': 'الإعدادات',
+  'aip.textModel': 'نموذج النص',
+  'aip.defaultModel': 'الافتراضي للمنصة (openrouter/free)',
+  'aip.modelsFailed': 'تعذّر تحميل النماذج المجانية: {error}',
+  'aip.modelsLive':
+    'قائمة مباشرة بـ {n} نموذجًا مجانيًا. النماذج المدفوعة غير معروضة ويرفضها الخادم.',
+  'aip.limits': 'حدود الاستخدام لهذه المؤسسة',
+  'aip.limitsHint':
+    'اتركه فارغًا للقيمة الافتراضية للمنصة. يمكنك خفض الحد لكن لا يمكنك رفعه فوق سقف المنصة.',
+  'aip.textDay': 'نصوص / يوم',
+  'aip.textMonth': 'نصوص / شهر',
+  'aip.imageDay': 'صور / يوم',
+  'aip.imageMonth': 'صور / شهر',
+  'aip.now': 'الحالي: {n}',
+  'aip.saveSettings': 'حفظ الإعدادات',
+  'aip.saved': 'تم حفظ الإعدادات.',
+  'aip.adminOnly':
+    'يمكن للمالكين والمسؤولين فقط تغيير إعدادات الذكاء الاصطناعي وتشغيل اختبارات المزوّد.',
+  'aip.testText': 'اختبار توليد النص',
+  'aip.testImage': 'اختبار توليد الصور',
+  'aip.generating': 'جارٍ التوليد…',
+  'aip.runText': 'تشغيل اختبار النص',
+  'aip.runImage': 'تشغيل اختبار الصورة',
+  'aip.steps': 'خطوات الجودة',
+  'aip.generatedAlt': 'صورة اختبار مولَّدة',
 };
 
 export const LOCALES = ['en', 'fr', 'ar'] as const;
