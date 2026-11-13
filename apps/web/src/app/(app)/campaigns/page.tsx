@@ -13,10 +13,12 @@ import {
 import { apiFetch, canWriteCampaigns, Campaign, CampaignSummary } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
 
 export default function CampaignsPage() {
   const router = useRouter();
   const { currentOrgId, currentRole } = useApp();
+  const { t, dateLocale } = useI18n();
   const canWrite = canWriteCampaigns(currentRole);
   const base = `/organizations/${currentOrgId}/campaigns`;
   const [list, setList] = useState<CampaignSummary[] | null>(null);
@@ -57,23 +59,21 @@ export default function CampaignsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Campaigns</h1>
-          <p className="text-sm text-muted">
-            Group related articles and posts, and follow how far each campaign has come.
-          </p>
+          <h1 className="font-display text-2xl font-semibold">{t('nav.campaigns')}</h1>
+          <p className="text-sm text-muted">{t('camp.subtitle')}</p>
         </div>
         {canWrite && !creating && (
           <button className="btn-primary" onClick={() => setCreating(true)}>
-            <Plus size={16} aria-hidden /> New campaign
+            <Plus size={16} aria-hidden /> {t('camp.new')}
           </button>
         )}
       </div>
 
       {creating && (
         <section className="card p-5">
-          <h2 className="mb-3 font-display text-base font-semibold">New campaign</h2>
+          <h2 className="mb-3 font-display text-base font-semibold">{t('camp.new')}</h2>
           <CampaignForm
-            submitLabel="Create campaign"
+            submitLabel={t('camp.create')}
             busy={busy}
             error={error}
             onSubmit={create}
@@ -96,31 +96,25 @@ export default function CampaignsPage() {
           className={showArchived ? 'btn-ghost' : 'btn-primary'}
           onClick={() => setShowArchived(false)}
         >
-          Active
+          {t('camp.active')}
         </button>
         <button
           className={showArchived ? 'btn-primary' : 'btn-ghost'}
           onClick={() => setShowArchived(true)}
         >
-          Archived{archivedCount ? ` (${archivedCount})` : ''}
+          {archivedCount ? t('camp.archivedCount', { n: archivedCount }) : t('camp.archived')}
         </button>
       </div>
 
       {list === null ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <p className="text-sm text-muted">{t('common.loading')}</p>
       ) : visible.length === 0 ? (
         <div className="card p-10 text-center text-sm text-muted">
           <p className="text-3xl">📣</p>
           <p className="mt-2 font-semibold text-slate-700">
-            {showArchived ? 'No archived campaigns' : 'No campaigns yet'}
+            {showArchived ? t('camp.noArchived') : t('camp.none')}
           </p>
-          {!showArchived && (
-            <p>
-              {canWrite
-                ? 'Create one to group your articles and posts.'
-                : 'Ask an editor to create the first one.'}
-            </p>
-          )}
+          {!showArchived && <p>{canWrite ? t('camp.createHint') : t('camp.askEditor')}</p>}
         </div>
       ) : (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -134,9 +128,11 @@ export default function CampaignsPage() {
                   <h2 className="font-display text-base font-semibold" dir="auto">
                     {c.name}
                   </h2>
-                  {c.status === 'ARCHIVED' && <span className="chip-draft">Archived</span>}
+                  {c.status === 'ARCHIVED' && (
+                    <span className="chip-draft">{t('camp.archived')}</span>
+                  )}
                 </div>
-                <p className="text-xs text-muted">{dateRange(c)}</p>
+                <p className="text-xs text-muted">{dateRange(c, t, dateLocale)}</p>
                 {c.description && (
                   <p className="line-clamp-2 text-sm text-slate-600" dir="auto">
                     {c.description}

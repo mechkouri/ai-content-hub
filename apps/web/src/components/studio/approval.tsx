@@ -1,13 +1,10 @@
-import { ApprovalStatus, ContentReview, ReviewAction } from '@/lib/api';
+'use client';
 
-const LABEL: Record<ApprovalStatus, string> = {
-  DRAFT: 'Not submitted',
-  IN_REVIEW: 'In review',
-  CHANGES_REQUESTED: 'Changes requested',
-  APPROVED: 'Approved',
-};
+import { ApprovalStatus, ContentReview } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 export function ApprovalBadge({ status }: { status: ApprovalStatus }) {
+  const { t } = useI18n();
   const cls =
     status === 'APPROVED'
       ? 'chip-ok'
@@ -16,18 +13,11 @@ export function ApprovalBadge({ status }: { status: ApprovalStatus }) {
         : status === 'CHANGES_REQUESTED'
           ? 'chip-warn'
           : 'chip-draft';
-  return <span className={cls}>{LABEL[status]}</span>;
+  return <span className={cls}>{t(`approval.${status}`)}</span>;
 }
 
-const EVENT: Record<ReviewAction, string> = {
-  SUBMITTED: 'submitted for review',
-  WITHDRAWN: 'withdrew the submission',
-  APPROVED: 'approved',
-  CHANGES_REQUESTED: 'requested changes',
-  INVALIDATED: 'edit reset the review',
-};
-
 export function ReviewHistory({ reviews, userId }: { reviews: ContentReview[]; userId?: string }) {
+  const { t, dateLocale } = useI18n();
   if (reviews.length === 0) return null;
   return (
     <ol className="mt-3 space-y-2 border-t border-slate-100 pt-3">
@@ -35,10 +25,17 @@ export function ReviewHistory({ reviews, userId }: { reviews: ContentReview[]; u
         <li key={r.id} className="text-xs">
           <p className="text-slate-700">
             <span className="font-semibold">
-              {r.action === 'INVALIDATED' ? 'System' : r.actorId === userId ? 'You' : 'A teammate'}
+              {r.action === 'INVALIDATED'
+                ? t('review.system')
+                : r.actorId === userId
+                  ? t('review.you')
+                  : t('review.teammate')}
             </span>{' '}
-            {EVENT[r.action]}
-            <span className="text-slate-400"> · {new Date(r.createdAt).toLocaleString()}</span>
+            {t(`review.${r.action}`)}
+            <span className="text-slate-400">
+              {' '}
+              · {new Date(r.createdAt).toLocaleString(dateLocale)}
+            </span>
           </p>
           {r.comment && r.action !== 'INVALIDATED' && (
             <p className="mt-0.5 rounded-lg bg-slate-50 px-2 py-1 text-slate-600" dir="auto">

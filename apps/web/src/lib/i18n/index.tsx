@@ -9,13 +9,23 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { detectLocale, dirOf, isLocale, Locale, MessageKey, translate } from './messages';
+import {
+  dateLocaleOf,
+  detectLocale,
+  dirOf,
+  isLocale,
+  Locale,
+  MessageKey,
+  translate,
+} from './messages';
 
 export const LOCALE_STORAGE_KEY = 'aich.locale';
 
 interface I18n {
   locale: Locale;
   dir: 'ltr' | 'rtl';
+  /** Language tag for formatting dates and numbers. */
+  dateLocale: string;
   setLocale: (l: Locale) => void;
   t: (key: MessageKey, params?: Record<string, string | number>) => string;
 }
@@ -57,6 +67,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     () => ({
       locale,
       dir: dirOf(locale),
+      dateLocale: dateLocaleOf(locale),
       setLocale,
       t: (key, params) => translate(locale, key, params),
     }),

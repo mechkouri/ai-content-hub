@@ -20,6 +20,7 @@ import {
 } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
 
 const KIND = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k]));
 
@@ -27,6 +28,7 @@ export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { currentOrgId, currentRole } = useApp();
+  const { t, dateLocale } = useI18n();
   const canWrite = canWriteCampaigns(currentRole);
   const base = `/organizations/${currentOrgId}/campaigns/${id}`;
 
@@ -77,21 +79,21 @@ export default function CampaignDetailPage() {
     }
   }
 
-  if (!data) return <p className="text-sm text-muted">{error || 'Loading…'}</p>;
+  if (!data) return <p className="text-sm text-muted">{error || t('common.loading')}</p>;
   const { campaign, pieces, stats } = data;
   const archived = campaign.status === 'ARCHIVED';
 
   return (
     <div className="space-y-4">
       <Link href="/campaigns" className="text-sm font-semibold text-brand">
-        ← Campaigns
+        {t('camp.back')}
       </Link>
 
       <section className="card p-6">
         {editing ? (
           <CampaignForm
             initial={campaign}
-            submitLabel="Save changes"
+            submitLabel={t('camp.saveChanges')}
             busy={busy}
             error={error}
             onCancel={() => setEditing(false)}
@@ -110,9 +112,9 @@ export default function CampaignDetailPage() {
                 dir="auto"
               >
                 {campaign.name}
-                {archived && <span className="chip-draft">Archived</span>}
+                {archived && <span className="chip-draft">{t('camp.archived')}</span>}
               </h1>
-              <p className="mt-1 text-sm text-muted">{dateRange(campaign)}</p>
+              <p className="mt-1 text-sm text-muted">{dateRange(campaign, t, dateLocale)}</p>
               {campaign.description && (
                 <p className="mt-2 max-w-2xl text-sm text-slate-600" dir="auto">
                   {campaign.description}
@@ -122,7 +124,7 @@ export default function CampaignDetailPage() {
             {canWrite && (
               <div className="flex flex-wrap gap-2">
                 <button className="btn-ghost" onClick={() => setEditing(true)}>
-                  Edit
+                  {t('camp.edit')}
                 </button>
                 <button
                   className="btn-ghost"
@@ -136,22 +138,19 @@ export default function CampaignDetailPage() {
                     )
                   }
                 >
-                  {archived ? 'Restore' : 'Archive'}
+                  {archived ? t('camp.restore') : t('camp.archive')}
                 </button>
                 <button
                   className="btn-danger"
                   disabled={busy}
                   onClick={async () => {
-                    if (
-                      !confirm('Delete this campaign? Its content is kept, but no longer grouped.')
-                    )
-                      return;
+                    if (!confirm(t('camp.confirmDelete'))) return;
                     if (await run(() => apiFetch(base, { method: 'DELETE' }))) {
                       router.replace('/campaigns');
                     }
                   }}
                 >
-                  Delete
+                  {t('camp.delete')}
                 </button>
               </div>
             )}
@@ -169,10 +168,10 @@ export default function CampaignDetailPage() {
 
       <section className="card p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold">Content in this campaign</h2>
+          <h2 className="font-display text-base font-semibold">{t('camp.contentIn')}</h2>
           {canWrite && !archived && !adding && (
             <button className="btn-primary" onClick={openAdd}>
-              Add content
+              {t('camp.addContent')}
             </button>
           )}
         </div>
@@ -180,9 +179,7 @@ export default function CampaignDetailPage() {
         {adding && (
           <div className="mb-4 rounded-xl border border-line bg-surface p-4">
             {candidates.length === 0 ? (
-              <p className="text-sm text-muted">
-                Nothing left to add. Create content in the studio first.
-              </p>
+              <p className="text-sm text-muted">{t('camp.nothingToAdd')}</p>
             ) : (
               <ul className="max-h-72 space-y-1 overflow-y-auto">
                 {candidates.map((p) => (
@@ -202,7 +199,7 @@ export default function CampaignDetailPage() {
                         {KIND[p.kind].icon} {p.title}
                       </span>
                       {p.campaignId && (
-                        <span className="text-[11px] text-slate-400">in another campaign</span>
+                        <span className="text-[11px] text-slate-400">{t('camp.inOther')}</span>
                       )}
                       <ApprovalBadge status={p.approvalStatus} />
                     </label>
@@ -224,23 +221,21 @@ export default function CampaignDetailPage() {
                   if (ok) setAdding(false);
                 }}
               >
-                Add {chosen.size || ''} selected
+                {chosen.size ? t('camp.addSelectedN', { n: chosen.size }) : t('camp.addSelected')}
               </button>
               <button className="btn-ghost" onClick={() => setAdding(false)} disabled={busy}>
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Content belongs to one campaign at a time: adding it here moves it.
-            </p>
+            <p className="mt-2 text-[11px] text-slate-400">{t('camp.oneAtATime')}</p>
           </div>
         )}
 
         {pieces.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted">
             <p className="text-3xl">🗂️</p>
-            <p className="mt-2 font-semibold text-slate-700">No content yet</p>
-            <p>{canWrite && !archived ? 'Use “Add content” to start.' : ''}</p>
+            <p className="mt-2 font-semibold text-slate-700">{t('dash.noContent')}</p>
+            <p>{canWrite && !archived ? t('camp.useAdd') : ''}</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -251,10 +246,10 @@ export default function CampaignDetailPage() {
                     {p.title}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {KIND[p.kind].icon} {KIND[p.kind].label} ·{' '}
+                    {KIND[p.kind].icon} {t(`kind.${p.kind}`)} ·{' '}
                     {LANG_LABELS[p.language] ?? p.language}
                     {p.scheduledFor
-                      ? ` · planned ${new Date(p.scheduledFor).toLocaleDateString()}`
+                      ? ` · ${t('camp.planned', { date: new Date(p.scheduledFor).toLocaleDateString(dateLocale) })}`
                       : ''}
                   </p>
                 </Link>
@@ -267,9 +262,9 @@ export default function CampaignDetailPage() {
                       onClick={() =>
                         run(() => apiFetch(`${base}/content/${p.id}`, { method: 'DELETE' }))
                       }
-                      aria-label={`Remove ${p.title} from the campaign`}
+                      aria-label={t('camp.removeAria', { title: p.title })}
                     >
-                      Remove
+                      {t('common.remove')}
                     </button>
                   )}
                 </div>
