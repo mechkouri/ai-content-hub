@@ -38,6 +38,8 @@ const updateSchema = z.object({
   status: z.enum(['CONNECTED', 'DISCONNECTED']).optional(),
   autoPublish: z.boolean().optional(),
 });
+// The new login: its fields depend on the provider and are checked by the provider itself.
+const reconnectSchema = z.object({}).passthrough();
 const queueSchema = z.object({
   contentId: z.string().uuid(),
   channelIds: z.array(z.string().uuid()).min(1).max(10),
@@ -78,6 +80,12 @@ export class ChannelsController {
   @RequirePermission('channel:write')
   update(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: unknown) {
     return this.channels.update(orgId, uuid(id), parseBody(updateSchema, body));
+  }
+
+  @Post('channels/:id/reconnect')
+  @RequirePermission('channel:write')
+  reconnect(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: unknown) {
+    return this.channels.reconnect(orgId, uuid(id), parseBody(reconnectSchema, body ?? {}));
   }
 
   @Delete('channels/:id')

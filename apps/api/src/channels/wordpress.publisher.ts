@@ -66,6 +66,19 @@ export class WordPressPublisher implements Publisher {
 
   // ---------- connecting ----------
 
+  reconnectInput(config: Record<string, unknown>, details: Record<string, unknown>) {
+    return {
+      siteUrl: config.siteUrl,
+      publishAs: config.publishAs,
+      username: details.username,
+      applicationPassword: details.applicationPassword,
+    };
+  }
+
+  identity(config: Record<string, unknown>) {
+    return typeof config.siteUrl === 'string' ? config.siteUrl : undefined;
+  }
+
   /** Checks the site and the login before anything is saved, so a wrong password is caught right away. */
   async prepare(input: Record<string, unknown>): Promise<PreparedChannel> {
     const v = parseBody(inputSchema, input);

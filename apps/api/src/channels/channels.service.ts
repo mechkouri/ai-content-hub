@@ -85,6 +85,44 @@ export class ChannelsService {
     return toPublic(created);
   }
 
+  /**
+   * Gives a channel a new login (an expired token, a revoked password) without losing its history.
+   * The new login must belong to the same site, Page or profile: a scheduled post must never quietly
+   * start going to a different account. Nothing is changed unless the new login checks out.
+   */
+  async reconnect(
+    orgId: string,
+    id: string,
+    details: Record<string, unknown>,
+  ): Promise<PublicChannel> {
+    const channel = await this.findRaw(orgId, id);
+    const publisher = this.publishers.find((p) => p.provider === channel.provider);
+    if (!publisher?.prepare || !publisher.reconnectInput) {
+      throw new UnprocessableEntityException('This channel has no login to reconnect.');
+    }
+    if (!this.secrets.configured) this.secrets.encrypt({});
+    const oldConfig = (channel.config ?? {}) as Record<string, unknown>;
+    const prepared = await publisher.prepare(publisher.reconnectInput(oldConfig, details));
+
+    const before = publisher.identity?.(oldConfig);
+    const after = publisher.identity?.(prepared.config);
+    if (before && after !== before) {
+      throw new UnprocessableEntityException(
+        'That login belongs to a different account than this channel. Add it as a new channel instead.',
+      );
+    }
+    const updated = await this.prisma.channel.update({
+      where: { id: channel.id },
+      data: {
+        config: { ...oldConfig, ...prepared.config } as any,
+        credentials: prepared.secret ? this.secrets.encrypt(prepared.secret) : channel.credentials,
+        status: ChannelStatus.CONNECTED,
+        lastError: null,
+      },
+    });
+    return toPublic(updated);
+  }
+
   async update(
     orgId: string,
     id: string,

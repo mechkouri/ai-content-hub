@@ -70,6 +70,14 @@ export class LinkedInPublisher implements Publisher {
 
   // ---------- connecting ----------
 
+  reconnectInput(_config: Record<string, unknown>, details: Record<string, unknown>) {
+    return { accessToken: details.accessToken };
+  }
+
+  identity(config: Record<string, unknown>) {
+    return typeof config.authorUrn === 'string' ? config.authorUrn : undefined;
+  }
+
   /** Reads the profile the token belongs to. The post author is that person. */
   async prepare(input: Record<string, unknown>): Promise<PreparedChannel> {
     const v = parseBody(inputSchema, input);

@@ -42,6 +42,16 @@ export interface Publisher {
   supports(kind: ContentKind): boolean;
   /** Validates and tests the details entered when connecting. Providers without settings omit it. */
   prepare?(input: Record<string, unknown>): Promise<PreparedChannel>;
+  /**
+   * Reconnecting keeps what identifies the account (site, Page, profile) and only takes a new login.
+   * Returns the input for {@link prepare}.
+   */
+  reconnectInput?(
+    config: Record<string, unknown>,
+    details: Record<string, unknown>,
+  ): Record<string, unknown>;
+  /** What identifies the account behind a channel, so a reconnect can never switch to another one. */
+  identity?(config: Record<string, unknown>): string | undefined;
   publish(
     channel: PublishChannel,
     payload: PostPayload,
