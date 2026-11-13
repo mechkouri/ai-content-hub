@@ -3,24 +3,28 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AiStatus, ApiError, apiFetch, canAdminAi, canUseAi, FreeModel } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
-const ERROR_HELP: Record<string, string> = {
-  QUOTA_EXHAUSTED: 'Your organization reached its generation limit. It resets automatically.',
-  RATE_LIMITED: 'Too many requests in a short time. Wait a moment and try again.',
-  PROVIDER_QUOTA_EXHAUSTED: 'The free allowance of the AI provider is used up. Try again later.',
-  PROVIDER_RATE_LIMITED: 'The AI provider is busy. Try again in a moment.',
-  PROVIDER_TIMEOUT: 'The AI provider took too long. Try again.',
-  PROVIDER_AUTH_FAILED:
-    'The server key for this provider is wrong or expired. Check the server settings.',
-  PROVIDER_NOT_CONFIGURED: 'This provider is not set up on the server yet (missing API key).',
-  PROVIDER_UNAVAILABLE: 'The AI provider is temporarily unavailable.',
-  MODEL_NOT_FREE: 'That model is not free. Only free models can be used.',
-};
+const ERROR_CODES = [
+  'QUOTA_EXHAUSTED',
+  'RATE_LIMITED',
+  'PROVIDER_QUOTA_EXHAUSTED',
+  'PROVIDER_RATE_LIMITED',
+  'PROVIDER_TIMEOUT',
+  'PROVIDER_AUTH_FAILED',
+  'PROVIDER_NOT_CONFIGURED',
+  'PROVIDER_UNAVAILABLE',
+  'MODEL_NOT_FREE',
+];
 
-function describe(e: unknown): string {
+type T = (key: MessageKey, params?: Record<string, string | number>) => string;
+
+function describe(e: unknown, t: T): string {
   if (e instanceof ApiError) {
-    const help = e.code ? ERROR_HELP[e.code] : undefined;
-    const wait = e.retryAfterSeconds ? ` (retry in ~${e.retryAfterSeconds}s)` : '';
+    const help =
+      e.code && ERROR_CODES.includes(e.code) ? t(`aip.err.${e.code}` as MessageKey) : undefined;
+    const wait = e.retryAfterSeconds ? ` ${t('aip.retry', { n: e.retryAfterSeconds })}` : '';
     return help ? `${help}${wait}` : e.message;
   }
   return (e as Error).message;
@@ -45,6 +49,7 @@ function Meter({ label, used, limit }: { label: string; used: number; limit: num
 }
 
 function ProviderBadge({ id, configured }: { id: string; configured: boolean }) {
+  const { t } = useI18n();
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
@@ -52,7 +57,7 @@ function ProviderBadge({ id, configured }: { id: string; configured: boolean }) 
       }`}
     >
       <span className={`h-2 w-2 rounded-full ${configured ? 'bg-green-500' : 'bg-slate-400'}`} />
-      {id} · {configured ? 'Connected' : 'Not configured'}
+      {id} · {configured ? t('aip.connected') : t('aip.notConfiguredShort')}
     </span>
   );
 }
@@ -62,6 +67,7 @@ const numOrNull = (v: string): number | null =>
 
 export default function AiAdminPage() {
   const { currentOrgId, currentRole } = useApp();
+  const { t } = useI18n();
   const admin = canAdminAi(currentRole);
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [models, setModels] = useState<FreeModel[]>([]);
@@ -112,14 +118,14 @@ export default function AiAdminPage() {
         monthlyImage: s.settings?.monthlyImageLimit?.toString() ?? '',
       });
     } catch (e) {
-      setError(describe(e));
+      setError(describe(e, t));
     }
     try {
       setModels((await apiFetch<{ models: FreeModel[] }>(`${base}/models`)).models);
     } catch (e) {
-      setModelsError(describe(e));
+      setModelsError(describe(e, t));
     }
-  }, [currentOrgId, base]);
+  }, [currentOrgId, base, t]);
 
   useEffect(() => {
     setStatus(null);
@@ -142,10 +148,10 @@ export default function AiAdminPage() {
           monthlyImageLimit: numOrNull(limits.monthlyImage),
         }),
       });
-      setNotice('Settings saved.');
+      setNotice(t('aip.saved'));
       await load();
     } catch (e) {
-      setError(describe(e));
+      setError(describe(e, t));
     }
     setSaving(false);
   }
@@ -162,7 +168,7 @@ export default function AiAdminPage() {
         }),
       );
     } catch (e) {
-      setTextError(describe(e));
+      setTextError(describe(e, t));
     }
     setTextBusy(false);
     load();
@@ -182,7 +188,7 @@ export default function AiAdminPage() {
       );
       setImgResult({ src: `data:${r.mimeType};base64,${r.imageBase64}`, model: r.model });
     } catch (e) {
-      setImgError(describe(e));
+      setImgError(describe(e, t));
     }
     setImgBusy(false);
     load();
@@ -191,14 +197,12 @@ export default function AiAdminPage() {
   if (!canUseAi(currentRole)) {
     return (
       <section className="card p-6">
-        <h1 className="text-xl font-bold">AI</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Only owners, admins, editors and designers can use AI features.
-        </p>
+        <h1 className="text-xl font-bold">{t('aip.titleShort')}</h1>
+        <p className="mt-2 text-sm text-slate-500">{t('aip.noAccess')}</p>
       </section>
     );
   }
-  if (!status) return <p className="text-sm text-slate-500">{error || 'Loading…'}</p>;
+  if (!status) return <p className="text-sm text-slate-500">{error || t('common.loading')}</p>;
 
   const textOk = status.providers.text.some((p) => p.configured);
   const imageOk = status.providers.image.some((p) => p.configured);
@@ -207,15 +211,12 @@ export default function AiAdminPage() {
     <div className="space-y-4">
       <section className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-xl font-bold">AI providers</h1>
+          <h1 className="text-xl font-bold">{t('aip.title')}</h1>
           <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
-            Free models only · never falls back to paid
+            {t('aip.freeOnly')}
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-500">
-          Text and image generation for your organization. API keys live on the server and are never
-          shown here.
-        </p>
+        <p className="mt-1 text-sm text-slate-500">{t('aip.subtitle')}</p>
         {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         {notice && (
           <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-800">{notice}</p>
@@ -224,50 +225,57 @@ export default function AiAdminPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className="card space-y-3 p-6">
-          <h2 className="font-bold">Text</h2>
+          <h2 className="font-bold">{t('aip.text')}</h2>
           <div className="flex flex-wrap gap-2">
             {status.providers.text.map((p) => (
               <ProviderBadge key={p.id} {...p} />
             ))}
           </div>
           <p className="text-sm text-slate-600">
-            Active model:{' '}
+            {t('aip.activeModel')}{' '}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{status.textModel}</code>
           </p>
-          <Meter label="Today" used={status.usage.text.today} limit={status.limits.dailyText} />
           <Meter
-            label="This month"
+            label={t('aip.today')}
+            used={status.usage.text.today}
+            limit={status.limits.dailyText}
+          />
+          <Meter
+            label={t('aip.month')}
             used={status.usage.text.month}
             limit={status.limits.monthlyText}
           />
           {!textOk && (
             <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-              Not configured. Add OPENROUTER_API_KEY to the server environment.
+              {t('aip.textNotConfigured')}
             </p>
           )}
         </section>
 
         <section className="card space-y-3 p-6">
-          <h2 className="font-bold">Images</h2>
+          <h2 className="font-bold">{t('aip.images')}</h2>
           <div className="flex flex-wrap gap-2">
             {status.providers.image.map((p) => (
               <ProviderBadge key={p.id} {...p} />
             ))}
           </div>
           <p className="text-sm text-slate-600">
-            Model:{' '}
+            {t('aip.model')}{' '}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">FLUX.1 schnell</code>
           </p>
-          <Meter label="Today" used={status.usage.image.today} limit={status.limits.dailyImage} />
           <Meter
-            label="This month"
+            label={t('aip.today')}
+            used={status.usage.image.today}
+            limit={status.limits.dailyImage}
+          />
+          <Meter
+            label={t('aip.month')}
             used={status.usage.image.month}
             limit={status.limits.monthlyImage}
           />
           {!imageOk && (
             <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-              Not configured. Add the Cloudflare Worker URL and token, or the Cloudflare account ID
-              and API token, to the server environment.
+              {t('aip.imageNotConfigured')}
             </p>
           )}
         </section>
@@ -275,11 +283,11 @@ export default function AiAdminPage() {
 
       {admin ? (
         <form onSubmit={saveSettings} className="card space-y-4 p-6">
-          <h2 className="font-bold">Settings</h2>
+          <h2 className="font-bold">{t('aip.settings')}</h2>
           <label className="block text-sm">
-            <span className="font-semibold">Text model</span>
+            <span className="font-semibold">{t('aip.textModel')}</span>
             <select className="input mt-1" value={model} onChange={(e) => setModel(e.target.value)}>
-              <option value="">Platform default (openrouter/free)</option>
+              <option value="">{t('aip.defaultModel')}</option>
               {models.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.id}
@@ -289,37 +297,33 @@ export default function AiAdminPage() {
             </select>
             {modelsError ? (
               <span className="mt-1 block text-xs text-amber-700">
-                Could not load free models: {modelsError}
+                {t('aip.modelsFailed', { error: modelsError })}
               </span>
             ) : (
               <span className="mt-1 block text-xs text-slate-500">
-                Live list of {models.length} free models. Paid models are not offered and are
-                rejected by the server.
+                {t('aip.modelsLive', { n: models.length })}
               </span>
             )}
           </label>
           <div>
-            <p className="text-sm font-semibold">Usage limits for this organization</p>
-            <p className="text-xs text-slate-500">
-              Leave blank for the platform default. You can lower a limit but not raise it above the
-              platform cap.
-            </p>
+            <p className="text-sm font-semibold">{t('aip.limits')}</p>
+            <p className="text-xs text-slate-500">{t('aip.limitsHint')}</p>
             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {(
                 [
-                  ['dailyText', 'Text / day', status.limits.dailyText],
-                  ['monthlyText', 'Text / month', status.limits.monthlyText],
-                  ['dailyImage', 'Images / day', status.limits.dailyImage],
-                  ['monthlyImage', 'Images / month', status.limits.monthlyImage],
+                  ['dailyText', 'aip.textDay', status.limits.dailyText],
+                  ['monthlyText', 'aip.textMonth', status.limits.monthlyText],
+                  ['dailyImage', 'aip.imageDay', status.limits.dailyImage],
+                  ['monthlyImage', 'aip.imageMonth', status.limits.monthlyImage],
                 ] as const
               ).map(([key, label, current]) => (
                 <label key={key} className="block text-xs font-semibold text-slate-600">
-                  {label}
+                  {t(label)}
                   <input
                     className="input mt-1"
                     type="number"
                     min={0}
-                    placeholder={`Now: ${current}`}
+                    placeholder={t('aip.now', { n: current })}
                     value={limits[key]}
                     onChange={(e) => setLimits((l) => ({ ...l, [key]: e.target.value }))}
                   />
@@ -328,19 +332,17 @@ export default function AiAdminPage() {
             </div>
           </div>
           <button className="btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save settings'}
+            {saving ? t('det.saving') : t('aip.saveSettings')}
           </button>
         </form>
       ) : (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">
-          Only owners and admins can change AI settings and run provider tests.
-        </p>
+        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('aip.adminOnly')}</p>
       )}
 
       {admin && (
         <div className="grid gap-4 md:grid-cols-2">
           <section className="card space-y-3 p-6">
-            <h2 className="font-bold">Test text generation</h2>
+            <h2 className="font-bold">{t('aip.testText')}</h2>
             <textarea
               className="input"
               rows={3}
@@ -353,7 +355,7 @@ export default function AiAdminPage() {
               disabled={textBusy || !textPrompt.trim()}
               onClick={runText}
             >
-              {textBusy ? 'Generating…' : 'Run text test'}
+              {textBusy ? t('aip.generating') : t('aip.runText')}
             </button>
             {textError && (
               <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{textError}</p>
@@ -369,7 +371,7 @@ export default function AiAdminPage() {
           </section>
 
           <section className="card space-y-3 p-6">
-            <h2 className="font-bold">Test image generation</h2>
+            <h2 className="font-bold">{t('aip.testImage')}</h2>
             <textarea
               className="input"
               rows={3}
@@ -378,7 +380,7 @@ export default function AiAdminPage() {
               onChange={(e) => setImgPrompt(e.target.value)}
             />
             <label className="flex items-center gap-2 text-sm">
-              Quality steps
+              {t('aip.steps')}
               <input
                 className="input !w-20"
                 type="number"
@@ -393,7 +395,7 @@ export default function AiAdminPage() {
               disabled={imgBusy || !imgPrompt.trim()}
               onClick={runImage}
             >
-              {imgBusy ? 'Generating…' : 'Run image test'}
+              {imgBusy ? t('aip.generating') : t('aip.runImage')}
             </button>
             {imgError && (
               <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{imgError}</p>
@@ -403,7 +405,7 @@ export default function AiAdminPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imgResult.src}
-                  alt="Generated test"
+                  alt={t('aip.generatedAlt')}
                   className="w-full rounded-lg border border-slate-200"
                 />
                 <p className="mt-1 text-xs text-slate-400">{imgResult.model}</p>
