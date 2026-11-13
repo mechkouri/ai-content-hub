@@ -62,6 +62,14 @@ export class FacebookPublisher implements Publisher {
 
   // ---------- connecting ----------
 
+  reconnectInput(config: Record<string, unknown>, details: Record<string, unknown>) {
+    return { pageId: config.pageId, accessToken: details.accessToken };
+  }
+
+  identity(config: Record<string, unknown>) {
+    return typeof config.pageId === 'string' ? config.pageId : undefined;
+  }
+
   /** Checks that the token really belongs to that Page before anything is saved. */
   async prepare(input: Record<string, unknown>): Promise<PreparedChannel> {
     const v = parseBody(inputSchema, input);

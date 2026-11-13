@@ -287,3 +287,90 @@ export function ChannelForm({
     </form>
   );
 }
+
+export interface ReconnectValues {
+  username?: string;
+  applicationPassword?: string;
+  accessToken?: string;
+}
+
+/** A new login for a channel whose old one stopped working. The site, Page or profile stays the same. */
+export function ReconnectForm({
+  provider,
+  busy,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  provider: ChannelProvider;
+  busy: boolean;
+  error: string;
+  onSubmit: (v: ReconnectValues) => void;
+  onCancel: () => void;
+}) {
+  const wordpress = provider === 'WORDPRESS';
+  const [username, setUsername] = useState('');
+  const [secret, setSecret] = useState('');
+  const ready =
+    secret.trim().length >= (wordpress ? 8 : 20) && (!wordpress || username.trim().length > 0);
+
+  return (
+    <form
+      className="mt-2 w-full space-y-2 rounded-lg bg-surface p-3"
+      autoComplete="off"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(
+          wordpress
+            ? { username: username.trim(), applicationPassword: secret }
+            : { accessToken: secret.trim() },
+        );
+      }}
+    >
+      <p className="text-xs text-slate-600">
+        {wordpress
+          ? 'Create a new application password in WordPress (Users, Profile, Application Passwords) and enter it with your username.'
+          : provider === 'LINKEDIN'
+            ? 'Generate a new access token in the LinkedIn developer portal (Token Generator, with openid, profile and w_member_social).'
+            : 'Generate a new Page access token for the same Page in the Graph API Explorer.'}{' '}
+        It must belong to the same{' '}
+        {wordpress ? 'site' : provider === 'LINKEDIN' ? 'profile' : 'Page'} as before.
+      </p>
+      {wordpress && (
+        <input
+          className="input"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          maxLength={100}
+          autoComplete="off"
+          aria-label="WordPress username"
+          placeholder="WordPress username (not your email)"
+        />
+      )}
+      <input
+        className="input"
+        type="password"
+        value={secret}
+        onChange={(e) => setSecret(e.target.value)}
+        required
+        autoComplete="new-password"
+        aria-label={wordpress ? 'New application password' : 'New access token'}
+        placeholder={wordpress ? 'New application password' : 'New access token'}
+      />
+      {error && (
+        <p className="rounded-lg border border-red-200 bg-danger-soft p-2.5 text-xs text-danger-ink">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button className="btn-primary" disabled={busy || !ready}>
+          {busy ? 'Checking…' : 'Reconnect'}
+        </button>
+        <button type="button" className="btn-ghost" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}

@@ -1129,6 +1129,172 @@ describe('channels and publishing', () => {
     });
   });
 
+  describe('reconnecting a channel', () => {
+    const OLD = 'AQV' + 'o'.repeat(60);
+    const NEW = 'AQV' + 'n'.repeat(60);
+    const profile = (sub = 'abc123') => ({ status: 200, json: { sub, name: 'Said M' } });
+    const connect = async (provider: string, body: object) =>
+      (
+        await request(app.getHttpServer())
+          .post(`${base}/channels`)
+          .set('Authorization', as(U_ADMIN))
+          .send({ provider, name: 'My channel', ...body })
+          .expect(201)
+      ).body;
+    const reconnect = (id: string, body: object, user = U_ADMIN) =>
+      request(app.getHttpServer())
+        .post(`${base}/channels/${id}/reconnect`)
+        .set('Authorization', as(user))
+        .send(body);
+    const liPost = () =>
+      piece({
+        kind: 'LINKEDIN',
+        content: {
+          postText: 'Open Day on 14 March.',
+          cta: '',
+          hashtags: [],
+          imageMode: 'text',
+          images: [],
+        },
+      });
+
+    it('replaces an expired login, brings the channel back, and the next retry uses the new login', async () => {
+      wpHttp = async () => profile();
+      const ch = await connect('LINKEDIN', { accessToken: OLD });
+      const storedBefore = channels[0].credentials;
+
+      // The 60-day token expires: the channel is flagged and its post fails.
+      wpHttp = async () => ({ status: 401, json: { message: 'The token has expired' } });
+      const post = liPost();
+      await queue({ contentId: post.id, channelIds: [ch.id], when: 'now' }).expect(201);
+      await publishing.processDue();
+      expect(channels[0].status).toBe('ERROR');
+      expect(jobs[0].status).toBe('FAILED');
+
+      // Reconnect with a new token for the same profile.
+      wpHttp = async () => profile();
+      const res = await reconnect(ch.id, { accessToken: NEW }).expect(201);
+      expect(res.body.status).toBe('CONNECTED');
+      expect(res.body.lastError).toBeNull();
+      expect(res.body.config.authorUrn).toBe('urn:li:person:abc123');
+      expect(JSON.stringify(res.body)).not.toContain(NEW);
+      expect(res.body).not.toHaveProperty('credentials');
+      expect(channels[0].credentials).not.toBe(storedBefore);
+      expect(channels[0].credentials).not.toContain('nnnn');
+      expect(channels).toHaveLength(1); // same channel, history kept
+      expect(jobs).toHaveLength(1);
+
+      // Trying the failed post again uses the new token.
+      const seen: any[] = [];
+      wpHttp = async (url, opts) => {
+        seen.push(opts?.headers?.Authorization);
+        return { status: 201, json: null, headers: { 'x-restli-id': 'urn:li:share:77' } };
+      };
+      await request(app.getHttpServer())
+        .post(`${base}/publishing/jobs/${jobs[0].id}/retry`)
+        .set('Authorization', as(U_PUBLISHER))
+        .expect(201);
+      await publishing.processDue(new Date(Date.now() + 1000));
+      expect(jobs[0].status).toBe('PUBLISHED');
+      expect(seen).toEqual([`Bearer ${NEW}`]);
+    });
+
+    it('changes nothing when the new login is wrong, expired, or for a different account', async () => {
+      wpHttp = async () => profile();
+      const ch = await connect('LINKEDIN', { accessToken: OLD });
+      channels[0].status = 'ERROR';
+      channels[0].lastError = 'expired';
+      const snapshot = { ...channels[0] };
+
+      wpHttp = async () => ({ status: 401, json: null });
+      const bad = await reconnect(ch.id, { accessToken: NEW }).expect(422);
+      expect(String(bad.body.message)).toMatch(/did not accept/);
+
+      wpHttp = async () => profile('someone-else');
+      const other = await reconnect(ch.id, { accessToken: NEW }).expect(422);
+      expect(String(other.body.message)).toMatch(/different account/);
+
+      await reconnect(ch.id, {}).expect(400);
+      expect(channels[0]).toEqual(snapshot); // nothing was touched
+    });
+
+    it('keeps a Facebook channel on its own Page', async () => {
+      const TOKEN = 'EAAB' + 'x'.repeat(40);
+      wpHttp = async () => ({ status: 200, json: { id: '1234567890', name: 'Atlas' } });
+      const ch = await connect('FACEBOOK', { pageId: '1234567890', accessToken: TOKEN });
+      channels[0].status = 'ERROR';
+
+      wpHttp = async () => ({ status: 200, json: { id: '999', name: 'Another page' } });
+      const wrong = await reconnect(ch.id, { accessToken: 'EAAB' + 'y'.repeat(40) }).expect(422);
+      expect(String(wrong.body.message)).toMatch(/does not belong to that Page/);
+      expect(channels[0].status).toBe('ERROR');
+
+      wpHttp = async () => ({ status: 200, json: { id: '1234567890', name: 'Atlas' } });
+      const ok = await reconnect(ch.id, { accessToken: 'EAAB' + 'y'.repeat(40) }).expect(201);
+      expect(ok.body.status).toBe('CONNECTED');
+      expect(ok.body.config.pageId).toBe('1234567890');
+    });
+
+    it('keeps a WordPress channel on its own site and keeps its settings', async () => {
+      const seen: string[] = [];
+      wpHttp = async (url) => {
+        seen.push(String(url));
+        return {
+          status: 200,
+          json: { id: 3, name: 'Jane', capabilities: { publish_posts: true, edit_posts: true } },
+        };
+      };
+      const ch = await connect('WORDPRESS', {
+        siteUrl: 'https://site.example',
+        username: 'editor',
+        applicationPassword: 'abcd efgh ijkl mnop',
+        publishAs: 'draft',
+      });
+      channels[0].status = 'ERROR';
+      seen.length = 0;
+
+      // A different site address in the request is ignored: the channel's own site is used.
+      const res = await reconnect(ch.id, {
+        siteUrl: 'https://evil.example',
+        username: 'editor',
+        applicationPassword: 'new new new new pass',
+      }).expect(201);
+      expect(seen[0]).toBe('https://site.example/wp-json/wp/v2/users/me?context=edit');
+      expect(res.body.config).toMatchObject({
+        siteUrl: 'https://site.example',
+        publishAs: 'draft',
+      });
+      expect(res.body.status).toBe('CONNECTED');
+    });
+
+    it('has nothing to reconnect on the test channel, and is for admins in their own organization', async () => {
+      const test = await makeChannel('Plain test');
+      const res = await reconnect(test.id, {}).expect(422);
+      expect(String(res.body.message)).toMatch(/no login/);
+
+      wpHttp = async () => profile();
+      const ch = await connect('LINKEDIN', { accessToken: OLD });
+      await reconnect(ch.id, { accessToken: NEW }, U_EDITOR).expect(403);
+      await reconnect(ch.id, { accessToken: NEW }, U_PUBLISHER).expect(403);
+      await reconnect(ch.id, { accessToken: NEW }, U_OTHER).expect(404);
+      await reconnect('not-a-uuid', { accessToken: NEW }).expect(404);
+      await reconnect(randomUUID(), { accessToken: NEW }).expect(404);
+    });
+
+    it('says so when the server cannot store logins', async () => {
+      wpHttp = async () => profile();
+      const ch = await connect('LINKEDIN', { accessToken: OLD });
+      const key = process.env.ENCRYPTION_KEY;
+      delete process.env.ENCRYPTION_KEY;
+      try {
+        const res = await reconnect(ch.id, { accessToken: NEW }).expect(422);
+        expect(String(res.body.message)).toMatch(/ENCRYPTION_KEY/);
+      } finally {
+        process.env.ENCRYPTION_KEY = key;
+      }
+    });
+  });
+
   it('lists jobs for a piece of content', async () => {
     const c = await makeChannel();
     const p = piece();

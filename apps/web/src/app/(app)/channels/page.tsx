@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ChannelForm, ChannelFormValues } from '@/components/channels/channel-form';
+import {
+  ChannelForm,
+  ChannelFormValues,
+  ReconnectForm,
+  ReconnectValues,
+} from '@/components/channels/channel-form';
 import { JobBadge, jobWhen } from '@/components/channels/job-parts';
 import {
   apiFetch,
@@ -30,6 +35,7 @@ export default function ChannelsPage() {
   const [titles, setTitles] = useState<Map<string, ContentSummary>>(new Map());
   const [adding, setAdding] = useState<ChannelProvider | null>(null);
   const [formError, setFormError] = useState('');
+  const [reconnecting, setReconnecting] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -115,8 +121,8 @@ export default function ChannelsPage() {
                   </p>
                   {c.status === 'ERROR' && (
                     <p className="mt-1 text-xs text-danger-ink">
-                      {c.lastError ?? 'The login stopped working.'} Remove this channel and add it
-                      again with a new application password.
+                      {c.lastError ?? 'The login stopped working.'} Reconnect it with a new login;
+                      its history and settings are kept.
                     </p>
                   )}
                 </div>
@@ -159,6 +165,18 @@ export default function ChannelsPage() {
                   )}
                   {canManage && (
                     <>
+                      {c.status === 'ERROR' && c.provider !== 'TEST' && (
+                        <button
+                          className="text-xs font-semibold text-brand"
+                          disabled={busy}
+                          onClick={() => {
+                            setReconnecting(reconnecting === c.id ? null : c.id);
+                            setFormError('');
+                          }}
+                        >
+                          Reconnect
+                        </button>
+                      )}
                       {c.status !== 'ERROR' && (
                         <button
                           className="text-xs font-semibold text-brand"
@@ -193,6 +211,32 @@ export default function ChannelsPage() {
                     </>
                   )}
                 </div>
+                {reconnecting === c.id && (
+                  <ReconnectForm
+                    provider={c.provider}
+                    busy={busy}
+                    error={formError}
+                    onCancel={() => {
+                      setReconnecting(null);
+                      setFormError('');
+                    }}
+                    onSubmit={async (v: ReconnectValues) => {
+                      setBusy(true);
+                      setFormError('');
+                      try {
+                        await apiFetch(`${base}/channels/${c.id}/reconnect`, {
+                          method: 'POST',
+                          body: JSON.stringify(v),
+                        });
+                        setReconnecting(null);
+                        await load();
+                      } catch (e) {
+                        setFormError(describeError(e));
+                      }
+                      setBusy(false);
+                    }}
+                  />
+                )}
               </li>
             ))}
           </ul>
