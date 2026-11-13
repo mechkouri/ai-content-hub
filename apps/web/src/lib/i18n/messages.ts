@@ -828,7 +828,7 @@ export const en = {
   'form.ig3':
     'Call me/accounts?fields=instagram_business_account to get the account ID, then copy it and the token here.',
   'form.igNote':
-    'Pictures must be JPEG. They are put online for a few minutes so Instagram can fetch them, then removed. The token is stored encrypted and never shown again.',
+    'Pictures are converted to JPEG automatically. They are put online for a few minutes so Instagram can fetch them, then removed. The token is stored encrypted and never shown again.',
   'form.rcIg':
     'Generate a new access token for the same Instagram account in the Graph API Explorer.',
   'form.sameIg': 'It must belong to the same account as before.',
@@ -1678,7 +1678,7 @@ export const fr: Messages = {
   'form.ig3':
     'Appelez me/accounts?fields=instagram_business_account pour obtenir l’identifiant du compte, puis copiez-le ici avec le jeton.',
   'form.igNote':
-    'Les images doivent être au format JPEG. Elles sont mises en ligne quelques minutes pour qu’Instagram les récupère, puis supprimées. Le jeton est stocké chiffré et plus jamais affiché.',
+    'Les images sont converties automatiquement en JPEG. Elles sont mises en ligne quelques minutes pour qu’Instagram les récupère, puis supprimées. Le jeton est stocké chiffré et plus jamais affiché.',
   'form.rcIg':
     'Générez un nouveau jeton d’accès pour le même compte Instagram dans le Graph API Explorer.',
   'form.sameIg': 'Il doit appartenir au même compte qu’avant.',
@@ -2494,7 +2494,7 @@ export const ar: Messages = {
   'form.ig3':
     'استدعِ me/accounts?fields=instagram_business_account للحصول على معرّف الحساب، ثم انسخه مع الرمز إلى هنا.',
   'form.igNote':
-    'يجب أن تكون الصور بصيغة JPEG. تُنشر لبضع دقائق ليتمكن إنستغرام من جلبها ثم تُحذف. يُخزَّن الرمز مشفرًا ولا يُعرض مجددًا.',
+    'تُحوَّل الصور تلقائيًا إلى JPEG. تُنشر لبضع دقائق ليتمكن إنستغرام من جلبها ثم تُحذف. يُخزَّن الرمز مشفرًا ولا يُعرض مجددًا.',
   'form.rcIg': 'أنشئ رمز وصول جديدًا لنفس حساب إنستغرام في Graph API Explorer.',
   'form.sameIg': 'يجب أن ينتمي إلى الحساب نفسه كما كان.',
 };

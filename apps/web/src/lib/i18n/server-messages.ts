@@ -197,9 +197,9 @@ const ENTRIES: readonly Entry[] = [
     'تحتاج منشورات إنستغرام إلى صورة واحدة على الأقل.',
   ],
   [
-    'Instagram accepts JPEG pictures only. Replace the PNG, WebP or GIF pictures.',
-    'Instagram n’accepte que les images JPEG. Remplacez les images PNG, WebP ou GIF.',
-    'يقبل إنستغرام صور JPEG فقط. استبدل صور PNG أو WebP أو GIF.',
+    'Instagram allows at most 10 pictures.',
+    'Instagram autorise 10 images au maximum.',
+    'يسمح إنستغرام بـ 10 صور كحد أقصى.',
   ],
   [
     'Instagram is still processing the pictures. It will be retried.',
