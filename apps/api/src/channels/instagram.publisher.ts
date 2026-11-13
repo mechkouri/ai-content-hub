@@ -13,7 +13,7 @@ import {
   PublishResult,
 } from './publisher';
 import { PostPayload } from './publishing-rules';
-import { toJpeg } from './image-convert';
+import { fitForInstagram, PictureFitter } from './image-convert';
 import { PUBLIC_MEDIA, PublicMediaStore } from './public-media';
 import {
   FetchFailedError,
@@ -42,8 +42,7 @@ export const IG_MAX_IMAGES = 10;
 
 /** How long to wait for Instagram to download and process a picture before giving up for now. */
 export const IG_TIMING = Symbol('IG_TIMING');
-/** Turns any picture into a JPEG. Tests replace it; production uses sharp. */
-export type JpegConverter = (data: Buffer) => Promise<Buffer>;
+/** Makes a picture acceptable to Instagram (JPEG, size, shape). Tests replace it; production uses sharp. */
 export const IG_CONVERT = Symbol('IG_CONVERT');
 export interface InstagramTiming {
   intervalMs: number;
@@ -72,16 +71,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class InstagramPublisher implements Publisher {
   readonly provider = ChannelProvider.INSTAGRAM;
   private readonly timing: InstagramTiming;
-  private readonly convert: JpegConverter;
+  private readonly fit: PictureFitter;
 
   constructor(
     @Inject(HTTP_CLIENT) private readonly http: HttpClient,
     @Inject(PUBLIC_MEDIA) private readonly store: PublicMediaStore,
     @Optional() @Inject(IG_TIMING) timing?: InstagramTiming,
-    @Optional() @Inject(IG_CONVERT) convert?: JpegConverter,
+    @Optional() @Inject(IG_CONVERT) fit?: PictureFitter,
   ) {
     this.timing = timing ?? DEFAULT_TIMING;
-    this.convert = convert ?? toJpeg;
+    this.fit = fit ?? fitForInstagram;
   }
 
   supports(kind: ContentKind) {
@@ -161,18 +160,14 @@ export class InstagramPublisher implements Publisher {
     if (media.length > IG_MAX_IMAGES) {
       throw new PermanentPublishError(`Instagram allows at most ${IG_MAX_IMAGES} pictures.`);
     }
-    // Instagram takes JPEG only: other formats are converted here, before anything goes online.
+    // Instagram is strict about format, size and shape: fix the pictures here, before anything goes online.
     const pictures: PublishMedia[] = [];
     for (const m of media) {
-      if (m.mimeType === 'image/jpeg') {
-        pictures.push(m);
-        continue;
-      }
       try {
-        pictures.push({ ...m, mimeType: 'image/jpeg', data: await this.convert(m.data) });
+        pictures.push({ ...m, mimeType: 'image/jpeg', data: await this.fit(m.data, m.mimeType) });
       } catch {
         throw new PermanentPublishError(
-          `A picture (${m.filename}) could not be converted to JPEG. Replace it with another picture.`,
+          `A picture (${m.filename}) could not be prepared for Instagram. Replace it with another picture.`,
         );
       }
     }

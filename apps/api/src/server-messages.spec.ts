@@ -20,6 +20,7 @@ const INTERNAL = new Set([
   'No JSON object found',
   'Unreadable stored login',
   'Invalid storage key',
+  'Unreadable picture', // caught by the Instagram publisher and replaced by a translated message
   'Public picture storage is not configured', // guarded by InstagramPublisher.ready()
 ]);
 
@@ -85,6 +86,12 @@ describe('server error messages', () => {
         'Could not connect to Facebook. Facebook could not be reached.',
       ),
     ).toBe('Connexion à Facebook impossible. Facebook est injoignable.');
+    expect(
+      web.translateServerMessage(
+        'fr',
+        'A picture (a.png) could not be prepared for Instagram. Replace it with another picture.',
+      ),
+    ).toMatch(/^Une image \(a\.png\) n’a pas pu être préparée/);
     expect(web.translateServerMessage('ar', 'WordPress is not available right now (503).')).toBe(
       'WordPress غير متاح حاليًا (503).',
     );
