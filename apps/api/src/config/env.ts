@@ -30,6 +30,14 @@ const schema = z.object({
   // Background publishing. Set PUBLISH_WORKER=off to stop this process from posting (e.g. on a replica).
   PUBLISH_WORKER: z.enum(['on', 'off']).default('on'),
   PUBLISH_POLL_SECONDS: z.coerce.number().int().min(5).max(3600).default(30),
+  // Public picture storage. Instagram only accepts pictures it can download from a public web address,
+  // so posts are uploaded here for a moment, then removed. Needs a PUBLIC Supabase Storage bucket.
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
+  PUBLIC_MEDIA_BUCKET: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9_-]{1,62}$/)
+    .default('public-media'),
   SUPABASE_JWT_SECRET: z.string().min(1).optional(),
   SUPABASE_JWKS_URL: z.string().url().optional(),
 });

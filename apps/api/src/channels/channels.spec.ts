@@ -314,8 +314,8 @@ describe('channels and publishing', () => {
         .post(`${base}/channels`)
         .set('Authorization', as(U_ADMIN))
         .send({ provider: 'INSTAGRAM', name: 'Page' })
-        .expect(422);
-      expect(String(res.body.message)).toMatch(/not available yet/);
+        .expect(400); // Instagram needs an account ID and a token, like every provider with a login
+      expect(JSON.stringify(res.body)).toMatch(/igUserId|account ID/i);
       await request(app.getHttpServer())
         .post(`${base}/channels`)
         .set('Authorization', as(U_ADMIN))

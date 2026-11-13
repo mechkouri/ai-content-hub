@@ -20,6 +20,7 @@ const INTERNAL = new Set([
   'No JSON object found',
   'Unreadable stored login',
   'Invalid storage key',
+  'Public picture storage is not configured', // guarded by InstagramPublisher.ready()
 ]);
 
 function sources(dir: string): string[] {

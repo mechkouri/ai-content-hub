@@ -817,6 +817,21 @@ export const en = {
   'aip.runImage': 'Run image test',
   'aip.steps': 'Quality steps',
   'aip.generatedAlt': 'Generated test',
+  'form.igId': 'Instagram account ID',
+  'form.igIdPh': 'Account ID (numbers only)',
+  'form.igToken': 'Instagram access token',
+  'form.igHelp': 'Where do I find the account ID and token?',
+  'form.ig1':
+    'Switch your Instagram account to Business or Creator and link it to a Facebook Page.',
+  'form.ig2':
+    'In the Graph API Explorer, pick your app and generate a token with instagram_basic, instagram_content_publish and pages_show_list.',
+  'form.ig3':
+    'Call me/accounts?fields=instagram_business_account to get the account ID, then copy it and the token here.',
+  'form.igNote':
+    'Pictures must be JPEG. They are put online for a few minutes so Instagram can fetch them, then removed. The token is stored encrypted and never shown again.',
+  'form.rcIg':
+    'Generate a new access token for the same Instagram account in the Graph API Explorer.',
+  'form.sameIg': 'It must belong to the same account as before.',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1652,6 +1667,21 @@ export const fr: Messages = {
   'aip.runImage': 'Lancer le test d’image',
   'aip.steps': 'Étapes de qualité',
   'aip.generatedAlt': 'Image de test générée',
+  'form.igId': 'Identifiant du compte Instagram',
+  'form.igIdPh': 'Identifiant du compte (chiffres uniquement)',
+  'form.igToken': 'Jeton d’accès Instagram',
+  'form.igHelp': 'Où trouver l’identifiant du compte et le jeton ?',
+  'form.ig1':
+    'Passez votre compte Instagram en compte Professionnel ou Créateur et liez-le à une Page Facebook.',
+  'form.ig2':
+    'Dans le Graph API Explorer, choisissez votre application et générez un jeton avec instagram_basic, instagram_content_publish et pages_show_list.',
+  'form.ig3':
+    'Appelez me/accounts?fields=instagram_business_account pour obtenir l’identifiant du compte, puis copiez-le ici avec le jeton.',
+  'form.igNote':
+    'Les images doivent être au format JPEG. Elles sont mises en ligne quelques minutes pour qu’Instagram les récupère, puis supprimées. Le jeton est stocké chiffré et plus jamais affiché.',
+  'form.rcIg':
+    'Générez un nouveau jeton d’accès pour le même compte Instagram dans le Graph API Explorer.',
+  'form.sameIg': 'Il doit appartenir au même compte qu’avant.',
 };
 
 export const ar: Messages = {
@@ -2454,6 +2484,19 @@ export const ar: Messages = {
   'aip.runImage': 'تشغيل اختبار الصورة',
   'aip.steps': 'خطوات الجودة',
   'aip.generatedAlt': 'صورة اختبار مولَّدة',
+  'form.igId': 'معرّف حساب إنستغرام',
+  'form.igIdPh': 'معرّف الحساب (أرقام فقط)',
+  'form.igToken': 'رمز وصول إنستغرام',
+  'form.igHelp': 'أين أجد معرّف الحساب والرمز؟',
+  'form.ig1': 'حوّل حسابك على إنستغرام إلى حساب تجاري أو حساب منشئ محتوى واربطه بصفحة على فيسبوك.',
+  'form.ig2':
+    'في Graph API Explorer اختر تطبيقك وأنشئ رمزًا بالأذونات instagram_basic وinstagram_content_publish وpages_show_list.',
+  'form.ig3':
+    'استدعِ me/accounts?fields=instagram_business_account للحصول على معرّف الحساب، ثم انسخه مع الرمز إلى هنا.',
+  'form.igNote':
+    'يجب أن تكون الصور بصيغة JPEG. تُنشر لبضع دقائق ليتمكن إنستغرام من جلبها ثم تُحذف. يُخزَّن الرمز مشفرًا ولا يُعرض مجددًا.',
+  'form.rcIg': 'أنشئ رمز وصول جديدًا لنفس حساب إنستغرام في Graph API Explorer.',
+  'form.sameIg': 'يجب أن ينتمي إلى الحساب نفسه كما كان.',
 };
 
 export const LOCALES = ['en', 'fr', 'ar'] as const;

@@ -27,7 +27,10 @@ export class ChannelsService {
     return Object.values(ChannelProvider).map((provider) => {
       const p = ready.get(provider);
       // A provider that needs a login can only be used once logins can be stored safely.
-      return { provider, available: !!p && (!p.prepare || this.secrets.configured) };
+      return {
+        provider,
+        available: !!p && (!p.prepare || this.secrets.configured) && (p.ready?.() ?? true),
+      };
     });
   }
 

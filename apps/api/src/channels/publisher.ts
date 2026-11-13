@@ -42,6 +42,8 @@ export interface Publisher {
   readonly provider: ChannelProvider;
   /** Whether this provider can publish this kind of content. */
   supports(kind: ContentKind): boolean;
+  /** Whether the server has everything this provider needs. Omitted when nothing besides a login is needed. */
+  ready?(): boolean;
   /** Validates and tests the details entered when connecting. Providers without settings omit it. */
   prepare?(input: Record<string, unknown>): Promise<PreparedChannel>;
   /**
