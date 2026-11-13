@@ -9,6 +9,8 @@ import {
   InstagramContent,
   LinkedinContent,
 } from '@/lib/api';
+import { useT } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 import { Field, HashtagEditor, ListEditor, TextBox } from './fields';
 
 interface EditorProps<T> {
@@ -43,18 +45,19 @@ function ImageIdeas({
   warnings: ClaimWarning[];
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <ListEditor
       items={images}
       onChange={onChange}
       max={max}
-      itemLabel="Image"
-      addLabel="Add an image idea"
+      itemLabel={t('ed.image')}
+      addLabel={t('ed.addImageIdea')}
       disabled={disabled}
       makeNew={() => ({ brief: '', altText: '' })}
       render={(img, update) => (
         <>
-          <Field label="What the image should show">
+          <Field label={t('ed.imageShould')}>
             <TextBox
               value={img.brief}
               onChange={(brief) => update({ brief })}
@@ -64,7 +67,7 @@ function ImageIdeas({
               disabled={disabled}
             />
           </Field>
-          <Field label="Alt text" hint="for accessibility and SEO">
+          <Field label={t('ed.altText')} hint={t('ed.altHint')}>
             <TextBox
               value={img.altText}
               onChange={(altText) => update({ altText })}
@@ -97,12 +100,13 @@ export function ArticleEditor({
   warnings,
   disabled,
 }: EditorProps<ArticleContent>) {
+  const t = useT();
   const set = <K extends keyof ArticleContent>(k: K, v: ArticleContent[K]) =>
     onChange({ ...a, [k]: v });
   return (
     <>
-      <Block title="Search appearance" hint="How the article appears in Google results.">
-        <Field label="SEO title">
+      <Block title={t('ed.searchAppearance')} hint={t('ed.searchAppearanceHint')}>
+        <Field label={t('ed.seoTitle')}>
           <TextBox
             value={a.seoTitle}
             onChange={(v) => set('seoTitle', v)}
@@ -112,7 +116,7 @@ export function ArticleEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Meta description">
+        <Field label={t('ed.metaDesc')}>
           <TextBox
             value={a.metaDescription}
             onChange={(v) => set('metaDescription', v)}
@@ -123,13 +127,13 @@ export function ArticleEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="URL slug" hint="lowercase letters, numbers and hyphens only">
+        <Field label={t('ed.slug')} hint={t('ed.slugHint')}>
           <TextBox value={a.slug} onChange={(v) => set('slug', v)} max={120} disabled={disabled} />
         </Field>
       </Block>
 
-      <Block title="Article">
-        <Field label="Main heading (H1)">
+      <Block title={t('ed.article')}>
+        <Field label={t('ed.h1')}>
           <TextBox
             value={a.h1}
             onChange={(v) => set('h1', v)}
@@ -138,7 +142,7 @@ export function ArticleEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Excerpt">
+        <Field label={t('ed.excerpt')}>
           <TextBox
             value={a.excerpt}
             onChange={(v) => set('excerpt', v)}
@@ -148,7 +152,7 @@ export function ArticleEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Introduction">
+        <Field label={t('ed.intro')}>
           <TextBox
             value={a.introduction}
             onChange={(v) => set('introduction', v)}
@@ -159,18 +163,18 @@ export function ArticleEditor({
           />
         </Field>
         <div>
-          <p className="mb-2 text-sm font-semibold">Sections</p>
+          <p className="mb-2 text-sm font-semibold">{t('ed.sections')}</p>
           <ListEditor<ArticleContent['sections'][number]>
             items={a.sections}
             onChange={(v) => set('sections', v)}
             max={10}
-            itemLabel="Section"
-            addLabel="Add a section"
+            itemLabel={t('ed.section')}
+            addLabel={t('ed.addSection')}
             disabled={disabled}
             makeNew={() => ({ heading: '', body: '' })}
             render={(s, update) => (
               <>
-                <Field label="Heading (H2)">
+                <Field label={t('ed.h2')}>
                   <TextBox
                     value={s.heading}
                     onChange={(heading) => update({ heading })}
@@ -179,7 +183,7 @@ export function ArticleEditor({
                     disabled={disabled}
                   />
                 </Field>
-                <Field label="Text">
+                <Field label={t('ed.text')}>
                   <TextBox
                     value={s.body}
                     onChange={(body) => update({ body })}
@@ -190,13 +194,13 @@ export function ArticleEditor({
                   />
                 </Field>
                 <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="mb-2 text-xs font-semibold text-muted">Sub-sections (H3)</p>
+                  <p className="mb-2 text-xs font-semibold text-muted">{t('ed.subsections')}</p>
                   <ListEditor
                     items={s.subsections ?? []}
                     onChange={(subsections) => update({ subsections })}
                     max={5}
-                    itemLabel="Sub-section"
-                    addLabel="Add a sub-section"
+                    itemLabel={t('ed.subsection')}
+                    addLabel={t('ed.addSubsection')}
                     disabled={disabled}
                     makeNew={() => ({ heading: '', body: '' })}
                     render={(sub, updateSub) => (
@@ -205,7 +209,7 @@ export function ArticleEditor({
                           value={sub.heading}
                           onChange={(heading) => updateSub({ heading })}
                           max={160}
-                          placeholder="Sub-heading"
+                          placeholder={t('ed.subheading')}
                           warnings={warnings}
                           disabled={disabled}
                         />
@@ -225,7 +229,7 @@ export function ArticleEditor({
             )}
           />
         </div>
-        <Field label="Conclusion">
+        <Field label={t('ed.conclusion')}>
           <TextBox
             value={a.conclusion}
             onChange={(v) => set('conclusion', v)}
@@ -237,13 +241,13 @@ export function ArticleEditor({
         </Field>
       </Block>
 
-      <Block title="FAQ" hint="Answers must come from the verified facts.">
+      <Block title={t('ed.faq')} hint={t('ed.faqHint')}>
         <ListEditor
           items={a.faq}
           onChange={(v) => set('faq', v)}
           max={8}
-          itemLabel="Question"
-          addLabel="Add a question"
+          itemLabel={t('ed.question')}
+          addLabel={t('ed.addQuestion')}
           disabled={disabled}
           makeNew={() => ({ question: '', answer: '' })}
           render={(f, update) => (
@@ -252,7 +256,7 @@ export function ArticleEditor({
                 value={f.question}
                 onChange={(question) => update({ question })}
                 max={220}
-                placeholder="Question"
+                placeholder={t('ed.question')}
                 warnings={warnings}
                 disabled={disabled}
               />
@@ -261,7 +265,7 @@ export function ArticleEditor({
                 onChange={(answer) => update({ answer })}
                 max={900}
                 rows={3}
-                placeholder="Answer"
+                placeholder={t('ed.answer')}
                 warnings={warnings}
                 disabled={disabled}
               />
@@ -270,15 +274,15 @@ export function ArticleEditor({
         />
       </Block>
 
-      <Block title="Links, image and markup" hint="Suggestions for your website team.">
+      <Block title={t('ed.linksBlock')} hint={t('ed.linksHint')}>
         <div>
-          <p className="mb-2 text-sm font-semibold">Internal link suggestions</p>
+          <p className="mb-2 text-sm font-semibold">{t('ed.internalLinks')}</p>
           <ListEditor
             items={a.internalLinkSuggestions}
             onChange={(v) => set('internalLinkSuggestions', v)}
             max={6}
-            itemLabel="Link"
-            addLabel="Add a link idea"
+            itemLabel={t('ed.link')}
+            addLabel={t('ed.addLinkIdea')}
             disabled={disabled}
             makeNew={() => ({ anchorText: '', suggestedTopic: '' })}
             render={(l, update) => (
@@ -287,21 +291,21 @@ export function ArticleEditor({
                   value={l.anchorText}
                   onChange={(anchorText) => update({ anchorText })}
                   max={100}
-                  placeholder="Link text"
+                  placeholder={t('ed.linkText')}
                   disabled={disabled}
                 />
                 <TextBox
                   value={l.suggestedTopic}
                   onChange={(suggestedTopic) => update({ suggestedTopic })}
                   max={200}
-                  placeholder="Page or topic to link to"
+                  placeholder={t('ed.linkTopic')}
                   disabled={disabled}
                 />
               </>
             )}
           />
         </div>
-        <Field label="Featured image idea">
+        <Field label={t('ed.featuredIdea')}>
           <TextBox
             value={a.featuredImageBrief}
             onChange={(v) => set('featuredImageBrief', v)}
@@ -311,7 +315,7 @@ export function ArticleEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Image alt text">
+        <Field label={t('ed.imageAlt')}>
           <TextBox
             value={a.imageAltText}
             onChange={(v) => set('imageAltText', v)}
@@ -320,7 +324,7 @@ export function ArticleEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Structured data (schema.org)">
+        <Field label={t('ed.structured')}>
           <select
             className="input"
             disabled={disabled}
@@ -337,7 +341,7 @@ export function ArticleEditor({
               onChange={(notes) => set('structuredData', { ...a.structuredData, notes })}
               max={500}
               rows={2}
-              placeholder="Notes for the developer"
+              placeholder={t('ed.devNotes')}
               disabled={disabled}
             />
           </div>
@@ -355,12 +359,13 @@ export function InstagramEditor({
   warnings,
   disabled,
 }: EditorProps<InstagramContent>) {
+  const t = useT();
   const set = <K extends keyof InstagramContent>(k: K, v: InstagramContent[K]) =>
     onChange({ ...p, [k]: v });
   return (
     <>
-      <Block title="Caption">
-        <Field label="Caption" hint="the first line is the hook">
+      <Block title={t('ed.caption')}>
+        <Field label={t('ed.caption')} hint={t('ed.captionHint')}>
           <TextBox
             value={p.caption}
             onChange={(v) => set('caption', v)}
@@ -370,7 +375,7 @@ export function InstagramEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Call to action">
+        <Field label={t('ed.cta')}>
           <TextBox
             value={p.cta}
             onChange={(v) => set('cta', v)}
@@ -379,7 +384,7 @@ export function InstagramEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Hashtags">
+        <Field label={t('ed.hashtags')}>
           <HashtagEditor
             tags={p.hashtags}
             onChange={(v) => set('hashtags', v)}
@@ -389,13 +394,13 @@ export function InstagramEditor({
           />
         </Field>
       </Block>
-      <Block title="Carousel slides" hint="Optional. Up to 10 slides, short and punchy.">
+      <Block title={t('ed.carousel')} hint={t('ed.carouselHint')}>
         <ListEditor
           items={p.carousel}
           onChange={(v) => set('carousel', v)}
           max={10}
-          itemLabel="Slide"
-          addLabel="Add a slide"
+          itemLabel={t('ed.slide')}
+          addLabel={t('ed.addSlide')}
           disabled={disabled}
           makeNew={() => ({ headline: '', body: '' })}
           render={(s, update) => (
@@ -404,7 +409,7 @@ export function InstagramEditor({
                 value={s.headline}
                 onChange={(headline) => update({ headline })}
                 max={90}
-                placeholder="Headline"
+                placeholder={t('ed.headline')}
                 warnings={warnings}
                 disabled={disabled}
               />
@@ -413,7 +418,7 @@ export function InstagramEditor({
                 onChange={(body) => update({ body })}
                 max={260}
                 rows={2}
-                placeholder="Slide text"
+                placeholder={t('ed.slideText')}
                 warnings={warnings}
                 disabled={disabled}
               />
@@ -421,8 +426,8 @@ export function InstagramEditor({
           )}
         />
       </Block>
-      <Block title="Image">
-        <Field label="Cover image idea">
+      <Block title={t('ed.image')}>
+        <Field label={t('ed.coverIdea')}>
           <TextBox
             value={p.imageBrief}
             onChange={(v) => set('imageBrief', v)}
@@ -432,7 +437,7 @@ export function InstagramEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Alt text">
+        <Field label={t('ed.altText')}>
           <TextBox
             value={p.altText}
             onChange={(v) => set('altText', v)}
@@ -454,12 +459,13 @@ export function FacebookEditor({
   warnings,
   disabled,
 }: EditorProps<FacebookContent>) {
+  const t = useT();
   const set = <K extends keyof FacebookContent>(k: K, v: FacebookContent[K]) =>
     onChange({ ...p, [k]: v });
   return (
     <>
-      <Block title="Post">
-        <Field label="Post text">
+      <Block title={t('ed.post')}>
+        <Field label={t('ed.postText')}>
           <TextBox
             value={p.postText}
             onChange={(v) => set('postText', v)}
@@ -469,7 +475,7 @@ export function FacebookEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Call to action">
+        <Field label={t('ed.cta')}>
           <TextBox
             value={p.cta}
             onChange={(v) => set('cta', v)}
@@ -478,7 +484,7 @@ export function FacebookEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Link" hint="only an official link from the verified facts">
+        <Field label={t('ed.link')} hint={t('ed.linkHint')}>
           <TextBox
             value={p.link ?? ''}
             onChange={(v) => set('link', v.trim() ? v : null)}
@@ -487,7 +493,7 @@ export function FacebookEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Hashtags">
+        <Field label={t('ed.hashtags')}>
           <HashtagEditor
             tags={p.hashtags}
             onChange={(v) => set('hashtags', v)}
@@ -497,7 +503,7 @@ export function FacebookEditor({
           />
         </Field>
       </Block>
-      <Block title="Images" hint="Add several for a multi-image post.">
+      <Block title={t('ed.images')} hint={t('ed.imagesHint')}>
         <ImageIdeas
           images={p.images}
           onChange={(v) => set('images', v)}
@@ -512,10 +518,10 @@ export function FacebookEditor({
 
 // ---------------- LinkedIn ----------------
 
-const MODES: { id: LinkedinContent['imageMode']; label: string }[] = [
-  { id: 'text', label: 'Text only' },
-  { id: 'image', label: 'One image' },
-  { id: 'multi_image', label: 'Several images' },
+const MODES: { id: LinkedinContent['imageMode']; label: MessageKey }[] = [
+  { id: 'text', label: 'ed.mode.text' },
+  { id: 'image', label: 'ed.mode.image' },
+  { id: 'multi_image', label: 'ed.mode.multi_image' },
 ];
 
 export function LinkedinEditor({
@@ -524,13 +530,14 @@ export function LinkedinEditor({
   warnings,
   disabled,
 }: EditorProps<LinkedinContent>) {
+  const t = useT();
   const set = <K extends keyof LinkedinContent>(k: K, v: LinkedinContent[K]) =>
     onChange({ ...p, [k]: v });
   const maxImages = p.imageMode === 'text' ? 0 : p.imageMode === 'image' ? 1 : 9;
   return (
     <>
-      <Block title="Post">
-        <Field label="Post text">
+      <Block title={t('ed.post')}>
+        <Field label={t('ed.postText')}>
           <TextBox
             value={p.postText}
             onChange={(v) => set('postText', v)}
@@ -540,7 +547,7 @@ export function LinkedinEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Call to action">
+        <Field label={t('ed.cta')}>
           <TextBox
             value={p.cta}
             onChange={(v) => set('cta', v)}
@@ -549,7 +556,7 @@ export function LinkedinEditor({
             disabled={disabled}
           />
         </Field>
-        <Field label="Hashtags">
+        <Field label={t('ed.hashtags')}>
           <HashtagEditor
             tags={p.hashtags}
             onChange={(v) => set('hashtags', v)}
@@ -559,7 +566,7 @@ export function LinkedinEditor({
           />
         </Field>
       </Block>
-      <Block title="Format and images">
+      <Block title={t('ed.formatImages')}>
         <div className="flex flex-wrap gap-2">
           {MODES.map((m) => (
             <button
@@ -579,7 +586,7 @@ export function LinkedinEditor({
                   : 'bg-slate-200/70 text-slate-700 hover:bg-slate-300/70'
               }`}
             >
-              {m.label}
+              {t(m.label)}
             </button>
           ))}
         </div>

@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import { ClaimWarning } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 
 /** Arabic-Indic digits to ASCII, so "٢٠٢٧" matches a warning about "2027". */
 function normalizeDigits(text: string): string {
@@ -40,7 +41,7 @@ export function Field({
   return (
     <label className="block text-sm">
       <span className="font-semibold">{label}</span>
-      {hint && <span className="ml-2 text-xs font-normal text-slate-400">{hint}</span>}
+      {hint && <span className="ms-2 text-xs font-normal text-slate-400">{hint}</span>}
       <div className="mt-1">{children}</div>
     </label>
   );
@@ -67,6 +68,7 @@ export function TextBox({
   /** Preferred [min, max] length; the counter turns amber outside it. */
   ideal?: [number, number];
 }) {
+  const t = useT();
   const flags = flagsIn(value, warnings);
   const outside = ideal && value.length > 0 && (value.length < ideal[0] || value.length > ideal[1]);
   const common = {
@@ -84,11 +86,11 @@ export function TextBox({
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px]">
         <span className="text-amber-700">
           {flags.length > 0 &&
-            `⚠ Check: ${flags.map((f) => f.value).join(', ')} is not in the verified facts`}
+            `⚠ ${t('fld.notVerified', { values: flags.map((f) => f.value).join(', ') })}`}
         </span>
         <span className={outside ? 'text-amber-700' : 'text-slate-400'}>
           {value.length}/{max}
-          {ideal ? ` · aim for ${ideal[0]}–${ideal[1]}` : ''}
+          {ideal ? ` · ${t('fld.aim', { min: ideal[0], max: ideal[1] })}` : ''}
         </span>
       </div>
     </div>
@@ -115,6 +117,7 @@ export function ListEditor<T>({
   disabled?: boolean;
   itemLabel: string;
 }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
@@ -131,7 +134,7 @@ export function ListEditor<T>({
                     className="hover:text-brand"
                     onClick={() => onChange(move(items, i, i - 1))}
                   >
-                    ↑ Up
+                    ↑ {t('fld.up')}
                   </button>
                 )}
                 {i < items.length - 1 && (
@@ -140,7 +143,7 @@ export function ListEditor<T>({
                     className="hover:text-brand"
                     onClick={() => onChange(move(items, i, i + 1))}
                   >
-                    ↓ Down
+                    ↓ {t('fld.down')}
                   </button>
                 )}
                 <button
@@ -148,7 +151,7 @@ export function ListEditor<T>({
                   className="text-red-600"
                   onClick={() => onChange(items.filter((_, j) => j !== i))}
                 >
-                  Remove
+                  {t('common.remove')}
                 </button>
               </span>
             )}
@@ -197,6 +200,7 @@ export function HashtagEditor({
   disabled?: boolean;
   warnings?: ClaimWarning[];
 }) {
+  const t = useT();
   const [draft, setDraft] = useState('');
   const add = () => {
     const tag = cleanTag(draft);
@@ -207,22 +211,22 @@ export function HashtagEditor({
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        {tags.map((t) => (
+        {tags.map((tag) => (
           <span
-            key={t}
+            key={tag}
             className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
-              flagsIn(t, warnings).length
+              flagsIn(tag, warnings).length
                 ? 'bg-amber-100 text-amber-800'
                 : 'bg-brand-soft text-brand'
             }`}
             dir="auto"
           >
-            {t}
+            {tag}
             {!disabled && (
               <button
                 type="button"
-                aria-label={`Remove ${t}`}
-                onClick={() => onChange(tags.filter((x) => x !== t))}
+                aria-label={t('fld.removeTag', { tag })}
+                onClick={() => onChange(tags.filter((x) => x !== tag))}
               >
                 ×
               </button>
@@ -233,7 +237,7 @@ export function HashtagEditor({
       {!disabled && tags.length < max && (
         <input
           className="input mt-2"
-          placeholder="Add a hashtag and press Enter"
+          placeholder={t('fld.addTag')}
           value={draft}
           dir="auto"
           onChange={(e) => setDraft(e.target.value)}
@@ -247,7 +251,7 @@ export function HashtagEditor({
         />
       )}
       <p className="mt-1 text-[11px] text-slate-400">
-        {tags.length}/{max} hashtags
+        {t('fld.tagCount', { n: tags.length, max })}
       </p>
     </div>
   );

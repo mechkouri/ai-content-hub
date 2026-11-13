@@ -1,4 +1,7 @@
+'use client';
+
 import { Check } from 'lucide-react';
+import { useT } from '@/lib/i18n';
 
 export interface PipelineStep {
   label: string;
@@ -8,8 +11,9 @@ export interface PipelineStep {
 
 /** Horizontal progress of a piece of content, as in the design's campaign workspace header. */
 export function PipelineSteps({ steps }: { steps: PipelineStep[] }) {
+  const t = useT();
   return (
-    <ol className="card grid gap-3 p-4 sm:grid-cols-4" aria-label="Content pipeline">
+    <ol className="card grid gap-3 p-4 sm:grid-cols-4" aria-label={t('det.pipeline')}>
       {steps.map((s, i) => (
         <li
           key={s.label}
@@ -28,7 +32,9 @@ export function PipelineSteps({ steps }: { steps: PipelineStep[] }) {
             {s.state === 'done' ? <Check size={15} strokeWidth={3} aria-hidden /> : i + 1}
           </span>
           <span className="min-w-0">
-            <span className="eyebrow block">Step {String(i + 1).padStart(2, '0')}</span>
+            <span className="eyebrow block">
+              {t('det.stepN', { n: String(i + 1).padStart(2, '0') })}
+            </span>
             <span className="block truncate text-sm font-semibold">{s.label}</span>
             <span className="block truncate text-xs text-muted">{s.detail}</span>
           </span>

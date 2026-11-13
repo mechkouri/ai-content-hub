@@ -8,6 +8,7 @@ import {
   InstagramContent,
   LinkedinContent,
 } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -20,11 +21,12 @@ function Avatar({ name }: { name: string }) {
 }
 
 function ImagePlaceholder({ brief, className = '' }: { brief: string; className?: string }) {
+  const t = useT();
   return (
     <div
       className={`flex items-center justify-center bg-slate-100 p-3 text-center text-[11px] italic text-slate-400 ${className}`}
     >
-      {brief ? `🖼 ${clip(brief, 110)}` : '🖼 Image'}
+      {brief ? `🖼 ${clip(brief, 110)}` : `🖼 ${t('prev.image')}`}
     </div>
   );
 }
@@ -42,15 +44,18 @@ function Frame({ label, children }: { label: string; children: ReactNode }) {
 
 /** What the article looks like in Google results. */
 export function SerpPreview({ a }: { a: ArticleContent }) {
+  const t = useT();
   return (
-    <Frame label="Google preview">
+    <Frame label={t('prev.google')}>
       <div className="p-4" dir="auto">
-        <p className="truncate text-xs text-muted">yourwebsite.com › {a.slug || 'article'}</p>
+        <p className="truncate text-xs text-muted">
+          yourwebsite.com › {a.slug || t('prev.slugFallback')}
+        </p>
         <p className="mt-0.5 text-lg leading-snug text-[#1a0dab]">
-          {clip(a.seoTitle, 62) || 'SEO title'}
+          {clip(a.seoTitle, 62) || t('prev.seoTitlePh')}
         </p>
         <p className="mt-0.5 text-sm text-slate-600">
-          {clip(a.metaDescription, 165) || 'Meta description'}
+          {clip(a.metaDescription, 165) || t('prev.metaPh')}
         </p>
       </div>
     </Frame>
@@ -65,9 +70,10 @@ const Hash = ({ tags, className = 'text-[#00376b]' }: { tags: string[]; classNam
   ) : null;
 
 export function InstagramPreview({ p, org }: { p: InstagramContent; org: string }) {
+  const t = useT();
   const first = p.caption.split('\n')[0];
   return (
-    <Frame label="Instagram preview">
+    <Frame label={t('prev.instagram')}>
       <div className="p-3">
         <div className="flex items-center gap-2">
           <Avatar name={org} />
@@ -77,7 +83,7 @@ export function InstagramPreview({ p, org }: { p: InstagramContent; org: string 
         {p.carousel.length > 0 && (
           <div
             className="mt-2 flex items-center justify-center gap-1"
-            aria-label={`${p.carousel.length} slides`}
+            aria-label={t('prev.slides', { n: p.carousel.length })}
           >
             {p.carousel.map((_, i) => (
               <span
@@ -89,7 +95,7 @@ export function InstagramPreview({ p, org }: { p: InstagramContent; org: string 
         )}
         <p className="mt-2 whitespace-pre-wrap text-sm" dir="auto">
           <span className="font-semibold">{org.toLowerCase().replace(/\s+/g, '')}</span>{' '}
-          {p.caption.length > 125 ? `${clip(first, 125)} more` : p.caption}
+          {p.caption.length > 125 ? `${clip(first, 125)} ${t('prev.more')}` : p.caption}
         </p>
         <Hash tags={p.hashtags} />
       </div>
@@ -98,6 +104,7 @@ export function InstagramPreview({ p, org }: { p: InstagramContent; org: string 
 }
 
 function ImageGrid({ images }: { images: ImageIdea[] }) {
+  const t = useT();
   if (!images.length) return null;
   const shown = images.slice(0, 4);
   return (
@@ -113,7 +120,7 @@ function ImageGrid({ images }: { images: ImageIdea[] }) {
       ))}
       {images.length > 4 && (
         <p className="col-span-2 bg-slate-50 py-1 text-center text-[11px] text-slate-400">
-          +{images.length - 4} more images
+          {t('prev.moreImages', { n: images.length - 4 })}
         </p>
       )}
     </div>
@@ -121,14 +128,15 @@ function ImageGrid({ images }: { images: ImageIdea[] }) {
 }
 
 export function FacebookPreview({ p, org }: { p: FacebookContent; org: string }) {
+  const t = useT();
   return (
-    <Frame label="Facebook preview">
+    <Frame label={t('prev.facebook')}>
       <div className="p-4">
         <div className="flex items-center gap-2">
           <Avatar name={org} />
           <div>
             <p className="text-sm font-semibold">{org}</p>
-            <p className="text-[11px] text-slate-400">Just now · 🌍</p>
+            <p className="text-[11px] text-slate-400">{t('prev.justNow')} · 🌍</p>
           </div>
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm" dir="auto">
@@ -148,14 +156,15 @@ export function FacebookPreview({ p, org }: { p: FacebookContent; org: string })
 }
 
 export function LinkedinPreview({ p, org }: { p: LinkedinContent; org: string }) {
+  const t = useT();
   return (
-    <Frame label="LinkedIn preview">
+    <Frame label={t('prev.linkedin')}>
       <div className="p-4">
         <div className="flex items-center gap-2">
           <Avatar name={org} />
           <div>
             <p className="text-sm font-semibold">{org}</p>
-            <p className="text-[11px] text-slate-400">Company · Just now</p>
+            <p className="text-[11px] text-slate-400">{t('prev.companyNow')}</p>
           </div>
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm" dir="auto">
