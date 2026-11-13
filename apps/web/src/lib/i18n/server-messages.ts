@@ -164,6 +164,53 @@ const ENTRIES: readonly Entry[] = [
     'Facebook limite la fréquence de publication de cette Page. Une nouvelle tentative aura lieu.',
     'يحد فيسبوك من سرعة النشر على هذه الصفحة. ستتم إعادة المحاولة.',
   ],
+  // ---- Instagram
+  [
+    'Instagram cannot be reached from here.',
+    'Instagram est inaccessible depuis ici.',
+    'لا يمكن الوصول إلى إنستغرام من هنا.',
+  ],
+  ['Instagram could not be reached.', 'Instagram est injoignable.', 'تعذّر الوصول إلى إنستغرام.'],
+  [
+    'Instagram did not accept that access token. It may be wrong, expired or revoked. Create a new access token.',
+    'Instagram n’a pas accepté ce jeton d’accès. Il est peut-être incorrect, expiré ou révoqué. Créez un nouveau jeton d’accès.',
+    'لم يقبل إنستغرام رمز الوصول هذا. قد يكون خاطئًا أو منتهيًا أو ملغى. أنشئ رمز وصول جديدًا.',
+  ],
+  [
+    'This token cannot see that Instagram account. Check the account ID, and that the account is a business or creator account linked to your Facebook Page.',
+    'Ce jeton ne voit pas ce compte Instagram. Vérifiez l’identifiant du compte, et que c’est un compte professionnel ou créateur lié à votre Page Facebook.',
+    'لا يستطيع هذا الرمز رؤية حساب إنستغرام هذا. تحقق من معرّف الحساب، ومن أنه حساب تجاري أو حساب منشئ محتوى مرتبط بصفحتك على فيسبوك.',
+  ],
+  [
+    'This access token does not belong to that Instagram account.',
+    'Ce jeton d’accès n’appartient pas à ce compte Instagram.',
+    'رمز الوصول هذا لا يخص حساب إنستغرام هذا.',
+  ],
+  [
+    'Instagram needs public picture storage on the server (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY).',
+    'Instagram nécessite un stockage public d’images sur le serveur (SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY).',
+    'يحتاج إنستغرام إلى تخزين عام للصور على الخادم (SUPABASE_URL وSUPABASE_SERVICE_ROLE_KEY).',
+  ],
+  [
+    'Instagram posts need at least one picture.',
+    'Les publications Instagram nécessitent au moins une image.',
+    'تحتاج منشورات إنستغرام إلى صورة واحدة على الأقل.',
+  ],
+  [
+    'Instagram accepts JPEG pictures only. Replace the PNG, WebP or GIF pictures.',
+    'Instagram n’accepte que les images JPEG. Remplacez les images PNG, WebP ou GIF.',
+    'يقبل إنستغرام صور JPEG فقط. استبدل صور PNG أو WebP أو GIF.',
+  ],
+  [
+    'Instagram is still processing the pictures. It will be retried.',
+    'Instagram traite encore les images. Une nouvelle tentative aura lieu.',
+    'لا يزال إنستغرام يعالج الصور. ستتم إعادة المحاولة.',
+  ],
+  [
+    'Instagram is limiting how fast this account can post. It will be retried.',
+    'Instagram limite la fréquence de publication de ce compte. Une nouvelle tentative aura lieu.',
+    'يحد إنستغرام من سرعة النشر على هذا الحساب. ستتم إعادة المحاولة.',
+  ],
   [
     'LinkedIn cannot be reached from here.',
     'LinkedIn est inaccessible depuis ici.',
@@ -494,7 +541,7 @@ const PATTERNS: readonly (readonly [RegExp, string, string])[] = [
     'أرجع الموقع خطأً ($1)',
   ],
   [
-    /^(Facebook|LinkedIn|WordPress) is not available right now \((\d+)\)\.$/,
+    /^(Facebook|Instagram|LinkedIn|WordPress) is not available right now \((\d+)\)\.$/,
     '$1 n’est pas disponible pour le moment ($2).',
     '$1 غير متاح حاليًا ($2).',
   ],
@@ -525,9 +572,10 @@ const BY_EN = new Map<string, Entry>(ENTRIES.map((e) => [e[0], e]));
 export const SERVER_MESSAGE_KEYS: readonly string[] = ENTRIES.map((e) => e[0]);
 
 /** Messages that open with a connection problem followed by a reason, e.g. "Could not connect to Facebook. <reason>". */
-const CONNECT = /^Could not connect to (Facebook|LinkedIn|the site)\. ([\s\S]+)$/;
+const CONNECT = /^Could not connect to (Facebook|Instagram|LinkedIn|the site)\. ([\s\S]+)$/;
 const CONNECT_PREFIX: Record<string, { fr: string; ar: string }> = {
   Facebook: { fr: 'Connexion à Facebook impossible.', ar: 'تعذّر الاتصال بفيسبوك.' },
+  Instagram: { fr: 'Connexion à Instagram impossible.', ar: 'تعذّر الاتصال بإنستغرام.' },
   LinkedIn: { fr: 'Connexion à LinkedIn impossible.', ar: 'تعذّر الاتصال بلينكدإن.' },
   'the site': { fr: 'Connexion au site impossible.', ar: 'تعذّر الاتصال بالموقع.' },
 };

@@ -11,6 +11,7 @@ export interface ChannelFormValues {
   applicationPassword?: string;
   publishAs?: 'publish' | 'draft';
   pageId?: string;
+  igUserId?: string;
   accessToken?: string;
   autoPublish?: boolean;
 }
@@ -33,12 +34,14 @@ export function ChannelForm({
   const wordpress = provider === 'WORDPRESS';
   const facebook = provider === 'FACEBOOK';
   const linkedin = provider === 'LINKEDIN';
+  const instagram = provider === 'INSTAGRAM';
   const [name, setName] = useState(t(`provider.${provider}`));
   const [siteUrl, setSiteUrl] = useState('https://');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [publishAs, setPublishAs] = useState<'publish' | 'draft'>('publish');
   const [pageId, setPageId] = useState('');
+  const [igUserId, setIgUserId] = useState('');
   const [token, setToken] = useState('');
   const [autoPublish, setAutoPublish] = useState(false);
 
@@ -50,7 +53,8 @@ export function ChannelForm({
         username.trim().length > 0 &&
         password.trim().length >= 8)) &&
     (!facebook || (/^\d{5,25}$/.test(pageId.trim()) && token.trim().length >= 20)) &&
-    (!linkedin || token.trim().length >= 20);
+    (!linkedin || token.trim().length >= 20) &&
+    (!instagram || (/^\d{5,25}$/.test(igUserId.trim()) && token.trim().length >= 20));
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -58,6 +62,15 @@ export function ChannelForm({
       onSubmit({
         name: name.trim(),
         pageId: pageId.trim(),
+        accessToken: token.trim(),
+        autoPublish,
+      });
+      return;
+    }
+    if (instagram) {
+      onSubmit({
+        name: name.trim(),
+        igUserId: igUserId.trim(),
         accessToken: token.trim(),
         autoPublish,
       });
@@ -199,6 +212,42 @@ export function ChannelForm({
           </details>
         </>
       )}
+      {instagram && (
+        <>
+          <input
+            className="input"
+            inputMode="numeric"
+            value={igUserId}
+            onChange={(e) => setIgUserId(e.target.value)}
+            required
+            maxLength={25}
+            autoComplete="off"
+            aria-label={t('form.igId')}
+            placeholder={t('form.igIdPh')}
+          />
+          <input
+            className="input"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            required
+            minLength={20}
+            maxLength={1000}
+            autoComplete="new-password"
+            aria-label={t('form.igToken')}
+            placeholder={t('form.igToken')}
+          />
+          <details className="rounded-lg bg-surface p-2.5 text-xs text-slate-600">
+            <summary className="cursor-pointer font-semibold">{t('form.igHelp')}</summary>
+            <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
+              <li>{t('form.ig1')}</li>
+              <li>{t('form.ig2')}</li>
+              <li>{t('form.ig3')}</li>
+            </ol>
+            <p className="mt-1.5">{t('form.igNote')}</p>
+          </details>
+        </>
+      )}
       {linkedin && (
         <>
           <input
@@ -245,7 +294,7 @@ export function ChannelForm({
       <div className="flex gap-2">
         <button className="btn-primary" disabled={busy || !ready}>
           {busy
-            ? wordpress || facebook || linkedin
+            ? wordpress || facebook || linkedin || instagram
               ? t('form.checking')
               : t('form.adding')
             : t('form.addChannel')}
@@ -299,12 +348,20 @@ export function ReconnectForm({
       }}
     >
       <p className="text-xs text-slate-600">
-        {wordpress ? t('form.rcWp') : provider === 'LINKEDIN' ? t('form.rcLi') : t('form.rcFb')}{' '}
+        {wordpress
+          ? t('form.rcWp')
+          : provider === 'LINKEDIN'
+            ? t('form.rcLi')
+            : provider === 'INSTAGRAM'
+              ? t('form.rcIg')
+              : t('form.rcFb')}{' '}
         {wordpress
           ? t('form.sameWp')
           : provider === 'LINKEDIN'
             ? t('form.sameLi')
-            : t('form.sameFb')}
+            : provider === 'INSTAGRAM'
+              ? t('form.sameIg')
+              : t('form.sameFb')}
       </p>
       {wordpress && (
         <input
