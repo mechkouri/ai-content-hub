@@ -2,26 +2,29 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import {
-  AnalyticsOverview,
-  apiFetch,
-  CONTENT_KINDS,
-  LANG_LABELS,
-  PROVIDER_LABELS,
-} from '@/lib/api';
+import { AnalyticsOverview, apiFetch, LANG_LABELS, PROVIDER_LABELS } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
 const RANGES = [7, 30, 90] as const;
-/** 45 min, 3.5 h, 2 days: whichever reads best. */
-function duration(minutes: number): string {
-  if (minutes < 60) return `${Math.max(1, minutes)} min`;
-  const hours = minutes / 60;
-  if (hours < 48) return `${Math.round(hours * 10) / 10} h`;
-  return `${Math.round(hours / 24)} days`;
-}
+const KIND_ICON: Record<string, string> = {
+  ARTICLE: '📰',
+  INSTAGRAM: '📸',
+  FACEBOOK: '👍',
+  LINKEDIN: '💼',
+};
 
-const KIND = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k]));
+type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
+
+/** 45 min, 3.5 h, 2 days: whichever reads best. */
+function duration(minutes: number, t: Translate): string {
+  if (minutes < 60) return t('duration.min', { n: Math.max(1, minutes) });
+  const hours = minutes / 60;
+  if (hours < 48) return t('duration.h', { n: Math.round(hours * 10) / 10 });
+  return t('duration.days', { n: Math.round(hours / 24) });
+}
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -35,6 +38,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
 
 /** Bars for posts per day. The tallest bar sets the scale; every day has a title with its numbers. */
 function DayChart({ days }: { days: AnalyticsOverview['byDay'] }) {
+  const { t } = useI18n();
   const max = Math.max(1, ...days.map((d) => d.published + d.failed));
   const total = days.reduce((n, d) => n + d.published + d.failed, 0);
   return (
@@ -42,13 +46,17 @@ function DayChart({ days }: { days: AnalyticsOverview['byDay'] }) {
       <div
         className="flex h-40 items-end gap-px sm:gap-0.5"
         role="img"
-        aria-label={`Posts per day over the last ${days.length} days: ${total} in total`}
+        aria-label={t('analytics.chartLabel', { days: days.length, total })}
       >
         {days.map((d) => (
           <div
             key={d.date}
             className="flex h-full min-w-0 flex-1 flex-col justify-end"
-            title={`${d.date}: ${d.published} published, ${d.failed} failed`}
+            title={t('analytics.dayTitle', {
+              date: d.date,
+              published: d.published,
+              failed: d.failed,
+            })}
           >
             <div className="bg-danger" style={{ height: `${(d.failed / max) * 100}%` }} />
             <div className="bg-brand" style={{ height: `${(d.published / max) * 100}%` }} />
@@ -61,10 +69,10 @@ function DayChart({ days }: { days: AnalyticsOverview['byDay'] }) {
       </div>
       <p className="mt-2 flex gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Published
+          <span className="h-2.5 w-2.5 rounded-sm bg-brand" /> {t('analytics.legendPublished')}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-danger" /> Failed
+          <span className="h-2.5 w-2.5 rounded-sm bg-danger" /> {t('analytics.legendFailed')}
         </span>
       </p>
     </div>
@@ -73,6 +81,7 @@ function DayChart({ days }: { days: AnalyticsOverview['byDay'] }) {
 
 export default function AnalyticsPage() {
   const { currentOrgId } = useApp();
+  const { t, dateLocale } = useI18n();
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
   const [data, setData] = useState<AnalyticsOverview | null>(null);
   const [error, setError] = useState('');
@@ -101,10 +110,10 @@ export default function AnalyticsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Analytics</h1>
-          <p className="text-sm text-muted">What you made and published, from your own records.</p>
+          <h1 className="font-display text-2xl font-semibold">{t('nav.analytics')}</h1>
+          <p className="text-sm text-muted">{t('analytics.subtitle')}</p>
         </div>
-        <div className="flex gap-2" role="group" aria-label="Period">
+        <div className="flex gap-2" role="group" aria-label={t('analytics.period')}>
           {RANGES.map((r) => (
             <button
               key={r}
@@ -112,7 +121,7 @@ export default function AnalyticsPage() {
               onClick={() => setDays(r)}
               aria-pressed={days === r}
             >
-              {r} days
+              {t('analytics.days', { n: r })}
             </button>
           ))}
         </div>
@@ -123,40 +132,50 @@ export default function AnalyticsPage() {
           {error}
         </p>
       )}
-      {!data && !error && <p className="text-sm text-muted">Loading…</p>}
+      {!data && !error && <p className="text-sm text-muted">{t('common.loading')}</p>}
 
       {data && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
-              label="Content created"
+              label={t('analytics.created')}
               value={String(data.totals.created)}
-              hint={`last ${data.range.days} days`}
+              hint={t('analytics.createdHint', { n: data.range.days })}
             />
             <Kpi
-              label="Posts published"
+              label={t('analytics.published')}
               value={String(data.totals.published)}
-              hint={data.totals.queued ? `${data.totals.queued} waiting` : undefined}
-            />
-            <Kpi
-              label="Success rate"
-              value={data.successRate === null ? '—' : `${data.successRate}%`}
-              hint={data.totals.failed ? `${data.totals.failed} failed` : 'no failures'}
-            />
-            <Kpi
-              label="Time to approve"
-              value={data.approval.avgMinutes === null ? '—' : duration(data.approval.avgMinutes)}
               hint={
-                data.approval.count ? `${data.approval.count} approved` : 'nothing approved yet'
+                data.totals.queued ? t('analytics.waiting', { n: data.totals.queued }) : undefined
+              }
+            />
+            <Kpi
+              label={t('analytics.successRate')}
+              value={data.successRate === null ? '—' : `${data.successRate}%`}
+              hint={
+                data.totals.failed
+                  ? t('analytics.failedHint', { n: data.totals.failed })
+                  : t('analytics.noFailures')
+              }
+            />
+            <Kpi
+              label={t('analytics.approveTime')}
+              value={
+                data.approval.avgMinutes === null ? '—' : duration(data.approval.avgMinutes, t)
+              }
+              hint={
+                data.approval.count
+                  ? t('analytics.approvedCount', { n: data.approval.count })
+                  : t('analytics.nothingApproved')
               }
             />
           </div>
 
           <section className="card p-5">
-            <h2 className="mb-3 font-display text-base font-semibold">Posts per day</h2>
+            <h2 className="mb-3 font-display text-base font-semibold">{t('analytics.perDay')}</h2>
             {data.totals.published + data.totals.failed === 0 ? (
               <p className="py-8 text-center text-sm text-muted">
-                Nothing has been published in this period yet.
+                {t('analytics.nothingPublished')}
               </p>
             ) : (
               <DayChart days={data.byDay} />
@@ -165,17 +184,23 @@ export default function AnalyticsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="card p-5">
-              <h2 className="mb-3 font-display text-base font-semibold">By channel</h2>
+              <h2 className="mb-3 font-display text-base font-semibold">
+                {t('analytics.byChannel')}
+              </h2>
               {data.byChannel.length === 0 ? (
-                <p className="text-sm text-muted">No posts yet. Connect a channel and publish.</p>
+                <p className="text-sm text-muted">{t('analytics.noPosts')}</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-muted">
-                      <th className="pb-1.5 font-semibold">Channel</th>
-                      <th className="pb-1.5 text-right font-semibold">Published</th>
-                      <th className="pb-1.5 text-right font-semibold">Failed</th>
-                      <th className="pb-1.5 text-right font-semibold">Waiting</th>
+                    <tr className="text-start text-xs text-muted">
+                      <th className="pb-1.5 text-start font-semibold">
+                        {t('analytics.colChannel')}
+                      </th>
+                      <th className="pb-1.5 text-end font-semibold">
+                        {t('analytics.colPublished')}
+                      </th>
+                      <th className="pb-1.5 text-end font-semibold">{t('analytics.colFailed')}</th>
+                      <th className="pb-1.5 text-end font-semibold">{t('analytics.colWaiting')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -191,9 +216,9 @@ export default function AnalyticsPage() {
                             </p>
                           )}
                         </td>
-                        <td className="py-2 text-right tabular-nums">{c.published}</td>
-                        <td className="py-2 text-right tabular-nums">{c.failed || '—'}</td>
-                        <td className="py-2 text-right tabular-nums">{c.queued || '—'}</td>
+                        <td className="py-2 text-end tabular-nums">{c.published}</td>
+                        <td className="py-2 text-end tabular-nums">{c.failed || '—'}</td>
+                        <td className="py-2 text-end tabular-nums">{c.queued || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -202,23 +227,25 @@ export default function AnalyticsPage() {
             </section>
 
             <section className="card p-5">
-              <h2 className="mb-1 font-display text-base font-semibold">Content pipeline</h2>
-              <p className="mb-3 text-xs text-muted">All your content, right now.</p>
+              <h2 className="mb-1 font-display text-base font-semibold">
+                {t('analytics.pipeline')}
+              </h2>
+              <p className="mb-3 text-xs text-muted">{t('analytics.pipelineHint')}</p>
               {pipelineTotal === 0 ? (
-                <p className="text-sm text-muted">No content yet.</p>
+                <p className="text-sm text-muted">{t('analytics.noContent')}</p>
               ) : (
                 <ul className="space-y-2.5">
                   {(
                     [
-                      ['Draft', data.pipeline.draft, 'bg-slate-300'],
-                      ['In review', data.pipeline.inReview, 'bg-brand'],
-                      ['Changes requested', data.pipeline.changesRequested, 'bg-warn'],
-                      ['Approved', data.pipeline.approved, 'bg-ok'],
+                      ['stage.draft', data.pipeline.draft, 'bg-slate-300'],
+                      ['stage.inReview', data.pipeline.inReview, 'bg-brand'],
+                      ['stage.changes', data.pipeline.changesRequested, 'bg-warn'],
+                      ['stage.approved', data.pipeline.approved, 'bg-ok'],
                     ] as const
                   ).map(([label, n, color]) => (
                     <li key={label}>
                       <div className="flex justify-between text-sm">
-                        <span>{label}</span>
+                        <span>{t(label)}</span>
                         <span className="tabular-nums">{n}</span>
                       </div>
                       <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-sub">
@@ -236,16 +263,18 @@ export default function AnalyticsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="card p-5">
-              <h2 className="mb-3 font-display text-base font-semibold">What you created</h2>
+              <h2 className="mb-3 font-display text-base font-semibold">
+                {t('analytics.whatCreated')}
+              </h2>
               {data.totals.created === 0 ? (
-                <p className="text-sm text-muted">Nothing created in this period.</p>
+                <p className="text-sm text-muted">{t('analytics.nothingCreated')}</p>
               ) : (
                 <div className="space-y-3 text-sm">
                   <ul className="space-y-1">
                     {Object.entries(data.content.byKind).map(([k, n]) => (
                       <li key={k} className="flex justify-between">
                         <span>
-                          {KIND[k]?.icon} {KIND[k]?.label ?? k}
+                          {KIND_ICON[k]} {t(`kind.${k}` as MessageKey)}
                         </span>
                         <span className="tabular-nums">{n}</span>
                       </li>
@@ -263,9 +292,11 @@ export default function AnalyticsPage() {
             </section>
 
             <section className="card p-5">
-              <h2 className="mb-3 font-display text-base font-semibold">Recent failures</h2>
+              <h2 className="mb-3 font-display text-base font-semibold">
+                {t('analytics.recentFailures')}
+              </h2>
               {data.recentFailures.length === 0 ? (
-                <p className="text-sm text-muted">No failed posts in this period.</p>
+                <p className="text-sm text-muted">{t('analytics.noFailed')}</p>
               ) : (
                 <ul className="space-y-2.5">
                   {data.recentFailures.map((f) => (
@@ -278,7 +309,7 @@ export default function AnalyticsPage() {
                           {f.channel}
                         </Link>
                         <span className="text-xs text-slate-400">
-                          {new Date(f.at).toLocaleString()}
+                          {new Date(f.at).toLocaleString(dateLocale)}
                         </span>
                       </div>
                       {f.error && <p className="text-xs text-danger-ink">{f.error}</p>}

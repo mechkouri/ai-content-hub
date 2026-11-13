@@ -2,12 +2,14 @@
 
 import { FormEvent, useState } from 'react';
 import { Campaign, CampaignStats } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 
 /** A campaign date is a plain day stored at midnight UTC, so read it in UTC to never shift it. */
 export const dayOf = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
-export const showDay = (iso: string | null) =>
+export const showDay = (iso: string | null, dateLocale = 'en') =>
   iso
-    ? new Date(iso).toLocaleDateString([], {
+    ? new Date(iso).toLocaleDateString(dateLocale, {
         timeZone: 'UTC',
         day: 'numeric',
         month: 'short',
@@ -15,15 +17,22 @@ export const showDay = (iso: string | null) =>
       })
     : '';
 
-export function dateRange(c: Pick<Campaign, 'startsOn' | 'endsOn'>) {
-  if (c.startsOn && c.endsOn) return `${showDay(c.startsOn)} – ${showDay(c.endsOn)}`;
-  if (c.startsOn) return `From ${showDay(c.startsOn)}`;
-  if (c.endsOn) return `Until ${showDay(c.endsOn)}`;
-  return 'No dates set';
+export function dateRange(
+  c: Pick<Campaign, 'startsOn' | 'endsOn'>,
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+  dateLocale: string,
+) {
+  const start = showDay(c.startsOn, dateLocale);
+  const end = showDay(c.endsOn, dateLocale);
+  if (c.startsOn && c.endsOn) return `${start} – ${end}`;
+  if (c.startsOn) return t('camp.from', { date: start });
+  if (c.endsOn) return t('camp.until', { date: end });
+  return t('camp.noDates');
 }
 
 /** Share of the campaign's content that is approved (scheduled content is approved too). */
 export function Progress({ stats }: { stats: CampaignStats }) {
+  const { t } = useI18n();
   const pct = stats.total ? Math.round((stats.approved / stats.total) * 100) : 0;
   return (
     <div>
@@ -33,14 +42,20 @@ export function Progress({ stats }: { stats: CampaignStats }) {
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Approved content"
+        aria-label={t('camp.approvedLabel')}
       >
         <div className="h-full rounded-full bg-ok" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-1.5 text-xs text-muted">
         {stats.total === 0
-          ? 'No content yet'
-          : `${stats.approved} of ${stats.total} approved · ${stats.inReview} in review · ${stats.draft} draft · ${stats.scheduled} scheduled`}
+          ? t('camp.noContentYet')
+          : t('camp.progress', {
+              approved: stats.approved,
+              total: stats.total,
+              inReview: stats.inReview,
+              draft: stats.draft,
+              scheduled: stats.scheduled,
+            })}
       </p>
     </div>
   );
@@ -69,6 +84,7 @@ export function CampaignForm({
   onSubmit: (v: CampaignValues) => void;
   onCancel?: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [startsOn, setStartsOn] = useState(dayOf(initial?.startsOn ?? null));
@@ -89,25 +105,25 @@ export function CampaignForm({
     <form onSubmit={submit} className="space-y-3">
       <input
         className="input"
-        placeholder="Campaign name, e.g. Open Day 2027"
+        placeholder={t('camp.namePlaceholder')}
         value={name}
         onChange={(e) => setName(e.target.value)}
         maxLength={120}
         required
         minLength={2}
-        aria-label="Campaign name"
+        aria-label={t('camp.nameLabel')}
       />
       <textarea
         className="input min-h-[72px]"
-        placeholder="What is this campaign for? (optional)"
+        placeholder={t('camp.descPlaceholder')}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         maxLength={2000}
-        aria-label="Description"
+        aria-label={t('camp.descLabel')}
       />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-semibold text-slate-600">
-          Starts
+          {t('camp.starts')}
           <input
             type="date"
             className="input mt-1"
@@ -116,7 +132,7 @@ export function CampaignForm({
           />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          Ends
+          {t('camp.ends')}
           <input
             type="date"
             className="input mt-1"
@@ -126,17 +142,15 @@ export function CampaignForm({
           />
         </label>
       </div>
-      {badRange && (
-        <p className="text-xs text-danger-ink">The end date is before the start date.</p>
-      )}
+      {badRange && <p className="text-xs text-danger-ink">{t('camp.badRange')}</p>}
       {error && <p className="text-sm text-danger-ink">{error}</p>}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={busy || badRange || name.trim().length < 2}>
-          {busy ? 'Saving…' : submitLabel}
+          {busy ? t('camp.saving') : submitLabel}
         </button>
         {onCancel && (
           <button type="button" className="btn-ghost" onClick={onCancel} disabled={busy}>
-            Cancel
+            {t('common.cancel')}
           </button>
         )}
       </div>

@@ -8,14 +8,15 @@ import { apiFetch, canScheduleContent, CONTENT_KINDS, ContentSummary } from '@/l
 import { useApp } from '@/lib/app-context';
 import { addMonths, dayKey, monthGrid, startOfMonth } from '@/lib/calendar';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
 
 const KIND = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k]));
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const time = (iso: string) =>
-  new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
 function Item({ p }: { p: ContentSummary }) {
+  const { dateLocale } = useI18n();
+  const time = new Date(p.scheduledFor!).toLocaleTimeString(dateLocale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   return (
     <Link
       href={`/studio/${p.id}`}
@@ -23,7 +24,7 @@ function Item({ p }: { p: ContentSummary }) {
       title={p.title}
     >
       <span aria-hidden>{KIND[p.kind].icon}</span>
-      <span className="shrink-0 tabular-nums">{time(p.scheduledFor!)}</span>
+      <span className="shrink-0 tabular-nums">{time}</span>
       <span className="truncate" dir="auto">
         {p.title}
       </span>
@@ -33,6 +34,7 @@ function Item({ p }: { p: ContentSummary }) {
 
 export default function CalendarPage() {
   const { currentOrgId, currentRole } = useApp();
+  const { t, dateLocale } = useI18n();
   const canSchedule = canScheduleContent(currentRole);
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [scheduled, setScheduled] = useState<ContentSummary[] | null>(null);
@@ -77,23 +79,27 @@ export default function CalendarPage() {
   }, [scheduled]);
 
   const todayKey = dayKey(new Date());
-  const title = month.toLocaleDateString([], { month: 'long', year: 'numeric' });
+  const title = month.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' });
+  // Monday-first weekday names in the current language (2026-11-02 is a Monday).
+  const weekdays = Array.from({ length: 7 }, (_, i) =>
+    new Date(2026, 10, 2 + i).toLocaleDateString(dateLocale, { weekday: 'short' }),
+  );
   const agenda = days.filter((d) => d.getMonth() === month.getMonth() && byDay.has(dayKey(d)));
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Content calendar</h1>
-          <p className="text-sm text-muted">Plan when approved content should go out.</p>
+          <h1 className="font-display text-2xl font-semibold">{t('nav.calendar')}</h1>
+          <p className="text-sm text-muted">{t('cal.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             className="btn-ghost !px-2.5"
             onClick={() => setMonth(addMonths(month, -1))}
-            aria-label="Previous month"
+            aria-label={t('cal.prev')}
           >
-            <ChevronLeft size={16} aria-hidden />
+            <ChevronLeft size={16} aria-hidden className="rtl:rotate-180" />
           </button>
           <span className="min-w-[9rem] text-center font-display text-base font-semibold">
             {title}
@@ -101,12 +107,12 @@ export default function CalendarPage() {
           <button
             className="btn-ghost !px-2.5"
             onClick={() => setMonth(addMonths(month, 1))}
-            aria-label="Next month"
+            aria-label={t('cal.next')}
           >
-            <ChevronRight size={16} aria-hidden />
+            <ChevronRight size={16} aria-hidden className="rtl:rotate-180" />
           </button>
           <button className="btn-ghost" onClick={() => setMonth(startOfMonth(new Date()))}>
-            Today
+            {t('cal.today')}
           </button>
         </div>
       </div>
@@ -121,7 +127,7 @@ export default function CalendarPage() {
         <section className="card overflow-hidden">
           <div className="hidden md:block">
             <div className="grid grid-cols-7 border-b border-line bg-surface-sub text-center">
-              {WEEKDAYS.map((w) => (
+              {weekdays.map((w) => (
                 <div
                   key={w}
                   className="py-2 font-label text-[11px] font-semibold uppercase text-muted"
@@ -137,7 +143,7 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={d.toISOString()}
-                    className={`min-h-[104px] space-y-1 border-b border-r border-line p-1.5 ${outside ? 'bg-surface-sub/60' : ''}`}
+                    className={`min-h-[104px] space-y-1 border-b border-e border-line p-1.5 ${outside ? 'bg-surface-sub/60' : ''}`}
                   >
                     <span
                       className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs ${
@@ -162,14 +168,18 @@ export default function CalendarPage() {
           {/* Narrow screens: a plain list of the days that have something planned. */}
           <div className="divide-y divide-line md:hidden">
             {scheduled === null ? (
-              <p className="p-4 text-sm text-muted">Loading…</p>
+              <p className="p-4 text-sm text-muted">{t('common.loading')}</p>
             ) : agenda.length === 0 ? (
-              <p className="p-4 text-sm text-muted">Nothing planned in {title}.</p>
+              <p className="p-4 text-sm text-muted">{t('cal.nothingIn', { month: title })}</p>
             ) : (
               agenda.map((d) => (
                 <div key={d.toISOString()} className="space-y-1 p-3">
                   <p className="text-xs font-semibold text-slate-500">
-                    {d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {d.toLocaleDateString(dateLocale, {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    })}
                   </p>
                   {byDay.get(dayKey(d))!.map((p) => (
                     <Item key={p.id} p={p} />
@@ -181,11 +191,9 @@ export default function CalendarPage() {
         </section>
 
         <aside className="card h-fit p-4">
-          <h2 className="font-display text-base font-semibold">Approved, not scheduled</h2>
+          <h2 className="font-display text-base font-semibold">{t('cal.unscheduled')}</h2>
           {unscheduled.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">
-              Nothing waiting. Content appears here once it is approved in the studio.
-            </p>
+            <p className="mt-2 text-sm text-muted">{t('cal.nothingWaiting')}</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {unscheduled.map((p) => (
@@ -203,7 +211,7 @@ export default function CalendarPage() {
                         className="shrink-0 text-xs font-semibold text-brand"
                         onClick={() => setPicked(picked === p.id ? null : p.id)}
                       >
-                        {picked === p.id ? 'Close' : 'Schedule'}
+                        {picked === p.id ? t('common.close') : t('schedule.schedule')}
                       </button>
                     )}
                   </div>
@@ -224,9 +232,7 @@ export default function CalendarPage() {
             </ul>
           )}
           {!canSchedule && unscheduled.length > 0 && (
-            <p className="mt-3 text-[11px] text-slate-400">
-              Publishers and admins can set the date.
-            </p>
+            <p className="mt-3 text-[11px] text-slate-400">{t('cal.publishersOnly')}</p>
           )}
         </aside>
       </div>

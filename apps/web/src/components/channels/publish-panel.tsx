@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, apiFetch, Channel, PROVIDER_LABELS, PublishJob, PublishQueued } from '@/lib/api';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
 import { JobBadge, jobWhen } from './job-parts';
 
 /** Publishes approved content to connected channels, and shows what happened to each post. */
@@ -18,6 +19,7 @@ export function PublishPanel({
   canPublish: boolean;
 }) {
   const base = `/organizations/${orgId}`;
+  const { t, dateLocale } = useI18n();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [jobs, setJobs] = useState<PublishJob[]>([]);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
@@ -114,7 +116,7 @@ export function PublishPanel({
                   </span>
                   <JobBadge status={j.status} />
                 </div>
-                <p className="mt-0.5 text-slate-500">{jobWhen(j)}</p>
+                <p className="mt-0.5 text-slate-500">{jobWhen(j, t, dateLocale)}</p>
                 {j.lastError && j.status !== 'PUBLISHED' && (
                   <p className="mt-1 text-danger-ink">{j.lastError}</p>
                 )}

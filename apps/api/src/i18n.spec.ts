@@ -42,11 +42,11 @@ describe('translations', () => {
         ['fr', fr],
         ['ar', ar],
       ] as const) {
-        // Arabic may drop the number for "one" (e.g. "تفصيل واحد"), which has no placeholder in English either.
+        // Arabic writes the singular ("one") forms without a number (e.g. "تفصيل واحد"): keys ending in One.
         expect({ key: k, lang: name, placeholders: placeholders(dict[k]) }).toEqual({
           key: k,
           lang: name,
-          placeholders: k === 'dash.detailsOne' && name === 'ar' ? [] : placeholders(en[k]),
+          placeholders: /One$/.test(k) && name === 'ar' ? [] : placeholders(en[k]),
         });
       }
     }

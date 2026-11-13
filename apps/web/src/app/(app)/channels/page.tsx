@@ -22,11 +22,13 @@ import {
 } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
+import { useI18n } from '@/lib/i18n';
 
 export default function ChannelsPage() {
   const { currentOrgId, currentRole } = useApp();
   const canManage = canManageChannels(currentRole);
   const canPublish = canScheduleContent(currentRole);
+  const { t, dateLocale } = useI18n();
   const base = `/organizations/${currentOrgId}`;
 
   const [channels, setChannels] = useState<Channel[] | null>(null);
@@ -329,7 +331,7 @@ export default function ChannelsPage() {
                     <JobBadge status={j.status} />
                   </div>
                   <p className="text-xs text-slate-400">
-                    {ch?.name ?? 'Removed channel'} · {jobWhen(j)}
+                    {ch?.name ?? 'Removed channel'} · {jobWhen(j, t, dateLocale)}
                   </p>
                   {j.lastError && j.status !== 'PUBLISHED' && (
                     <p className="text-xs text-danger-ink">{j.lastError}</p>
