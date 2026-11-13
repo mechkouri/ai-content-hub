@@ -189,6 +189,45 @@ describe('LinkedIn publisher', () => {
       });
     });
 
+    it('sends picture descriptions with single and multi-image posts, and leaves them out when there are none', async () => {
+      let n = 0;
+      const upload = async (url: any, o: any) => {
+        if (String(url).includes('initializeUpload')) {
+          n++;
+          return {
+            status: 200,
+            json: {
+              value: {
+                uploadUrl: `https://uploads.linkedin.example/${n}`,
+                image: `urn:li:image:I${n}`,
+              },
+            },
+          };
+        }
+        if (o?.method === 'PUT') return { status: 201, json: null };
+        return created();
+      };
+      const one = make(upload);
+      await one.li.publish(channel(), payload, [
+        { ...photo('a.png'), altText: 'A crowd at the open day' },
+      ]);
+      expect((one.http.mock.calls[2][1]?.body as any).content).toEqual({
+        media: { id: 'urn:li:image:I1', altText: 'A crowd at the open day' },
+      });
+
+      n = 0;
+      const many = make(upload);
+      await many.li.publish(channel(), payload, [
+        { ...photo('a.png'), altText: 'First' },
+        photo('b.png'),
+      ]);
+      const post = many.http.mock.calls[many.http.mock.calls.length - 1][1]?.body as any;
+      expect(post.content.multiImage.images).toEqual([
+        { id: 'urn:li:image:I1', altText: 'First' },
+        { id: 'urn:li:image:I2' },
+      ]);
+    });
+
     it('treats a rejected token or permission as permanent so the channel is flagged', async () => {
       for (const status of [401, 403]) {
         const { li } = make(async () => ({ status, json: { message: 'Expired' } }));

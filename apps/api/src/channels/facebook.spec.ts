@@ -221,6 +221,30 @@ describe('Facebook publisher', () => {
       });
     });
 
+    it('sends the picture description with a single picture and with every upload of a multi-picture post', async () => {
+      const single = make(async () => ok({ id: '77', post_id: '1234567890_77' }));
+      await single.fb.publish(channel(), payload, [
+        { ...photo('a.png'), altText: 'A crowd at the open day' },
+      ]);
+      expect(single.http.mock.calls[0][1]!.raw!.data.toString('latin1')).toContain(
+        'name="alt_text_custom"\r\n\r\nA crowd at the open day',
+      );
+
+      let n = 0;
+      const multi = make(async (url) =>
+        String(url).endsWith('/photos') ? ok({ id: `p${++n}` }) : ok({ id: 'post' }),
+      );
+      await multi.fb.publish(channel(), payload, [
+        { ...photo('a.png'), altText: 'First' },
+        photo('b.png'), // no description: the field is simply left out
+      ]);
+      const [first, second] = multi.http.mock.calls
+        .slice(0, 2)
+        .map((c) => c[1]!.raw!.data.toString('latin1'));
+      expect(first).toContain('name="alt_text_custom"\r\n\r\nFirst');
+      expect(second).not.toContain('alt_text_custom');
+    });
+
     it('treats a rejected token or permission as permanent so the channel is flagged', async () => {
       for (const err of [
         graphErr(400, 190),

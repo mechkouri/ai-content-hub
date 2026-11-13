@@ -127,11 +127,12 @@ export class LinkedInPublisher implements Publisher {
     const imageUrns: string[] = [];
     for (const m of media) imageUrns.push(await this.uploadImage(cfg.authorUrn, headers, m));
 
+    const described = (i: number) => (media[i].altText ? { altText: media[i].altText } : {});
     const content =
       imageUrns.length === 1
-        ? { media: { id: imageUrns[0] } }
+        ? { media: { id: imageUrns[0], ...described(0) } }
         : imageUrns.length > 1
-          ? { multiImage: { images: imageUrns.map((id) => ({ id })) } }
+          ? { multiImage: { images: imageUrns.map((id, i) => ({ id, ...described(i) })) } }
           : undefined;
 
     const res = await this.send(`${API}/rest/posts`, {

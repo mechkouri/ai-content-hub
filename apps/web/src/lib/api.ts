@@ -443,6 +443,8 @@ export interface ContentImage {
   id: string;
   assetId: string;
   position: number;
+  /** Description for people who cannot see the picture; sent with the post. */
+  altText: string | null;
   asset: { id: string; filename: string; mimeType: string; sizeBytes: number };
 }
 

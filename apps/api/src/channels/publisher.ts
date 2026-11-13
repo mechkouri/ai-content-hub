@@ -33,6 +33,8 @@ export interface PublishMedia {
   filename: string;
   mimeType: string;
   data: Buffer;
+  /** Description for people who cannot see the picture. */
+  altText?: string;
 }
 
 /** One network or website. Real providers (WordPress, Meta, LinkedIn) plug in here. */

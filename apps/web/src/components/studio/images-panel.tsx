@@ -94,30 +94,26 @@ export function ImagesPanel({
             : 'A picture helps a post stand out.'}
         </p>
       ) : (
-        <ul className="grid grid-cols-3 gap-2">
+        <ul className="space-y-2.5">
           {images.map((i) => (
-            <li key={i.id} className="group relative">
-              <AuthImage
-                orgId={orgId}
-                assetId={i.assetId}
-                alt={i.asset.filename}
-                className="aspect-square w-full rounded-lg object-cover"
-              />
-              {canEdit && (
-                <button
-                  className="absolute right-1 top-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 shadow hover:text-danger"
-                  onClick={() =>
-                    change(() =>
-                      apiFetch<ContentImage[]>(`${base}/${i.assetId}`, { method: 'DELETE' }),
-                    )
-                  }
-                  disabled={busy}
-                  aria-label={`Remove ${i.asset.filename}`}
-                >
-                  Remove
-                </button>
-              )}
-            </li>
+            <PictureRow
+              key={i.id}
+              orgId={orgId}
+              image={i}
+              canEdit={canEdit}
+              busy={busy}
+              onRemove={() =>
+                change(() => apiFetch<ContentImage[]>(`${base}/${i.assetId}`, { method: 'DELETE' }))
+              }
+              onDescribe={(altText) =>
+                change(() =>
+                  apiFetch<ContentImage[]>(`${base}/${i.assetId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ altText }),
+                  }),
+                )
+              }
+            />
           ))}
         </ul>
       )}
@@ -241,5 +237,66 @@ export function ImagesPanel({
         Changing the pictures of approved content sends it back to draft.
       </p>
     </div>
+  );
+}
+
+/** One attached picture with its description, which is read out for people who cannot see it and sent with the post. */
+function PictureRow({
+  orgId,
+  image,
+  canEdit,
+  busy,
+  onRemove,
+  onDescribe,
+}: {
+  orgId: string;
+  image: ContentImage;
+  canEdit: boolean;
+  busy: boolean;
+  onRemove: () => void;
+  onDescribe: (altText: string) => void;
+}) {
+  const [alt, setAlt] = useState(image.altText ?? '');
+  // Follow the server (e.g. after another change), but never overwrite what is being typed.
+  useEffect(() => setAlt(image.altText ?? ''), [image.altText]);
+  const changed = alt.trim() !== (image.altText ?? '');
+
+  return (
+    <li className="flex gap-2.5">
+      <AuthImage
+        orgId={orgId}
+        assetId={image.assetId}
+        alt={image.altText ?? image.asset.filename}
+        className="h-16 w-16 shrink-0 rounded-lg object-cover"
+      />
+      <div className="min-w-0 flex-1 space-y-1">
+        <textarea
+          className="input min-h-[44px] text-xs"
+          value={alt}
+          onChange={(e) => setAlt(e.target.value)}
+          onBlur={() => changed && onDescribe(alt)}
+          maxLength={500}
+          disabled={!canEdit || busy}
+          placeholder="Describe the picture for people who cannot see it"
+          aria-label={`Description of ${image.asset.filename}`}
+          dir="auto"
+        />
+        <div className="flex items-center justify-between text-[11px]">
+          <span className={image.altText ? 'text-ok-ink' : 'text-amber-700'}>
+            {image.altText ? 'Description saved' : 'No description yet'}
+          </span>
+          {canEdit && (
+            <button
+              className="font-semibold text-slate-500 hover:text-danger"
+              onClick={onRemove}
+              disabled={busy}
+              aria-label={`Remove ${image.asset.filename}`}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }
