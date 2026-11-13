@@ -93,6 +93,18 @@ describe('Instagram publisher', () => {
       ig: new InstagramPublisher(http, store, { intervalMs: 0, attempts: 3 }),
     };
   };
+  const make2 = (
+    impl: HttpClient,
+    store = new FakeStore(),
+    convert?: (b: Buffer) => Promise<Buffer>,
+  ) => {
+    const http = jest.fn(impl);
+    return {
+      http,
+      store,
+      ig: new InstagramPublisher(http, store, { intervalMs: 0, attempts: 3 }, convert),
+    };
+  };
   const ok = (json: any) => ({ status: 200, json });
   const graphErr = (status: number, code: number, message = 'Problem') => ({
     status,
@@ -321,12 +333,62 @@ describe('Instagram publisher', () => {
       expect(http).not.toHaveBeenCalled();
     });
 
-    it('accepts JPEG only, before uploading anything', async () => {
-      const { ig, store } = make(happy());
-      await expect(
-        ig.publish(channel(), payload, [{ ...jpeg('a.png'), mimeType: 'image/png' }]),
-      ).rejects.toThrow(PermanentPublishError);
+    it('converts PNG, WebP and GIF pictures to real JPEG before putting them online', async () => {
+      const sharp = (await import('sharp')).default;
+      const make = (fmt: 'png' | 'webp' | 'gif') =>
+        sharp({
+          create: {
+            width: 40,
+            height: 30,
+            channels: 4,
+            background: { r: 255, g: 0, b: 0, alpha: 0.4 },
+          },
+        })
+          [fmt]()
+          .toBuffer();
+      const seen: Buffer[] = [];
+      const store = new FakeStore();
+      const upload = store.upload.bind(store);
+      store.upload = async (key, data, mime) => {
+        seen.push(data);
+        expect(mime).toBe('image/jpeg');
+        return upload(key, data, mime);
+      };
+      const { ig } = make2(happy(), store);
+      await ig.publish(channel(), payload, [
+        { filename: 'a.png', mimeType: 'image/png', data: await make('png'), altText: 'A' },
+        { filename: 'b.webp', mimeType: 'image/webp', data: await make('webp') },
+        { filename: 'c.gif', mimeType: 'image/gif', data: await make('gif') },
+      ]);
+      expect(seen).toHaveLength(3);
+      for (const b of seen) {
+        expect(b[0]).toBe(0xff); // JPEG start marker
+        expect(b[1]).toBe(0xd8);
+        const meta = await sharp(b).metadata();
+        expect(meta.format).toBe('jpeg');
+        expect([meta.width, meta.height]).toEqual([40, 30]);
+      }
+    });
+
+    it('leaves a JPEG untouched', async () => {
+      const convert = jest.fn(async (b: Buffer) => b);
+      const { ig, store } = make2(happy(), new FakeStore(), convert);
+      await ig.publish(channel(), payload, [jpeg('a.jpg')]);
+      expect(convert).not.toHaveBeenCalled();
+      expect(store.uploads[0].size).toBe(Buffer.from('img-a.jpg').length);
+    });
+
+    it('fails for good, naming the picture, when it cannot be converted', async () => {
+      const { ig, store, http } = make2(happy(), new FakeStore());
+      const err = await ig
+        .publish(channel(), payload, [
+          { filename: 'broken.png', mimeType: 'image/png', data: Buffer.from('not an image') },
+        ])
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(PermanentPublishError);
+      expect(err.message).toMatch(/broken\.png.*could not be converted to JPEG/);
       expect(store.uploads).toHaveLength(0);
+      expect(http).not.toHaveBeenCalled();
     });
 
     it('allows at most 10 pictures', async () => {

@@ -13,6 +13,7 @@ import {
   PublishResult,
 } from './publisher';
 import { PostPayload } from './publishing-rules';
+import { toJpeg } from './image-convert';
 import { PUBLIC_MEDIA, PublicMediaStore } from './public-media';
 import {
   FetchFailedError,
@@ -41,6 +42,9 @@ export const IG_MAX_IMAGES = 10;
 
 /** How long to wait for Instagram to download and process a picture before giving up for now. */
 export const IG_TIMING = Symbol('IG_TIMING');
+/** Turns any picture into a JPEG. Tests replace it; production uses sharp. */
+export type JpegConverter = (data: Buffer) => Promise<Buffer>;
+export const IG_CONVERT = Symbol('IG_CONVERT');
 export interface InstagramTiming {
   intervalMs: number;
   attempts: number;
@@ -68,13 +72,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class InstagramPublisher implements Publisher {
   readonly provider = ChannelProvider.INSTAGRAM;
   private readonly timing: InstagramTiming;
+  private readonly convert: JpegConverter;
 
   constructor(
     @Inject(HTTP_CLIENT) private readonly http: HttpClient,
     @Inject(PUBLIC_MEDIA) private readonly store: PublicMediaStore,
     @Optional() @Inject(IG_TIMING) timing?: InstagramTiming,
+    @Optional() @Inject(IG_CONVERT) convert?: JpegConverter,
   ) {
     this.timing = timing ?? DEFAULT_TIMING;
+    this.convert = convert ?? toJpeg;
   }
 
   supports(kind: ContentKind) {
@@ -154,10 +161,20 @@ export class InstagramPublisher implements Publisher {
     if (media.length > IG_MAX_IMAGES) {
       throw new PermanentPublishError(`Instagram allows at most ${IG_MAX_IMAGES} pictures.`);
     }
-    if (media.some((m) => m.mimeType !== 'image/jpeg')) {
-      throw new PermanentPublishError(
-        'Instagram accepts JPEG pictures only. Replace the PNG, WebP or GIF pictures.',
-      );
+    // Instagram takes JPEG only: other formats are converted here, before anything goes online.
+    const pictures: PublishMedia[] = [];
+    for (const m of media) {
+      if (m.mimeType === 'image/jpeg') {
+        pictures.push(m);
+        continue;
+      }
+      try {
+        pictures.push({ ...m, mimeType: 'image/jpeg', data: await this.convert(m.data) });
+      } catch {
+        throw new PermanentPublishError(
+          `A picture (${m.filename}) could not be converted to JPEG. Replace it with another picture.`,
+        );
+      }
     }
 
     const ig = `${GRAPH}/${cfg.igUserId}`;
@@ -166,7 +183,7 @@ export class InstagramPublisher implements Publisher {
     try {
       // Pictures go online only for the minutes Instagram needs to fetch them.
       const urls: string[] = [];
-      for (const m of media) {
+      for (const m of pictures) {
         const key = `instagram/${randomUUID()}.jpg`;
         try {
           urls.push(await this.store.upload(key, m.data, m.mimeType));
@@ -177,20 +194,20 @@ export class InstagramPublisher implements Publisher {
       }
 
       let creation: string;
-      if (media.length === 1) {
+      if (pictures.length === 1) {
         creation = await this.createContainer(ig, headers, {
           image_url: urls[0],
           caption: payload.text,
-          ...(media[0].altText ? { alt_text: media[0].altText } : {}),
+          ...(pictures[0].altText ? { alt_text: pictures[0].altText } : {}),
         });
       } else {
         const children: string[] = [];
-        for (let i = 0; i < media.length; i++) {
+        for (let i = 0; i < pictures.length; i++) {
           children.push(
             await this.createContainer(ig, headers, {
               image_url: urls[i],
               is_carousel_item: true,
-              ...(media[i].altText ? { alt_text: media[i].altText } : {}),
+              ...(pictures[i].altText ? { alt_text: pictures[i].altText } : {}),
             }),
           );
         }
