@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { apiFetch, MemberRow, Role, ROLES } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 
@@ -22,7 +23,7 @@ export default function MembersPage() {
     try {
       setMembers(await apiFetch<MemberRow[]>(`/organizations/${currentOrgId}/members`));
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }, [currentOrgId]);
 
@@ -44,7 +45,7 @@ export default function MembersPage() {
       setInviteLink(`${window.location.origin}/accept-invite?token=${res.token}`);
       setEmail('');
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }
 
@@ -57,7 +58,7 @@ export default function MembersPage() {
       });
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }
 
@@ -68,7 +69,7 @@ export default function MembersPage() {
       await apiFetch(`/organizations/${currentOrgId}/members/${userId}`, { method: 'DELETE' });
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }
 

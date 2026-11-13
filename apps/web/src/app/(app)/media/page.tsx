@@ -4,6 +4,7 @@ import { ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState } from
 import { AuthImage } from '@/components/auth-image';
 import { apiFetch, canDeleteMedia, canUploadMedia, MediaAsset } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 
 export default function MediaPage() {
@@ -24,7 +25,7 @@ export default function MediaPage() {
     try {
       setAssets(await apiFetch<MediaAsset[]>(`/organizations/${currentOrgId}/media`));
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }, [currentOrgId]);
 
@@ -46,7 +47,7 @@ export default function MediaPage() {
         form.append('file', file);
         await apiFetch(`/organizations/${currentOrgId}/media`, { method: 'POST', body: form });
       } catch (e) {
-        setError(`${file.name}: ${(e as Error).message}`);
+        setError(`${file.name}: ${describeError(e)}`);
       }
     }
     setBusy(false);
@@ -61,7 +62,7 @@ export default function MediaPage() {
       await apiFetch(`/organizations/${currentOrgId}/media/${a.id}`, { method: 'DELETE' });
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(describeError(e));
     }
   }
 

@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AiStatus, ApiError, apiFetch, canAdminAi, canUseAi, FreeModel } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 
@@ -25,9 +26,9 @@ function describe(e: unknown, t: T): string {
     const help =
       e.code && ERROR_CODES.includes(e.code) ? t(`aip.err.${e.code}` as MessageKey) : undefined;
     const wait = e.retryAfterSeconds ? ` ${t('aip.retry', { n: e.retryAfterSeconds })}` : '';
-    return help ? `${help}${wait}` : e.message;
+    return help ? `${help}${wait}` : describeError(e);
   }
-  return (e as Error).message;
+  return describeError(e);
 }
 
 function Meter({ label, used, limit }: { label: string; used: number; limit: number }) {
