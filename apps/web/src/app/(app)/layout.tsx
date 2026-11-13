@@ -14,6 +14,7 @@ const FEATURES: [string, string][] = [
   ['/calendar', 'the Content calendar'],
   ['/campaigns', 'Campaigns'],
   ['/channels', 'Channels'],
+  ['/analytics', 'Analytics'],
   ['/brand', 'the Brand kit'],
   ['/media', 'the Media library'],
   ['/ai', 'AI providers'],

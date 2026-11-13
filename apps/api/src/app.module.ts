@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AiModule } from './ai/ai.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { ChannelsModule } from './channels/channels.module';
@@ -23,6 +24,7 @@ import { StorageModule } from './storage/storage.module';
     StudioModule,
     CampaignsModule,
     ChannelsModule,
+    AnalyticsModule,
   ],
   controllers: [HealthController],
 })

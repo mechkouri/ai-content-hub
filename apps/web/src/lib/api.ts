@@ -485,6 +485,32 @@ export const PROVIDER_LABELS: Record<ChannelProvider, { label: string; blurb: st
 
 export const canManageChannels = (role: Role | null) => role === 'OWNER' || role === 'ADMIN';
 
+export interface AnalyticsOverview {
+  range: { days: number; from: string; to: string };
+  totals: { created: number; published: number; failed: number; queued: number };
+  /** Percent of finished posts that were published, or null when none finished. */
+  successRate: number | null;
+  pipeline: { draft: number; inReview: number; changesRequested: number; approved: number };
+  approval: { count: number; avgMinutes: number | null };
+  byDay: { date: string; published: number; failed: number }[];
+  byChannel: {
+    channelId: string;
+    name: string;
+    provider: ChannelProvider | null;
+    published: number;
+    failed: number;
+    queued: number;
+  }[];
+  content: { byKind: Record<string, number>; byLanguage: Record<string, number> };
+  recentFailures: {
+    jobId: string;
+    contentId: string;
+    channel: string;
+    error: string | null;
+    at: string;
+  }[];
+}
+
 export const canScheduleContent = (role: Role | null) =>
   role === 'OWNER' || role === 'ADMIN' || role === 'PUBLISHER';
 

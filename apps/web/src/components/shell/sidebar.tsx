@@ -36,6 +36,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/calendar', label: 'Content calendar', icon: CalendarDays },
       { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
       { href: '/channels', label: 'Channels', icon: Share2 },
+      { href: '/analytics', label: 'Analytics', icon: LineChart },
     ],
   },
   {
@@ -52,7 +53,6 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
   { label: 'Visual design studio', icon: Wand2 },
   { label: 'Workflow automation', icon: Workflow },
-  { label: 'Analytics', icon: LineChart },
 ];
 
 export interface SidebarProps {

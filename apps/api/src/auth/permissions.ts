@@ -20,6 +20,7 @@ export type Permission =
   | 'content:write'
   | 'content:review'
   | 'content:schedule'
+  | 'analytics:read'
   | 'campaign:read'
   | 'campaign:write'
   | 'channel:read'
@@ -56,6 +57,7 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   'content:write': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
   'content:review': [Role.OWNER, Role.ADMIN, Role.APPROVER],
   'content:schedule': [Role.OWNER, Role.ADMIN, Role.PUBLISHER],
+  'analytics:read': ALL_ROLES,
   'campaign:read': ALL_ROLES,
   'campaign:write': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
   'channel:read': ALL_ROLES,
