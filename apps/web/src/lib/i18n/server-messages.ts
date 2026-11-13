@@ -551,6 +551,11 @@ const PATTERNS: readonly (readonly [RegExp, string, string])[] = [
     'ردّ لينكدإن بخطأ ($1).',
   ],
   [
+    /^A picture \((.*)\) could not be prepared for Instagram\. Replace it with another picture\.$/,
+    'Une image ($1) n’a pas pu être préparée pour Instagram. Remplacez-la par une autre image.',
+    'تعذّر تجهيز صورة ($1) لإنستغرام. استبدلها بصورة أخرى.',
+  ],
+  [
     /^The channel "(.*)" is not connected$/,
     'Le canal « $1 » n’est pas connecté',
     'القناة "$1" غير متصلة',

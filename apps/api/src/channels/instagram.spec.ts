@@ -85,18 +85,19 @@ describe('Supabase public picture storage', () => {
 });
 
 describe('Instagram publisher', () => {
+  // The simple tests use made-up picture bytes, so the real picture fitting is switched off for them.
   const make = (impl: HttpClient, store = new FakeStore()) => {
     const http = jest.fn(impl);
     return {
       http,
       store,
-      ig: new InstagramPublisher(http, store, { intervalMs: 0, attempts: 3 }),
+      ig: new InstagramPublisher(http, store, { intervalMs: 0, attempts: 3 }, async (b) => b),
     };
   };
   const make2 = (
     impl: HttpClient,
     store = new FakeStore(),
-    convert?: (b: Buffer) => Promise<Buffer>,
+    convert?: (b: Buffer, mime: string) => Promise<Buffer>,
   ) => {
     const http = jest.fn(impl);
     return {
@@ -366,16 +367,15 @@ describe('Instagram publisher', () => {
         expect(b[1]).toBe(0xd8);
         const meta = await sharp(b).metadata();
         expect(meta.format).toBe('jpeg');
-        expect([meta.width, meta.height]).toEqual([40, 30]);
+        expect([meta.width, meta.height]).toEqual([320, 240]); // tiny pictures are enlarged to Instagram's minimum width
       }
     });
 
-    it('leaves a JPEG untouched', async () => {
-      const convert = jest.fn(async (b: Buffer) => b);
-      const { ig, store } = make2(happy(), new FakeStore(), convert);
+    it('passes every picture and its type to the fitting step', async () => {
+      const fit = jest.fn(async (b: Buffer) => b);
+      const { ig } = make2(happy(), new FakeStore(), fit);
       await ig.publish(channel(), payload, [jpeg('a.jpg')]);
-      expect(convert).not.toHaveBeenCalled();
-      expect(store.uploads[0].size).toBe(Buffer.from('img-a.jpg').length);
+      expect(fit).toHaveBeenCalledWith(Buffer.from('img-a.jpg'), 'image/jpeg');
     });
 
     it('fails for good, naming the picture, when it cannot be converted', async () => {
@@ -386,7 +386,7 @@ describe('Instagram publisher', () => {
         ])
         .catch((e) => e);
       expect(err).toBeInstanceOf(PermanentPublishError);
-      expect(err.message).toMatch(/broken\.png.*could not be converted to JPEG/);
+      expect(err.message).toMatch(/broken\.png.*could not be prepared for Instagram/);
       expect(store.uploads).toHaveLength(0);
       expect(http).not.toHaveBeenCalled();
     });
