@@ -46,6 +46,7 @@ model Organization {
   campaigns       Campaign[]
   channels        Channel[]
   publishJobs     PublishJob[]
+  designTemplates DesignTemplate[]
 }
 
 enum ChannelProvider {
@@ -143,6 +144,21 @@ model Campaign {
   pieces         ContentPiece[]
 
   @@index([organizationId, status])
+}
+
+model DesignTemplate {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  name           String
+  category       String
+  /// Layout, format, colours role, sample text. Checked by the API before saving.
+  spec           Json
+  createdById    String       @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
 }
 
 model Membership {

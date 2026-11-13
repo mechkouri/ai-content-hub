@@ -367,6 +367,7 @@ const ENTRIES: readonly Entry[] = [
     'رفض ووردبريس بيانات الدخول المحفوظة (قد تكون أُلغيت أو تنقصها الصلاحيات). أعد ربط القناة.',
   ],
   // ---- sources
+  ['Template not found', 'Modèle introuvable', 'القالب غير موجود'],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
     'Only http and https URLs are allowed',
@@ -554,6 +555,11 @@ const PATTERNS: readonly (readonly [RegExp, string, string])[] = [
     /^A picture \((.*)\) could not be prepared for Instagram\. Replace it with another picture\.$/,
     'Une image ($1) n’a pas pu être préparée pour Instagram. Remplacez-la par une autre image.',
     'تعذّر تجهيز صورة ($1) لإنستغرام. استبدلها بصورة أخرى.',
+  ],
+  [
+    /^An organization can keep up to (\d+) templates\. Delete one first\.$/,
+    'Une organisation peut conserver jusqu’à $1 modèles. Supprimez-en un d’abord.',
+    'يمكن للمؤسسة الاحتفاظ بما يصل إلى $1 قالبًا. احذف واحدًا أولًا.',
   ],
   [
     /^The channel "(.*)" is not connected$/,

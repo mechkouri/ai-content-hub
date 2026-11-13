@@ -24,7 +24,9 @@ export type Permission =
   | 'campaign:read'
   | 'campaign:write'
   | 'channel:read'
-  | 'channel:write';
+  | 'channel:write'
+  | 'design:read'
+  | 'design:write';
 
 const ALL_ROLES: Role[] = [
   Role.OWNER,
@@ -60,6 +62,8 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   'analytics:read': ALL_ROLES,
   'campaign:read': ALL_ROLES,
   'campaign:write': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
+  'design:read': ALL_ROLES,
+  'design:write': [Role.OWNER, Role.ADMIN, Role.EDITOR, Role.DESIGNER],
   'channel:read': ALL_ROLES,
   'channel:write': MANAGERS,
 };
