@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { AppProvider } from '@/lib/app-context';
+import { LocaleProvider } from '@/lib/i18n';
+import { LOCALE_BOOT_SCRIPT } from '@/lib/i18n/boot-script';
 // Self-hosted fonts (no network access at build time): Plus Jakarta Sans for display, Inter for body,
 // Geist for labels and metrics, and Cairo + Tajawal for Arabic (RTL). The CSS variables are in globals.css.
 import '@fontsource/plus-jakarta-sans/latin-600.css';
@@ -25,9 +27,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The language and direction are set on <html> by a script before paint, so React must not complain.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOT_SCRIPT }} />
+      </head>
       <body>
-        <AppProvider>{children}</AppProvider>
+        <LocaleProvider>
+          <AppProvider>{children}</AppProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

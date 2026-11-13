@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { AuthCard } from '@/components/auth-card';
+import { useT } from '@/lib/i18n';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
+  const t = useT();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,16 +31,16 @@ export default function SignupPage() {
     setBusy(false);
     if (error) return setError(error.message);
     if (data.session) router.replace('/onboarding');
-    else setNotice('Check your email to confirm your account, then log in.');
+    else setNotice(t('auth.checkEmail'));
   }
 
   return (
-    <AuthCard title="Create your account" subtitle="Start turning one input into a full campaign.">
+    <AuthCard title={t('auth.signup.title')} subtitle={t('auth.signup.subtitle')}>
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           className="input"
           type="text"
-          placeholder="Your name (optional)"
+          placeholder={t('auth.namePlaceholder')}
           autoComplete="name"
           maxLength={80}
           value={fullName}
@@ -47,7 +49,7 @@ export default function SignupPage() {
         <input
           className="input"
           type="email"
-          placeholder="Email"
+          placeholder={t('auth.email')}
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -55,7 +57,7 @@ export default function SignupPage() {
         <input
           className="input"
           type="password"
-          placeholder="Password (min 8 characters)"
+          placeholder={t('auth.passwordMin')}
           minLength={8}
           required
           value={password}
@@ -64,12 +66,12 @@ export default function SignupPage() {
         {error && <p className="text-sm text-red-600">{error}</p>}
         {notice && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
         <button className="btn-primary w-full" disabled={busy || !isSupabaseConfigured}>
-          {busy ? 'Creating…' : 'Sign up'}
+          {busy ? t('auth.creating') : t('auth.signup.button')}
         </button>
         <p className="pt-2 text-center text-sm text-slate-500">
-          Already have an account?{' '}
+          {t('auth.haveAccount')}{' '}
           <Link href="/login" className="font-semibold text-brand">
-            Log in
+            {t('auth.logIn')}
           </Link>
         </p>
       </form>
