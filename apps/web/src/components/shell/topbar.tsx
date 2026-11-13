@@ -3,6 +3,8 @@
 import { ChevronsUpDown, LogOut, Menu, Plus, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { useT } from '@/lib/i18n';
 
 export interface TopbarProps {
   orgs: { id: string; name: string }[];
@@ -29,6 +31,7 @@ export function Topbar({
   onSignOut,
   onMenu,
 }: TopbarProps) {
+  const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = orgs.find((o) => o.id === currentOrgId);
@@ -52,19 +55,19 @@ export function Topbar({
       <button
         className="rounded-lg p-2 text-slate-600 hover:bg-surface lg:hidden"
         onClick={onMenu}
-        aria-label="Open menu"
+        aria-label={t('nav.openMenu')}
       >
         <Menu size={20} />
       </button>
 
       {/* Organization switcher */}
-      <label className="relative flex h-10 min-w-0 max-w-[280px] items-center gap-2.5 rounded-lg border border-line bg-white pl-2 pr-8 hover:border-line-strong">
+      <label className="relative flex h-10 min-w-0 max-w-[280px] items-center gap-2.5 rounded-lg border border-line bg-white ps-2 pe-8 hover:border-line-strong">
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-soft font-label text-[11px] font-bold text-brand-dark">
           {initials(current?.name ?? '')}
         </span>
-        <span className="sr-only">Organization</span>
+        <span className="sr-only">{t('topbar.org')}</span>
         <select
-          aria-label="Organization"
+          aria-label={t('topbar.org')}
           className="w-full cursor-pointer appearance-none truncate bg-transparent text-sm font-semibold text-ink outline-none"
           value={currentOrgId ?? ''}
           onChange={(e) => onOrgChange(e.target.value)}
@@ -77,18 +80,20 @@ export function Topbar({
         </select>
         <ChevronsUpDown
           size={14}
-          className="pointer-events-none absolute right-2.5 text-muted"
+          className="pointer-events-none absolute end-2.5 text-muted"
           aria-hidden
         />
       </label>
 
       <div className="flex-1" />
 
+      <LanguageSwitcher />
+
       <Link href="/studio" className="btn-primary hidden sm:inline-flex">
         <Plus size={16} aria-hidden />
-        Create content
+        {t('topbar.create')}
       </Link>
-      <Link href="/studio" className="btn-primary !px-3 sm:hidden" aria-label="Create content">
+      <Link href="/studio" className="btn-primary !px-3 sm:hidden" aria-label={t('topbar.create')}>
         <Plus size={18} aria-hidden />
       </Link>
 
@@ -98,7 +103,7 @@ export function Topbar({
           onClick={() => setMenuOpen((v) => !v)}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          aria-label="Account menu"
+          aria-label={t('topbar.account')}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-label text-xs font-bold text-white hover:ring-4 hover:ring-slate-200"
         >
           {userEmail.slice(0, 1).toUpperCase() || '?'}
@@ -106,10 +111,10 @@ export function Topbar({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 mt-2 w-64 rounded-xl border border-line bg-white p-1.5 shadow-pop"
+            className="absolute end-0 mt-2 w-64 rounded-xl border border-line bg-white p-1.5 shadow-pop"
           >
             <div className="border-b border-line px-3 pb-2 pt-1.5">
-              <p className="eyebrow">Signed in as</p>
+              <p className="eyebrow">{t('topbar.signedInAs')}</p>
               <p className="truncate text-sm font-medium" title={userEmail}>
                 {userEmail}
               </p>
@@ -120,7 +125,7 @@ export function Topbar({
               onClick={() => setMenuOpen(false)}
               className="mt-1 flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm text-slate-700 hover:bg-surface"
             >
-              <PlusCircle size={16} aria-hidden /> New organization
+              <PlusCircle size={16} aria-hidden /> {t('topbar.newOrg')}
             </Link>
             <button
               role="menuitem"
@@ -130,7 +135,7 @@ export function Topbar({
               }}
               className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-sm text-slate-700 hover:bg-surface"
             >
-              <LogOut size={16} aria-hidden /> Log out
+              <LogOut size={16} aria-hidden /> {t('topbar.logout')}
             </button>
           </div>
         )}
@@ -141,21 +146,23 @@ export function Topbar({
 
 /** Topbar shown to visitors who are not signed in: browsing is free, the account is needed to create. */
 export function GuestTopbar({ onMenu }: { onMenu: () => void }) {
+  const t = useT();
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white/85 px-4 backdrop-blur-md lg:px-10">
       <button
         className="rounded-lg p-2 text-slate-600 hover:bg-surface lg:hidden"
         onClick={onMenu}
-        aria-label="Open menu"
+        aria-label={t('nav.openMenu')}
       >
         <Menu size={20} />
       </button>
       <div className="flex-1" />
+      <LanguageSwitcher />
       <Link href="/login" className="btn-ghost">
-        Log in
+        {t('topbar.login')}
       </Link>
       <Link href="/signup" className="btn-primary">
-        Create account
+        {t('topbar.signup')}
       </Link>
     </header>
   );

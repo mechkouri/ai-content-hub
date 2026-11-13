@@ -6,27 +6,30 @@ import { Sidebar } from '@/components/shell/sidebar';
 import { AuthGate } from '@/components/auth-gate';
 import { GuestTopbar, Topbar } from '@/components/shell/topbar';
 import { useApp } from '@/lib/app-context';
+import { useT } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 import { useShellData } from '@/lib/use-shell-data';
 
-const FEATURES: [string, string][] = [
-  ['/sources', 'Sources'],
-  ['/studio', 'the Content studio'],
-  ['/calendar', 'the Content calendar'],
-  ['/campaigns', 'Campaigns'],
-  ['/channels', 'Channels'],
-  ['/analytics', 'Analytics'],
-  ['/brand', 'the Brand kit'],
-  ['/media', 'the Media library'],
-  ['/ai', 'AI providers'],
-  ['/members', 'Members'],
+const FEATURES: [string, MessageKey][] = [
+  ['/sources', 'gate.sources'],
+  ['/studio', 'gate.studio'],
+  ['/calendar', 'gate.calendar'],
+  ['/campaigns', 'gate.campaigns'],
+  ['/channels', 'gate.channels'],
+  ['/analytics', 'gate.analytics'],
+  ['/brand', 'gate.brand'],
+  ['/media', 'gate.media'],
+  ['/ai', 'gate.ai'],
+  ['/members', 'gate.members'],
 ];
-const featureName = (path: string) =>
-  FEATURES.find(([p]) => path === p || path.startsWith(`${p}/`))?.[1] ?? 'this page';
+const featureKey = (path: string): MessageKey =>
+  FEATURES.find(([p]) => path === p || path.startsWith(`${p}/`))?.[1] ?? 'gate.page';
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, memberships, currentOrgId, setCurrentOrg, signOut, loading } = useApp();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
   const shell = useShellData(currentOrgId);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -40,7 +43,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const guest = !loading && !user;
   if (loading || (user && memberships.length === 0)) {
-    return <div className="flex min-h-screen items-center justify-center text-muted">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted">
+        {t('common.loading')}
+      </div>
+    );
   }
 
   return (
@@ -52,7 +59,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
       />
-      <div className="lg:pl-rail">
+      <div className="lg:ps-rail">
         {guest ? (
           <GuestTopbar onMenu={() => setMenuOpen(true)} />
         ) : (
@@ -70,7 +77,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         )}
         <main className="mx-auto w-full max-w-[1280px] px-4 py-6 lg:px-10 lg:py-8">
           {guest && pathname !== '/dashboard' ? (
-            <AuthGate feature={featureName(pathname)} next={pathname} />
+            <AuthGate feature={t(featureKey(pathname))} next={pathname} />
           ) : (
             children
           )}

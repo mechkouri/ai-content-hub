@@ -5,9 +5,11 @@ import { GuestHome } from '@/components/dashboard/guest-home';
 import { Overview, OverviewData, nameFromEmail } from '@/components/dashboard/overview';
 import { AiStatus, apiFetch, BrandKit, ContentSummary, SourceSummary } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
+import { useT } from '@/lib/i18n';
 
 export default function Dashboard() {
   const { currentOrgId, memberships, user } = useApp();
+  const t = useT();
   const orgName =
     memberships.find((m) => m.organizationId === currentOrgId)?.organization.name ?? '';
   const [data, setData] = useState<OverviewData | null>(null);
@@ -38,7 +40,7 @@ export default function Dashboard() {
   }, [currentOrgId]);
 
   if (!user) return <GuestHome />;
-  if (!data) return <p className="text-sm text-muted">Loading…</p>;
+  if (!data) return <p className="text-sm text-muted">{t('common.loading')}</p>;
   const metaName = String(user?.user_metadata?.full_name ?? '').trim();
   const name = metaName ? metaName.split(/\s+/)[0] : nameFromEmail(user?.email ?? '');
   return <Overview data={data} name={name} orgName={orgName} />;

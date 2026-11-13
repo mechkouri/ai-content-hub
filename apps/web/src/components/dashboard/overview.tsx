@@ -1,3 +1,5 @@
+'use client';
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -9,6 +11,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { AiStatus, CONTENT_KINDS, ContentSummary, LANG_LABELS, SourceSummary } from '@/lib/api';
+import { useT } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 import { KindBadge, StatCard, StatusDot, StepItem } from './widgets';
 
 export interface OverviewData {
@@ -21,18 +25,19 @@ export interface OverviewData {
 const KIND = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k]));
 const pct = (used: number, limit: number) =>
   limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 100;
-const ago = (iso: string) => {
+type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
+const ago = (iso: string, t: Translate) => {
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m} min ago`;
+  if (m < 1) return t('time.justNow');
+  if (m < 60) return t('time.minAgo', { n: m });
   const h = Math.round(m / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return t('time.hAgo', { n: h });
   return new Date(iso).toLocaleDateString();
 };
 
-export function greeting(now = new Date()): string {
+export function greeting(t: Translate, now = new Date()): string {
   const h = now.getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return t(h < 12 ? 'dash.morning' : h < 18 ? 'dash.afternoon' : 'dash.evening');
 }
 
 export function nameFromEmail(email: string): string {
@@ -50,6 +55,7 @@ export function Overview({
   name: string;
   orgName: string;
 }) {
+  const t = useT();
   const { sources, content, ai, hasBrandKit } = data;
   const ready = sources.filter((s) => s.status === 'EXTRACTED');
   const needExtraction = sources.filter((s) => s.status !== 'EXTRACTED');
@@ -61,16 +67,18 @@ export function Overview({
       key: `c-${c.id}`,
       href: `/studio/${c.id}`,
       title: c.title,
-      detail: `${c.warnings.length} detail${c.warnings.length === 1 ? '' : 's'} to check against the verified facts`,
-      chip: <span className="chip-warn">Needs review</span>,
+      detail: t(c.warnings.length === 1 ? 'dash.detailsOne' : 'dash.detailsMany', {
+        n: c.warnings.length,
+      }),
+      chip: <span className="chip-warn">{t('status.needsReview')}</span>,
       icon: <AlertTriangle size={18} className="text-warn" aria-hidden />,
     })),
     ...needExtraction.map((s) => ({
       key: `s-${s.id}`,
       href: `/sources/${s.id}`,
       title: s.title,
-      detail: 'Facts have not been extracted yet',
-      chip: <span className="chip-draft">Needs extraction</span>,
+      detail: t('dash.notExtracted'),
+      chip: <span className="chip-draft">{t('status.needsExtraction')}</span>,
       icon: <FileText size={18} className="text-muted" aria-hidden />,
     })),
   ].slice(0, 6);
@@ -78,26 +86,26 @@ export function Overview({
   const steps = [
     {
       done: hasBrandKit,
-      title: 'Set up your brand kit',
-      hint: 'Colors, fonts and logo applied to everything you create',
+      title: t('dash.step.brand'),
+      hint: t('dash.step.brandHint'),
       href: '/brand',
     },
     {
       done: sources.length > 0,
-      title: 'Add a source',
-      hint: 'Paste text, upload a PDF or DOCX, or import a web page',
+      title: t('dash.step.source'),
+      hint: t('dash.step.sourceHint'),
       href: '/sources',
     },
     {
       done: ready.length > 0,
-      title: 'Verify the extracted facts',
-      hint: 'Confirm what the AI found before anything is written',
+      title: t('dash.step.facts'),
+      hint: t('dash.step.factsHint'),
       href: ready[0] ? `/sources/${ready[0].id}` : '/sources',
     },
     {
       done: content.length > 0,
-      title: 'Create your first content',
-      hint: 'An article or a social post from your verified facts',
+      title: t('dash.step.content'),
+      hint: t('dash.step.contentHint'),
       href: '/studio',
     },
   ];
@@ -109,14 +117,14 @@ export function Overview({
       <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="font-display text-[32px] font-semibold leading-tight">
-            {greeting()}, {name}
+            {t('dash.hello', { greeting: greeting(t), name })}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="chip-ai">
               <span className="h-1.5 w-1.5 rounded-full bg-ai" aria-hidden />
               {orgName}
             </span>
-            Overview of your sources, content and AI usage.
+            {t('dash.overviewLine')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -125,73 +133,78 @@ export function Overview({
               key={k.id}
               href={`/studio?kind=${k.id}`}
               className="btn-ghost btn-sm"
-              title={k.blurb}
+              title={t(`kind.blurb.${k.id}`)}
             >
               <span aria-hidden>{k.icon}</span>
-              {k.label}
+              {t(`kind.${k.id}`)}
             </Link>
           ))}
           <Link href="/studio" className="btn-primary">
             <Wand2 size={16} aria-hidden />
-            New content
+            {t('dash.newContent')}
           </Link>
         </div>
       </section>
 
       {/* KPI cards */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Key numbers">
+      <section
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label={t('dash.keyNumbers')}
+      >
         <StatCard
-          label="Sources"
+          label={t('dash.sources')}
           value={sources.length}
           icon={FileText}
-          note={`${ready.length} with verified facts ready`}
+          note={t('dash.readyFacts', { n: ready.length })}
         />
         <StatCard
-          label="Content created"
+          label={t('dash.contentCreated')}
           value={content.length}
           icon={PenLine}
           tone="ai"
-          note={review.length ? `${review.length} need review` : 'Nothing waiting for review'}
+          note={
+            review.length ? t('dash.needReview', { n: review.length }) : t('dash.nothingReview')
+          }
         />
         {ai ? (
           <>
             <StatCard
-              label="AI text today"
+              label={t('dash.aiText')}
               value={ai.usage.text.today}
               suffix={`/ ${ai.limits.dailyText}`}
               icon={Sparkles}
               tone="ai"
               progress={pct(ai.usage.text.today, ai.limits.dailyText)}
-              note={`${ai.usage.text.month} this month`}
+              note={t('dash.thisMonth', { n: ai.usage.text.month })}
             />
             <StatCard
-              label="AI images today"
+              label={t('dash.aiImages')}
               value={ai.usage.image.today}
               suffix={`/ ${ai.limits.dailyImage}`}
               icon={ImageIcon}
               progress={pct(ai.usage.image.today, ai.limits.dailyImage)}
-              note={`${ai.usage.image.month} this month`}
+              note={t('dash.thisMonth', { n: ai.usage.image.month })}
             />
           </>
         ) : (
           <div className="card flex items-center p-5 text-sm text-muted sm:col-span-2">
-            AI usage is visible to owners, admins, editors and designers.
+            {t('dash.aiVisible')}
           </div>
         )}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Needs attention */}
           <section className="card p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold">Needs your attention</h2>
+              <h2 className="font-display text-lg font-semibold">{t('dash.attention')}</h2>
               <span className="chip-draft">{attention.length}</span>
             </div>
             {attention.length === 0 ? (
               <div className="rounded-xl bg-surface py-8 text-center text-sm text-muted">
-                <p className="font-medium text-ink">All clear</p>
-                <p>Nothing is waiting for review or extraction.</p>
+                <p className="font-medium text-ink">{t('dash.allClear')}</p>
+                <p>{t('dash.nothingWaiting')}</p>
               </div>
             ) : (
               <ul className="space-y-2">
@@ -208,7 +221,7 @@ export function Overview({
                         <span className="block truncate text-xs text-muted">{a.detail}</span>
                       </span>
                       {a.chip}
-                      <ArrowRight size={16} className="text-slate-300" aria-hidden />
+                      <ArrowRight size={16} className="text-slate-300 rtl:rotate-180" aria-hidden />
                     </Link>
                   </li>
                 ))}
@@ -219,18 +232,19 @@ export function Overview({
           {/* Recent content */}
           <section className="card p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold">Recent content</h2>
+              <h2 className="font-display text-lg font-semibold">{t('dash.recent')}</h2>
               <Link
                 href="/studio"
                 className="flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
               >
-                Open studio <ArrowRight size={14} aria-hidden />
+                {t('dash.openStudio')}{' '}
+                <ArrowRight size={14} aria-hidden className="rtl:rotate-180" />
               </Link>
             </div>
             {recent.length === 0 ? (
               <div className="rounded-xl bg-surface py-8 text-center text-sm text-muted">
-                <p className="font-medium text-ink">No content yet</p>
-                <p>Create an article or a social post from one of your sources.</p>
+                <p className="font-medium text-ink">{t('dash.noContent')}</p>
+                <p>{t('dash.noContentHint')}</p>
               </div>
             ) : (
               <ul className="divide-y divide-line">
@@ -246,14 +260,14 @@ export function Overview({
                           {c.title}
                         </span>
                         <span className="block text-xs text-muted">
-                          {KIND[c.kind].label} · {LANG_LABELS[c.language] ?? c.language} ·{' '}
-                          {ago(c.createdAt)}
+                          {t(`kind.${c.kind}`)} · {LANG_LABELS[c.language] ?? c.language} ·{' '}
+                          {ago(c.createdAt, t)}
                         </span>
                       </span>
                       {c.status === 'NEEDS_REVIEW' ? (
-                        <span className="chip-warn">Needs review</span>
+                        <span className="chip-warn">{t('status.needsReview')}</span>
                       ) : (
-                        <span className="chip-ok">Draft</span>
+                        <span className="chip-ok">{t('status.draft')}</span>
                       )}
                     </Link>
                   </li>
@@ -266,9 +280,12 @@ export function Overview({
         <aside className="space-y-6">
           {!allDone && (
             <section className="card p-5">
-              <h2 className="font-display text-lg font-semibold">Getting started</h2>
+              <h2 className="font-display text-lg font-semibold">{t('dash.gettingStarted')}</h2>
               <p className="mb-2 text-xs text-muted">
-                {steps.filter((s) => s.done).length} of {steps.length} done
+                {t('dash.stepsDone', {
+                  done: steps.filter((s) => s.done).length,
+                  total: steps.length,
+                })}
               </p>
               <div className="space-y-0.5">
                 {steps.map((s) => (
@@ -281,16 +298,16 @@ export function Overview({
           {/* Provider connectivity (design: "Pipe connectivity") */}
           <section className="card p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="eyebrow">AI providers</h2>
+              <h2 className="eyebrow">{t('dash.aiProviders')}</h2>
               <Link href="/ai" className="text-xs font-semibold text-brand hover:underline">
-                Manage
+                {t('dash.manage')}
               </Link>
             </div>
             {ai ? (
               <ul className="grid grid-cols-2 gap-2">
                 {[
-                  ...ai.providers.text.map((p) => ({ ...p, kind: 'Text' })),
-                  ...ai.providers.image.map((p) => ({ ...p, kind: 'Images' })),
+                  ...ai.providers.text.map((p) => ({ ...p, kind: t('dash.text') })),
+                  ...ai.providers.image.map((p) => ({ ...p, kind: t('dash.images') })),
                 ].map((p) => (
                   <li
                     key={`${p.kind}-${p.id}`}
@@ -302,19 +319,15 @@ export function Overview({
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted">
                       <StatusDot ok={p.configured} />
-                      {p.configured ? 'Connected' : 'Not set up'}
+                      {p.configured ? t('dash.connected') : t('dash.notSetUpShort')}
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted">
-                Provider status is visible to owners, admins, editors and designers.
-              </p>
+              <p className="text-sm text-muted">{t('dash.providersVisible')}</p>
             )}
-            <p className="mt-3 text-[11px] text-muted">
-              Free models only. The app never falls back to a paid model.
-            </p>
+            <p className="mt-3 text-[11px] text-muted">{t('dash.freeOnly')}</p>
           </section>
         </aside>
       </div>

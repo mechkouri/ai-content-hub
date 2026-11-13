@@ -18,41 +18,43 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/messages';
 import { Logo } from './logo';
 
 interface NavItem {
   href: string;
-  label: string;
+  label: MessageKey;
   icon: LucideIcon;
 }
 
-export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
   {
-    title: 'Workspace',
+    title: 'nav.workspace',
     items: [
-      { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
-      { href: '/sources', label: 'Sources', icon: FileText },
-      { href: '/studio', label: 'Content studio', icon: PenLine },
-      { href: '/calendar', label: 'Content calendar', icon: CalendarDays },
-      { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-      { href: '/channels', label: 'Channels', icon: Share2 },
-      { href: '/analytics', label: 'Analytics', icon: LineChart },
+      { href: '/dashboard', label: 'nav.overview', icon: LayoutGrid },
+      { href: '/sources', label: 'nav.sources', icon: FileText },
+      { href: '/studio', label: 'nav.studio', icon: PenLine },
+      { href: '/calendar', label: 'nav.calendar', icon: CalendarDays },
+      { href: '/campaigns', label: 'nav.campaigns', icon: Megaphone },
+      { href: '/channels', label: 'nav.channels', icon: Share2 },
+      { href: '/analytics', label: 'nav.analytics', icon: LineChart },
     ],
   },
   {
-    title: 'AI studio',
+    title: 'nav.aiStudio',
     items: [
-      { href: '/brand', label: 'Brand kit', icon: Palette },
-      { href: '/media', label: 'Media library', icon: ImageIcon },
-      { href: '/ai', label: 'AI providers', icon: Sparkles },
+      { href: '/brand', label: 'nav.brand', icon: Palette },
+      { href: '/media', label: 'nav.media', icon: ImageIcon },
+      { href: '/ai', label: 'nav.aiProviders', icon: Sparkles },
     ],
   },
 ];
 
 /** Planned features from the design that are not built yet. They are shown disabled, never faked. */
-export const SOON_ITEMS: { label: string; icon: LucideIcon }[] = [
-  { label: 'Visual design studio', icon: Wand2 },
-  { label: 'Workflow automation', icon: Workflow },
+export const SOON_ITEMS: { label: MessageKey; icon: LucideIcon }[] = [
+  { label: 'nav.designStudio', icon: Wand2 },
+  { label: 'nav.workflow', icon: Workflow },
 ];
 
 export interface SidebarProps {
@@ -69,6 +71,7 @@ const isActive = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
 
 export function Sidebar({ pathname, brandName, credits, open, onClose }: SidebarProps) {
+  const t = useT();
   const pct =
     credits && credits.limit > 0
       ? Math.min(100, Math.round((credits.used / credits.limit) * 100))
@@ -85,17 +88,17 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-rail flex-col border-r border-line bg-white transition-transform duration-200 lg:translate-x-0 ${
-          open ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 start-0 z-40 flex w-rail flex-col border-e border-line bg-white transition-transform duration-200 lg:translate-x-0 ${
+          open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'
         }`}
-        aria-label="Main navigation"
+        aria-label={t('nav.main')}
       >
         <div className="flex h-16 shrink-0 items-center justify-between px-5">
           <Logo />
           <button
             className="rounded-lg p-1.5 text-muted hover:bg-surface lg:hidden"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={t('nav.closeMenu')}
           >
             <X size={18} />
           </button>
@@ -104,7 +107,7 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-3">
           {NAV_GROUPS.map((g) => (
             <div key={g.title}>
-              <p className="eyebrow px-3 pb-1.5">{g.title}</p>
+              <p className="eyebrow px-3 pb-1.5">{t(g.title)}</p>
               <ul className="space-y-0.5">
                 {g.items.map(({ href, label, icon: Icon }) => {
                   const active = isActive(pathname, href);
@@ -121,7 +124,7 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
                         }`}
                       >
                         <Icon size={18} strokeWidth={active ? 2.2 : 1.8} aria-hidden />
-                        {label}
+                        {t(label)}
                       </Link>
                     </li>
                   );
@@ -131,7 +134,7 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
           ))}
 
           <div>
-            <p className="eyebrow px-3 pb-1.5">Coming soon</p>
+            <p className="eyebrow px-3 pb-1.5">{t('nav.comingSoon')}</p>
             <ul className="space-y-0.5">
               {SOON_ITEMS.map(({ label, icon: Icon }) => (
                 <li
@@ -140,9 +143,9 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
                   className="flex h-10 cursor-not-allowed items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-400"
                 >
                   <Icon size={18} strokeWidth={1.8} aria-hidden />
-                  <span className="flex-1">{label}</span>
+                  <span className="flex-1">{t(label)}</span>
                   <span className="rounded bg-surface-sub px-1.5 py-0.5 font-label text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    Soon
+                    {t('nav.soon')}
                   </span>
                 </li>
               ))}
@@ -161,10 +164,10 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-label text-[11px] font-semibold uppercase tracking-wide text-muted">
-                Brand kit
+                {t('sidebar.brandKit')}
               </span>
               <span className="block truncate text-sm font-medium">
-                {brandName ?? 'Not set up yet'}
+                {brandName ?? t('sidebar.notSetUp')}
               </span>
             </span>
           </Link>
@@ -174,10 +177,10 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
               href="/ai"
               onClick={onClose}
               className="block rounded-xl bg-surface px-3 py-2.5 hover:bg-surface-sub"
-              aria-label="AI usage today"
+              aria-label={t('sidebar.aiUsage')}
             >
               <span className="flex items-center justify-between font-label text-[11px] font-semibold uppercase tracking-wide text-muted">
-                <span>AI generations today</span>
+                <span>{t('sidebar.aiToday')}</span>
                 <span className="text-ink">
                   {credits.used} / {credits.limit}
                 </span>
@@ -199,7 +202,7 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
             }`}
           >
             <Settings size={18} strokeWidth={1.8} aria-hidden />
-            Settings &amp; team
+            {t('nav.settings')}
           </Link>
         </div>
       </aside>
