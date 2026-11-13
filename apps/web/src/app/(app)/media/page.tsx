@@ -4,14 +4,15 @@ import { ChangeEvent, DragEvent, useCallback, useEffect, useRef, useState } from
 import { AuthImage } from '@/components/auth-image';
 import { apiFetch, canDeleteMedia, canUploadMedia, MediaAsset } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
-
-const fmtSize = (n: number) =>
-  n > 1024 * 1024
-    ? `${(n / 1024 / 1024).toFixed(1)} MB`
-    : `${Math.max(1, Math.round(n / 1024))} KB`;
+import { useI18n } from '@/lib/i18n';
 
 export default function MediaPage() {
   const { currentOrgId, currentRole } = useApp();
+  const { t } = useI18n();
+  const fmtSize = (n: number) =>
+    n > 1024 * 1024
+      ? t('media.mb', { n: (n / 1024 / 1024).toFixed(1) })
+      : t('media.kb', { n: Math.max(1, Math.round(n / 1024)) });
   const [assets, setAssets] = useState<MediaAsset[] | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,7 +38,7 @@ export default function MediaPage() {
     setBusy(true);
     for (const file of Array.from(files)) {
       if (file.size > 5 * 1024 * 1024) {
-        setError(`${file.name}: max file size is 5 MB`);
+        setError(t('media.tooBig', { name: file.name }));
         continue;
       }
       try {
@@ -54,7 +55,7 @@ export default function MediaPage() {
   }
 
   async function remove(a: MediaAsset) {
-    if (!confirm(`Delete ${a.filename}? Brand kits using it will lose that logo.`)) return;
+    if (!confirm(t('media.confirmDelete', { name: a.filename }))) return;
     setError('');
     try {
       await apiFetch(`/organizations/${currentOrgId}/media/${a.id}`, { method: 'DELETE' });
@@ -76,10 +77,8 @@ export default function MediaPage() {
       <section className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold">Media library</h1>
-            <p className="text-sm text-slate-500">
-              Logos and images for your organization. PNG, JPEG, WebP or GIF, up to 5 MB.
-            </p>
+            <h1 className="text-xl font-bold">{t('media.title')}</h1>
+            <p className="text-sm text-slate-500">{t('media.subtitle')}</p>
           </div>
           {canUpload && (
             <>
@@ -98,7 +97,7 @@ export default function MediaPage() {
                 disabled={busy}
                 onClick={() => inputRef.current?.click()}
               >
-                {busy ? 'Uploading…' : '+ Upload images'}
+                {busy ? t('media.uploading') : t('media.upload')}
               </button>
             </>
           )}
@@ -116,16 +115,12 @@ export default function MediaPage() {
         onDrop={onDrop}
       >
         {assets === null ? (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500">{t('common.loading')}</p>
         ) : assets.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-500">
             <p className="text-3xl">🖼️</p>
-            <p className="mt-2 font-semibold text-slate-700">No images yet</p>
-            <p>
-              {canUpload
-                ? 'Drag images here or use Upload images.'
-                : 'Ask an editor or designer to upload some.'}
-            </p>
+            <p className="mt-2 font-semibold text-slate-700">{t('media.none')}</p>
+            <p>{canUpload ? t('media.dragHint') : t('media.askUpload')}</p>
           </div>
         ) : (
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -148,9 +143,9 @@ export default function MediaPage() {
                     <button
                       className="btn-danger btn-sm"
                       onClick={() => remove(a)}
-                      aria-label={`Delete ${a.filename}`}
+                      aria-label={t('media.deleteLabel', { name: a.filename })}
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   )}
                 </div>

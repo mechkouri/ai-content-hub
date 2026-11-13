@@ -62,7 +62,7 @@ export function StatCard({
       <p className="mt-3 font-display text-[40px] font-bold leading-none tracking-tight">
         {value}
         {suffix && (
-          <span className="ml-1 font-label text-base font-semibold text-muted">{suffix}</span>
+          <span className="ms-1 font-label text-base font-semibold text-muted">{suffix}</span>
         )}
       </p>
       {progress !== undefined && (
