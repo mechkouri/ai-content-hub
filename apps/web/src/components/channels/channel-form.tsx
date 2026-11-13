@@ -1,7 +1,8 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { ChannelProvider, PROVIDER_LABELS } from '@/lib/api';
+import { ChannelProvider } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 
 export interface ChannelFormValues {
   name: string;
@@ -28,10 +29,11 @@ export function ChannelForm({
   onSubmit: (v: ChannelFormValues) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const wordpress = provider === 'WORDPRESS';
   const facebook = provider === 'FACEBOOK';
   const linkedin = provider === 'LINKEDIN';
-  const [name, setName] = useState(PROVIDER_LABELS[provider].label);
+  const [name, setName] = useState(t(`provider.${provider}`));
   const [siteUrl, setSiteUrl] = useState('https://');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -88,8 +90,8 @@ export function ChannelForm({
         minLength={2}
         maxLength={80}
         required
-        aria-label="Channel name"
-        placeholder="Channel name"
+        aria-label={t('form.channelName')}
+        placeholder={t('form.channelName')}
       />
       {wordpress && (
         <>
@@ -100,14 +102,10 @@ export function ChannelForm({
             value={siteUrl}
             onChange={(e) => setSiteUrl(e.target.value)}
             required
-            aria-label="Website address"
+            aria-label={t('form.siteAddress')}
             placeholder="https://your-site.com"
           />
-          {insecure && (
-            <p className="text-xs text-danger-ink">
-              Use the https address. The login would travel unprotected over http.
-            </p>
-          )}
+          {insecure && <p className="text-xs text-danger-ink">{t('form.useHttps')}</p>}
           <input
             className="input"
             value={username}
@@ -115,8 +113,8 @@ export function ChannelForm({
             required
             maxLength={100}
             autoComplete="off"
-            aria-label="WordPress username"
-            placeholder="WordPress username (not your email)"
+            aria-label={t('form.wpUser')}
+            placeholder={t('form.wpUserPh')}
           />
           <input
             className="input"
@@ -127,11 +125,13 @@ export function ChannelForm({
             minLength={8}
             maxLength={200}
             autoComplete="new-password"
-            aria-label="Application password"
-            placeholder="Application password"
+            aria-label={t('form.appPassword')}
+            placeholder={t('form.appPassword')}
           />
           <fieldset className="space-y-1 text-sm">
-            <legend className="text-xs font-semibold text-slate-600">New posts are</legend>
+            <legend className="text-xs font-semibold text-slate-600">
+              {t('form.newPostsAre')}
+            </legend>
             <label className="flex items-center gap-2">
               <input
                 type="radio"
@@ -139,7 +139,7 @@ export function ChannelForm({
                 checked={publishAs === 'publish'}
                 onChange={() => setPublishAs('publish')}
               />
-              Published right away
+              {t('form.publishNow')}
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -148,26 +148,18 @@ export function ChannelForm({
                 checked={publishAs === 'draft'}
                 onChange={() => setPublishAs('draft')}
               />
-              Saved as drafts for you to review on the site
+              {t('form.saveDrafts')}
             </label>
           </fieldset>
           <details className="rounded-lg bg-surface p-2.5 text-xs text-slate-600">
-            <summary className="cursor-pointer font-semibold">
-              How do I get an application password?
-            </summary>
+            <summary className="cursor-pointer font-semibold">{t('form.wpHelp')}</summary>
             <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
-              <li>Sign in to your WordPress dashboard.</li>
-              <li>Open Users, then Profile, and scroll to “Application Passwords”.</li>
-              <li>
-                Type a name such as “AI Content Hub” and press “Add New Application Password”.
-              </li>
-              <li>Copy the password WordPress shows once and paste it here.</li>
+              <li>{t('form.wp1')}</li>
+              <li>{t('form.wp2')}</li>
+              <li>{t('form.wp3')}</li>
+              <li>{t('form.wp4')}</li>
             </ol>
-            <p className="mt-1.5">
-              The user needs the Editor or Administrator role to publish. The password is checked
-              against your site, then stored encrypted and never shown again. You can revoke it in
-              WordPress at any time.
-            </p>
+            <p className="mt-1.5">{t('form.wpNote')}</p>
           </details>
         </>
       )}
@@ -181,8 +173,8 @@ export function ChannelForm({
             required
             maxLength={25}
             autoComplete="off"
-            aria-label="Facebook Page ID"
-            placeholder="Page ID (numbers only)"
+            aria-label={t('form.fbPageId')}
+            placeholder={t('form.fbPageIdPh')}
           />
           <input
             className="input"
@@ -193,28 +185,17 @@ export function ChannelForm({
             minLength={20}
             maxLength={1000}
             autoComplete="new-password"
-            aria-label="Page access token"
-            placeholder="Page access token"
+            aria-label={t('form.fbToken')}
+            placeholder={t('form.fbToken')}
           />
           <details className="rounded-lg bg-surface p-2.5 text-xs text-slate-600">
-            <summary className="cursor-pointer font-semibold">
-              Where do I find the Page ID and token?
-            </summary>
+            <summary className="cursor-pointer font-semibold">{t('form.fbHelp')}</summary>
             <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
-              <li>
-                Create an app at developers.facebook.com (type “Business”) and add yourself as an
-                admin.
-              </li>
-              <li>
-                In the Graph API Explorer, pick your app, choose “Get Page Access Token” and select
-                your Page. Grant pages_manage_posts and pages_read_engagement.
-              </li>
-              <li>Copy the Page ID (shown in your Page’s About section) and the token.</li>
+              <li>{t('form.fb1')}</li>
+              <li>{t('form.fb2')}</li>
+              <li>{t('form.fb3')}</li>
             </ol>
-            <p className="mt-1.5">
-              It must be a Page access token, not a personal one. It is checked against the Page,
-              then stored encrypted and never shown again.
-            </p>
+            <p className="mt-1.5">{t('form.fbNote')}</p>
           </details>
         </>
       )}
@@ -229,30 +210,18 @@ export function ChannelForm({
             minLength={20}
             maxLength={2000}
             autoComplete="new-password"
-            aria-label="LinkedIn access token"
-            placeholder="LinkedIn access token"
+            aria-label={t('form.liToken')}
+            placeholder={t('form.liToken')}
           />
           <details className="rounded-lg bg-surface p-2.5 text-xs text-slate-600">
-            <summary className="cursor-pointer font-semibold">
-              How do I get an access token?
-            </summary>
+            <summary className="cursor-pointer font-semibold">{t('form.liHelp')}</summary>
             <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
-              <li>Create an app at linkedin.com/developers and link it to a LinkedIn Page.</li>
-              <li>
-                On the Products tab, request “Share on LinkedIn” and “Sign In with LinkedIn using
-                OpenID Connect”.
-              </li>
-              <li>
-                Open the Token Generator tool, tick the scopes openid, profile and w_member_social,
-                and generate a token for your account.
-              </li>
-              <li>Copy the token and paste it here.</li>
+              <li>{t('form.li1')}</li>
+              <li>{t('form.li2')}</li>
+              <li>{t('form.li3')}</li>
+              <li>{t('form.li4')}</li>
             </ol>
-            <p className="mt-1.5">
-              Posts are published on your personal profile. LinkedIn tokens last 60 days; when it
-              expires the channel shows “Needs reconnecting” and you add it again with a new token.
-              The token is checked, then stored encrypted and never shown again.
-            </p>
+            <p className="mt-1.5">{t('form.liNote')}</p>
           </details>
         </>
       )}
@@ -264,11 +233,8 @@ export function ChannelForm({
           onChange={(e) => setAutoPublish(e.target.checked)}
         />
         <span>
-          Post scheduled content here automatically
-          <span className="block text-xs text-slate-500">
-            When approved content is scheduled in the calendar, it is queued for this channel and
-            posted at that time. You can change this later.
-          </span>
+          {t('form.auto')}
+          <span className="block text-xs text-slate-500">{t('form.autoHint')}</span>
         </span>
       </label>
       {error && (
@@ -278,10 +244,14 @@ export function ChannelForm({
       )}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={busy || !ready}>
-          {busy ? (wordpress || facebook || linkedin ? 'Checking…' : 'Adding…') : 'Add channel'}
+          {busy
+            ? wordpress || facebook || linkedin
+              ? t('form.checking')
+              : t('form.adding')
+            : t('form.addChannel')}
         </button>
         <button type="button" className="btn-ghost" onClick={onCancel} disabled={busy}>
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </form>
@@ -308,6 +278,7 @@ export function ReconnectForm({
   onSubmit: (v: ReconnectValues) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const wordpress = provider === 'WORDPRESS';
   const [username, setUsername] = useState('');
   const [secret, setSecret] = useState('');
@@ -328,13 +299,12 @@ export function ReconnectForm({
       }}
     >
       <p className="text-xs text-slate-600">
+        {wordpress ? t('form.rcWp') : provider === 'LINKEDIN' ? t('form.rcLi') : t('form.rcFb')}{' '}
         {wordpress
-          ? 'Create a new application password in WordPress (Users, Profile, Application Passwords) and enter it with your username.'
+          ? t('form.sameWp')
           : provider === 'LINKEDIN'
-            ? 'Generate a new access token in the LinkedIn developer portal (Token Generator, with openid, profile and w_member_social).'
-            : 'Generate a new Page access token for the same Page in the Graph API Explorer.'}{' '}
-        It must belong to the same{' '}
-        {wordpress ? 'site' : provider === 'LINKEDIN' ? 'profile' : 'Page'} as before.
+            ? t('form.sameLi')
+            : t('form.sameFb')}
       </p>
       {wordpress && (
         <input
@@ -344,8 +314,8 @@ export function ReconnectForm({
           required
           maxLength={100}
           autoComplete="off"
-          aria-label="WordPress username"
-          placeholder="WordPress username (not your email)"
+          aria-label={t('form.wpUser')}
+          placeholder={t('form.wpUserPh')}
         />
       )}
       <input
@@ -355,8 +325,8 @@ export function ReconnectForm({
         onChange={(e) => setSecret(e.target.value)}
         required
         autoComplete="new-password"
-        aria-label={wordpress ? 'New application password' : 'New access token'}
-        placeholder={wordpress ? 'New application password' : 'New access token'}
+        aria-label={wordpress ? t('form.newAppPassword') : t('form.newToken')}
+        placeholder={wordpress ? t('form.newAppPassword') : t('form.newToken')}
       />
       {error && (
         <p className="rounded-lg border border-red-200 bg-danger-soft p-2.5 text-xs text-danger-ink">
@@ -365,10 +335,10 @@ export function ReconnectForm({
       )}
       <div className="flex gap-2">
         <button className="btn-primary" disabled={busy || !ready}>
-          {busy ? 'Checking…' : 'Reconnect'}
+          {busy ? t('form.checking') : t('ch.reconnect')}
         </button>
         <button type="button" className="btn-ghost" onClick={onCancel} disabled={busy}>
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </form>

@@ -16,7 +16,6 @@ import {
   Channel,
   ChannelProvider,
   ContentSummary,
-  PROVIDER_LABELS,
   ProviderInfo,
   PublishJob,
 } from '@/lib/api';
@@ -83,10 +82,8 @@ export default function ChannelsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Channels</h1>
-        <p className="text-sm text-muted">
-          Where your approved content is published: social pages and websites.
-        </p>
+        <h1 className="font-display text-2xl font-semibold">{t('nav.channels')}</h1>
+        <p className="text-sm text-muted">{t('ch.subtitle')}</p>
       </div>
 
       {error && (
@@ -96,15 +93,12 @@ export default function ChannelsPage() {
       )}
 
       <section className="card p-5">
-        <h2 className="font-display text-base font-semibold">Connected channels</h2>
+        <h2 className="font-display text-base font-semibold">{t('ch.connected')}</h2>
         {channels === null ? (
-          <p className="mt-2 text-sm text-muted">Loading…</p>
+          <p className="mt-2 text-sm text-muted">{t('common.loading')}</p>
         ) : channels.length === 0 ? (
           <p className="mt-2 text-sm text-muted">
-            Nothing connected yet.{' '}
-            {canManage
-              ? 'Add the test channel below to try publishing safely.'
-              : 'An admin can connect one.'}
+            {t('ch.nothing')} {canManage ? t('ch.addTest') : t('ch.askAdmin')}
           </p>
         ) : (
           <ul className="mt-3 divide-y divide-slate-100">
@@ -115,16 +109,15 @@ export default function ChannelsPage() {
                     {c.name}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {PROVIDER_LABELS[c.provider].label}
+                    {t(`provider.${c.provider}`)}
                     {c.config?.siteUrl ? ` · ${c.config.siteUrl.replace(/^https:\/\//, '')}` : ''}
                     {c.config?.pageName ? ` · ${c.config.pageName}` : ''}
                     {c.config?.memberName ? ` · ${c.config.memberName}` : ''}
-                    {c.config?.publishAs === 'draft' ? ' · saves drafts' : ''}
+                    {c.config?.publishAs === 'draft' ? ` · ${t('ch.savesDrafts')}` : ''}
                   </p>
                   {c.status === 'ERROR' && (
                     <p className="mt-1 text-xs text-danger-ink">
-                      {c.lastError ?? 'The login stopped working.'} Reconnect it with a new login;
-                      its history and settings are kept.
+                      {c.lastError ?? t('ch.loginStopped')} {t('ch.reconnectHint')}
                     </p>
                   )}
                 </div>
@@ -138,11 +131,7 @@ export default function ChannelsPage() {
                           : 'chip-draft'
                     }
                   >
-                    {c.status === 'CONNECTED'
-                      ? 'Connected'
-                      : c.status === 'ERROR'
-                        ? 'Needs reconnecting'
-                        : 'Paused'}
+                    {t(`ch.status.${c.status}`)}
                   </span>
                   {canManage && c.status !== 'ERROR' && (
                     <label className="flex items-center gap-1.5 text-xs text-slate-600">
@@ -159,11 +148,11 @@ export default function ChannelsPage() {
                           )
                         }
                       />
-                      Auto-post scheduled content
+                      {t('ch.autoPost')}
                     </label>
                   )}
                   {!canManage && c.autoPublish && (
-                    <span className="text-xs text-slate-500">Auto-posts scheduled content</span>
+                    <span className="text-xs text-slate-500">{t('ch.autoPosts')}</span>
                   )}
                   {canManage && (
                     <>
@@ -176,7 +165,7 @@ export default function ChannelsPage() {
                             setFormError('');
                           }}
                         >
-                          Reconnect
+                          {t('ch.reconnect')}
                         </button>
                       )}
                       {c.status !== 'ERROR' && (
@@ -194,21 +183,19 @@ export default function ChannelsPage() {
                             )
                           }
                         >
-                          {c.status === 'CONNECTED' ? 'Pause' : 'Resume'}
+                          {c.status === 'CONNECTED' ? t('ch.pause') : t('ch.resume')}
                         </button>
                       )}
                       <button
                         className="text-xs font-semibold text-slate-400 hover:text-danger"
                         disabled={busy}
                         onClick={() => {
-                          if (
-                            confirm(`Remove "${c.name}"? Its publishing history is removed too.`)
-                          ) {
+                          if (confirm(t('ch.confirmRemove', { name: c.name }))) {
                             run(() => apiFetch(`${base}/channels/${c.id}`, { method: 'DELETE' }));
                           }
                         }}
                       >
-                        Remove
+                        {t('common.remove')}
                       </button>
                     </>
                   )}
@@ -246,20 +233,19 @@ export default function ChannelsPage() {
       </section>
 
       <section className="card p-5">
-        <h2 className="font-display text-base font-semibold">Add a channel</h2>
+        <h2 className="font-display text-base font-semibold">{t('ch.addTitle')}</h2>
         <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {providers.map((p) => {
-            const info = PROVIDER_LABELS[p.provider];
             return (
               <li
                 key={p.provider}
                 className={`rounded-xl border border-line p-3 ${adding === p.provider && p.provider !== 'TEST' ? 'sm:col-span-2 xl:col-span-2' : ''}`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold">{info.label}</p>
-                  {!p.available && <span className="chip-draft">Soon</span>}
+                  <p className="font-semibold">{t(`provider.${p.provider}`)}</p>
+                  {!p.available && <span className="chip-draft">{t('nav.soon')}</span>}
                 </div>
-                <p className="mt-0.5 text-xs text-muted">{info.blurb}</p>
+                <p className="mt-0.5 text-xs text-muted">{t(`provider.${p.provider}.blurb`)}</p>
                 {p.available && canManage && adding !== p.provider && (
                   <button
                     className="btn-ghost mt-2"
@@ -268,7 +254,7 @@ export default function ChannelsPage() {
                       setFormError('');
                     }}
                   >
-                    Add
+                    {t('ch.add')}
                   </button>
                 )}
                 {adding === p.provider && (
@@ -301,18 +287,13 @@ export default function ChannelsPage() {
             );
           })}
         </ul>
-        <p className="mt-3 text-[11px] text-slate-400">
-          Real social networks and websites are being added one by one. The test channel never posts
-          anything.
-        </p>
+        <p className="mt-3 text-[11px] text-slate-400">{t('ch.note')}</p>
       </section>
 
       <section className="card p-5">
-        <h2 className="font-display text-base font-semibold">Publishing activity</h2>
+        <h2 className="font-display text-base font-semibold">{t('ch.activity')}</h2>
         {jobs.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
-            Nothing has been published yet. Approve content in the studio, then publish it.
-          </p>
+          <p className="mt-2 text-sm text-muted">{t('ch.noActivity')}</p>
         ) : (
           <ul className="mt-3 divide-y divide-slate-100">
             {jobs.map((j) => {
@@ -326,12 +307,12 @@ export default function ChannelsPage() {
                       className="min-w-0 truncate text-sm font-semibold hover:text-brand"
                       dir="auto"
                     >
-                      {piece?.title ?? j.payload?.title ?? 'Content'}
+                      {piece?.title ?? j.payload?.title ?? t('ch.contentFallback')}
                     </Link>
                     <JobBadge status={j.status} />
                   </div>
                   <p className="text-xs text-slate-400">
-                    {ch?.name ?? 'Removed channel'} · {jobWhen(j, t, dateLocale)}
+                    {ch?.name ?? t('ch.removedChannel')} · {jobWhen(j, t, dateLocale)}
                   </p>
                   {j.lastError && j.status !== 'PUBLISHED' && (
                     <p className="text-xs text-danger-ink">{j.lastError}</p>
@@ -339,7 +320,7 @@ export default function ChannelsPage() {
                   {j.payload?.text && (
                     <details className="text-xs text-slate-500">
                       <summary className="cursor-pointer">
-                        {j.status === 'PUBLISHED' ? 'What was posted' : 'What will be posted'}
+                        {j.status === 'PUBLISHED' ? t('ch.whatPosted') : t('ch.whatWillPost')}
                       </summary>
                       <p className="mt-1 whitespace-pre-wrap rounded-lg bg-surface p-2" dir="auto">
                         {j.payload.text}
@@ -360,7 +341,7 @@ export default function ChannelsPage() {
                             )
                           }
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                       )}
                       {(j.status === 'FAILED' || j.status === 'CANCELLED') && (
@@ -373,7 +354,7 @@ export default function ChannelsPage() {
                             )
                           }
                         >
-                          Try again
+                          {t('ch.tryAgain')}
                         </button>
                       )}
                     </div>

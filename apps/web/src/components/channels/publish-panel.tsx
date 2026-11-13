@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, apiFetch, Channel, PROVIDER_LABELS, PublishJob, PublishQueued } from '@/lib/api';
+import { ApiError, apiFetch, Channel, PublishJob, PublishQueued } from '@/lib/api';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import { JobBadge, jobWhen } from './job-parts';
@@ -112,7 +112,7 @@ export function PublishPanel({
               <li key={j.id} className="rounded-lg border border-line p-2.5 text-xs">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate font-semibold text-slate-700">
-                    {ch ? ch.name : 'Removed channel'}
+                    {ch ? ch.name : t('ch.removedChannel')}
                   </span>
                   <JobBadge status={j.status} />
                 </div>
@@ -127,7 +127,7 @@ export function PublishPanel({
                     rel="noopener noreferrer"
                     className="mt-1 inline-block font-semibold text-brand"
                   >
-                    View post
+                    {t('pub.viewPost')}
                   </a>
                 )}
                 {canPublish && (
@@ -138,7 +138,7 @@ export function PublishPanel({
                         onClick={() => act(j.id, 'cancel')}
                         disabled={busy}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     )}
                     {(j.status === 'FAILED' || j.status === 'CANCELLED') && (
@@ -147,7 +147,7 @@ export function PublishPanel({
                         onClick={() => act(j.id, 'retry')}
                         disabled={busy}
                       >
-                        Try again
+                        {t('ch.tryAgain')}
                       </button>
                     )}
                   </div>
@@ -160,13 +160,11 @@ export function PublishPanel({
 
       {canPublish ? (
         connected.length === 0 ? (
-          <p className="text-xs text-muted">
-            No channel is connected yet. An admin can add one on the Channels page.
-          </p>
+          <p className="text-xs text-muted">{t('pub.noChannel')}</p>
         ) : (
           <div className="space-y-2">
             <fieldset className="space-y-1">
-              <legend className="text-xs font-semibold text-slate-600">Publish to</legend>
+              <legend className="text-xs font-semibold text-slate-600">{t('pub.publishTo')}</legend>
               {connected.map((c) => (
                 <label
                   key={c.id}
@@ -184,14 +182,12 @@ export function PublishPanel({
                     }}
                   />
                   <span className="truncate">{c.name}</span>
-                  <span className="text-[11px] text-slate-400">
-                    {PROVIDER_LABELS[c.provider].label}
-                  </span>
+                  <span className="text-[11px] text-slate-400">{t(`provider.${c.provider}`)}</span>
                 </label>
               ))}
             </fieldset>
             <fieldset className="space-y-1 text-sm">
-              <legend className="text-xs font-semibold text-slate-600">When</legend>
+              <legend className="text-xs font-semibold text-slate-600">{t('pub.when')}</legend>
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
@@ -199,7 +195,7 @@ export function PublishPanel({
                   checked={when === 'now'}
                   onChange={() => setWhen('now')}
                 />
-                Now
+                {t('pub.now')}
               </label>
               <label className={`flex items-center gap-2 ${scheduledFor ? '' : 'opacity-50'}`}>
                 <input
@@ -210,8 +206,10 @@ export function PublishPanel({
                   onChange={() => setWhen('scheduled')}
                 />
                 {scheduledFor
-                  ? `At the scheduled time (${new Date(scheduledFor).toLocaleString()})`
-                  : 'At the scheduled time (schedule it first)'}
+                  ? t('pub.atScheduled', {
+                      when: new Date(scheduledFor).toLocaleString(dateLocale),
+                    })
+                  : t('pub.atScheduledFirst')}
               </label>
             </fieldset>
             <button
@@ -219,12 +217,12 @@ export function PublishPanel({
               onClick={publish}
               disabled={busy || chosen.size === 0}
             >
-              {when === 'now' ? 'Publish now' : 'Queue for the scheduled time'}
+              {when === 'now' ? t('pub.publishNow') : t('pub.queue')}
             </button>
           </div>
         )
       ) : (
-        <p className="text-xs text-muted">Publishers and admins can publish this content.</p>
+        <p className="text-xs text-muted">{t('pub.onlyPublishers')}</p>
       )}
 
       {error && (
@@ -241,7 +239,7 @@ export function PublishPanel({
       )}
       {advice.length > 0 && (
         <div className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">
-          <p className="font-semibold">Tips to get more from this post</p>
+          <p className="font-semibold">{t('pub.tips')}</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-4">
             {advice.map((a) => (
               <li key={a}>{a}</li>
@@ -249,9 +247,7 @@ export function PublishPanel({
           </ul>
         </div>
       )}
-      <p className="text-[11px] text-slate-400">
-        Editing the content cancels any post that is still waiting.
-      </p>
+      <p className="text-[11px] text-slate-400">{t('pub.editCancels')}</p>
     </div>
   );
 }
