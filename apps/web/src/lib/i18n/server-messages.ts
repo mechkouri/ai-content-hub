@@ -373,6 +373,16 @@ const ENTRIES: readonly Entry[] = [
     'L’un des canaux est introuvable',
     'إحدى القنوات غير موجودة',
   ],
+  [
+    'Too many requests. Please wait a moment.',
+    'Trop de requêtes. Patientez un instant.',
+    'طلبات كثيرة جدًا. انتظر قليلًا.',
+  ],
+  [
+    'The database is not reachable',
+    'La base de données est injoignable',
+    'قاعدة البيانات غير متاحة',
+  ],
   ['Invalid time', 'Heure invalide', 'وقت غير صالح'],
   ['No time found', 'Aucune heure trouvée', 'لم يُعثر على وقت'],
   ['Unknown time zone', 'Fuseau horaire inconnu', 'منطقة زمنية غير معروفة'],
