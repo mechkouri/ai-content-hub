@@ -29,6 +29,10 @@ const schema = z.object({
     .default('202601'),
   // Background publishing. Set PUBLISH_WORKER=off to stop this process from posting (e.g. on a replica).
   PUBLISH_WORKER: z.enum(['on', 'off']).default('on'),
+  // Requests allowed per client address per minute (0 turns the limit off). Set TRUST_PROXY=true only when the
+  // API runs behind a reverse proxy that sets X-Forwarded-For.
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(1500),
+  TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   PUBLISH_POLL_SECONDS: z.coerce.number().int().min(5).max(3600).default(30),
   // Public picture storage. Instagram only accepts pictures it can download from a public web address,
   // so posts are uploaded here for a moment, then removed. Needs a PUBLIC Supabase Storage bucket.
