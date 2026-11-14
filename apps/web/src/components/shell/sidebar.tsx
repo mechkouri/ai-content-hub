@@ -38,6 +38,7 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
       { href: '/calendar', label: 'nav.calendar', icon: CalendarDays },
       { href: '/campaigns', label: 'nav.campaigns', icon: Megaphone },
       { href: '/channels', label: 'nav.channels', icon: Share2 },
+      { href: '/automation', label: 'nav.workflow', icon: Workflow },
       { href: '/analytics', label: 'nav.analytics', icon: LineChart },
     ],
   },
@@ -50,11 +51,6 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
       { href: '/ai', label: 'nav.aiProviders', icon: Sparkles },
     ],
   },
-];
-
-/** Planned features from the design that are not built yet. They are shown disabled, never faked. */
-export const SOON_ITEMS: { label: MessageKey; icon: LucideIcon }[] = [
-  { label: 'nav.workflow', icon: Workflow },
 ];
 
 export interface SidebarProps {
@@ -132,25 +128,6 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
               </ul>
             </div>
           ))}
-
-          <div>
-            <p className="eyebrow px-3 pb-1.5">{t('nav.comingSoon')}</p>
-            <ul className="space-y-0.5">
-              {SOON_ITEMS.map(({ label, icon: Icon }) => (
-                <li
-                  key={label}
-                  aria-disabled="true"
-                  className="flex h-10 cursor-not-allowed items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-400"
-                >
-                  <Icon size={18} strokeWidth={1.8} aria-hidden />
-                  <span className="flex-1">{t(label)}</span>
-                  <span className="rounded bg-surface-sub px-1.5 py-0.5 font-label text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    {t('nav.soon')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
         </nav>
 
         <div className="shrink-0 space-y-2 border-t border-line p-3">

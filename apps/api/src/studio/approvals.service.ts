@@ -7,6 +7,7 @@ import {
 import { ApprovalStatus, ContentStatus, ReviewAction, Role } from '@prisma/client';
 import { PublishingService } from '../channels/publishing.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AutomationService } from './automation.service';
 
 /**
  * Human approval workflow: DRAFT -> IN_REVIEW -> APPROVED / CHANGES_REQUESTED.
@@ -18,6 +19,7 @@ export class ApprovalsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly publishing: PublishingService,
+    private readonly automation: AutomationService,
   ) {}
 
   private async find(orgId: string, id: string) {
@@ -116,7 +118,7 @@ export class ApprovalsService {
 
   async approve(orgId: string, id: string, actorId: string, comment?: string) {
     const piece = await this.decidable(orgId, id);
-    return this.move(
+    const approved = await this.move(
       orgId,
       piece,
       actorId,
@@ -124,6 +126,9 @@ export class ApprovalsService {
       ApprovalStatus.APPROVED,
       comment,
     );
+    // Workflow rules take it from here. This never fails the approval: it records what it did on each rule.
+    await this.automation.onApproved(orgId, actorId, piece.id);
+    return approved;
   }
 
   async requestChanges(orgId: string, id: string, actorId: string, comment: string) {

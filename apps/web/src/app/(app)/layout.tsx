@@ -16,6 +16,7 @@ const FEATURES: [string, MessageKey][] = [
   ['/calendar', 'gate.calendar'],
   ['/campaigns', 'gate.campaigns'],
   ['/channels', 'gate.channels'],
+  ['/automation', 'gate.automation'],
   ['/analytics', 'gate.analytics'],
   ['/brand', 'gate.brand'],
   ['/design', 'gate.design'],
