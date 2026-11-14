@@ -19,6 +19,7 @@ import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
 import { PublishPanel } from '@/components/channels/publish-panel';
 import { ImagesPanel } from '@/components/studio/images-panel';
 import { ScheduleBox } from '@/components/studio/schedule-box';
+import { SeoPanel } from '@/components/studio/seo-panel';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
 import {
@@ -225,7 +226,7 @@ export default function ContentDetailPage() {
 
   if (!detail || !draft)
     return <p className="text-sm text-muted">{error || t('common.loading')}</p>;
-  const { piece, seoChecks, source } = detail;
+  const { piece, seoChecks, seoScore, source } = detail;
   const kind = CONTENT_KINDS.find((k) => k.id === piece.kind)!;
   const nFacts = piece.usedFactIds.length;
   const factsUsed =
@@ -519,20 +520,13 @@ export default function ContentDetailPage() {
           )}
 
           {seoChecks && (
-            <section className="card p-4">
-              <h2 className="text-sm font-display text-base font-semibold">{t('det.seo')}</h2>
-              <p className="text-[11px] text-slate-400">{t('det.seoBased')}</p>
-              <ul className="mt-2 space-y-1.5">
-                {seoChecks.map((c) => (
-                  <li key={c.id} className="flex gap-2 text-xs">
-                    <span className={c.ok ? 'text-green-600' : 'text-amber-600'}>
-                      {c.ok ? '✓' : '!'}
-                    </span>
-                    <span className={c.ok ? 'text-slate-600' : 'text-slate-800'}>{c.message}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <SeoPanel
+              checks={seoChecks}
+              score={seoScore ?? 0}
+              article={piece.content as ArticleContent}
+              siteName={orgName}
+              language={piece.language}
+            />
           )}
 
           {canWrite && (

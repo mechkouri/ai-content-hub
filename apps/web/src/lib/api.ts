@@ -281,7 +281,9 @@ export interface ClaimWarning {
 export interface SeoCheck {
   id: string;
   ok: boolean;
+  /** English text. The app shows a translation chosen by `id`, filled with `params`. */
   message: string;
+  params?: Record<string, string | number>;
 }
 
 export interface ImageIdea {
@@ -355,6 +357,8 @@ export interface ContentPiece extends Omit<ContentSummary, 'warnings'> {
 export interface ContentDetail {
   piece: ContentPiece;
   seoChecks?: SeoCheck[];
+  /** 0 to 100: the share of SEO checks that pass. */
+  seoScore?: number;
   source?: { id: string; title: string } | null;
   factsAvailable?: number;
   excludedUnverified?: number;
