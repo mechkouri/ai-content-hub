@@ -9,6 +9,7 @@ type Locale = 'en' | 'fr' | 'ar';
 const web = require('../../web/src/lib/i18n/server-messages') as {
   SERVER_MESSAGE_KEYS: string[];
   translateServerMessage: (l: Locale, m: string) => string;
+  translateAutomationResult: (l: Locale, m: string) => string;
 };
 
 /** Internal codes and developer-only messages that never reach a normal user's screen. */
@@ -95,5 +96,23 @@ describe('server error messages', () => {
     expect(web.translateServerMessage('ar', 'WordPress is not available right now (503).')).toBe(
       'WordPress غير متاح حاليًا (503).',
     );
+  });
+
+  it('translates what an automation rule did', () => {
+    const t = web.translateAutomationResult;
+    expect(t('en', 'Queued for A, B.')).toBe('Queued for A, B.');
+    expect(t('fr', 'Queued for Main page, LinkedIn.')).toBe(
+      'Mis en file pour Main page, LinkedIn.',
+    );
+    expect(
+      t('fr', 'Queued for Main page. 1 channel(s) skipped because they need reconnecting.'),
+    ).toBe('Mis en file pour Main page. 1 canal(aux) ignoré(s) car à reconnecter.');
+    expect(t('ar', 'Nothing was queued.')).toMatch(/[؀-ۿ]/);
+    expect(t('fr', 'Failed: Choose a date and time in the future')).toBe(
+      'Échec : Choisissez une date et une heure dans le futur',
+    );
+    expect(
+      t('fr', 'Queued for A. Not queued: B: Already waiting to be published to "x"'),
+    ).toContain('Non mis en file : B: ');
   });
 });

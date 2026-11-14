@@ -367,6 +367,15 @@ const ENTRIES: readonly Entry[] = [
     'رفض ووردبريس بيانات الدخول المحفوظة (قد تكون أُلغيت أو تنقصها الصلاحيات). أعد ربط القناة.',
   ],
   // ---- sources
+  ['Automation rule not found', 'Règle d’automatisation introuvable', 'قاعدة الأتمتة غير موجودة'],
+  [
+    'One of the channels was not found',
+    'L’un des canaux est introuvable',
+    'إحدى القنوات غير موجودة',
+  ],
+  ['Invalid time', 'Heure invalide', 'وقت غير صالح'],
+  ['No time found', 'Aucune heure trouvée', 'لم يُعثر على وقت'],
+  ['Unknown time zone', 'Fuseau horaire inconnu', 'منطقة زمنية غير معروفة'],
   ['Template not found', 'Modèle introuvable', 'القالب غير موجود'],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
@@ -562,6 +571,11 @@ const PATTERNS: readonly (readonly [RegExp, string, string])[] = [
     'يمكن للمؤسسة الاحتفاظ بما يصل إلى $1 قالبًا. احذف واحدًا أولًا.',
   ],
   [
+    /^An organization can keep up to (\d+) automation rules\. Delete one first\.$/,
+    'Une organisation peut conserver jusqu’à $1 règles d’automatisation. Supprimez-en une d’abord.',
+    'يمكن للمؤسسة الاحتفاظ بما يصل إلى $1 قاعدة أتمتة. احذف واحدة أولًا.',
+  ],
+  [
     /^The channel "(.*)" is not connected$/,
     'Le canal « $1 » n’est pas connecté',
     'القناة "$1" غير متصلة',
@@ -603,4 +617,39 @@ export function translateServerMessage(locale: Locale, message: string): string 
     if (m) return (locale === 'fr' ? fr : ar).replace(/\$(\d)/g, (_, i) => m[Number(i)] ?? '');
   }
   return message;
+}
+
+const RESULT_SENTENCES: readonly (readonly [RegExp, string, string])[] = [
+  [
+    /No connected channel to publish to\./g,
+    'Aucun canal connecté sur lequel publier.',
+    'لا توجد قناة متصلة للنشر عليها.',
+  ],
+  [
+    /The rule has no daily time\./g,
+    'La règle n’a pas d’heure quotidienne.',
+    'ليس للقاعدة وقت يومي.',
+  ],
+  [/Nothing was queued\./g, 'Rien n’a été mis en file.', 'لم يتم وضع أي شيء في قائمة الانتظار.'],
+  [/Queued for ([^]+?)\.(?= |$)/g, 'Mis en file pour $1.', 'تمت الجدولة لـ $1.'],
+  [/Not queued: /g, 'Non mis en file : ', 'لم تتم الجدولة: '],
+  [
+    /(\d+) channel\(s\) skipped because they need reconnecting\./g,
+    '$1 canal(aux) ignoré(s) car à reconnecter.',
+    'تم تخطي $1 قناة لأنها تحتاج إلى إعادة ربط.',
+  ],
+];
+
+/** What an automation rule did the last time it ran, in the given language. The text comes from the API in English. */
+export function translateAutomationResult(locale: Locale, text: string): string {
+  if (locale === 'en') return text;
+  const failed = /^Failed: ([\s\S]+)$/.exec(text);
+  if (failed) {
+    return `${locale === 'fr' ? 'Échec : ' : 'فشل: '}${translateServerMessage(locale, failed[1])}`;
+  }
+  let out = text;
+  for (const [re, fr, ar] of RESULT_SENTENCES) {
+    out = out.replace(re, locale === 'fr' ? fr : ar);
+  }
+  return out;
 }
