@@ -27,12 +27,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    // The language and direction are set on <html> by a script before paint, so React must not complain.
+    // The language and direction are set on <html> by a script before paint, and browser extensions often add
+    // attributes to <head>, <script> and <body> before React loads, so React must not complain about those.
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOT_SCRIPT }} />
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: LOCALE_BOOT_SCRIPT }} />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <LocaleProvider>
           <AppProvider>{children}</AppProvider>
         </LocaleProvider>
