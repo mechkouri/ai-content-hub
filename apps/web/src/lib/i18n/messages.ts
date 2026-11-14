@@ -1055,6 +1055,39 @@ export const en = {
   'au.whenSlot': 'at the next {time} ({zone})',
   'au.lastRun': 'Last run {date}: {result}',
   'au.neverRun': 'Has not run yet.',
+  'seo.scoreLabel': 'SEO score {n} out of 100',
+  'seo.good': 'Well optimised',
+  'seo.okay': 'Good start, a few fixes will help',
+  'seo.weak': 'Needs work before publishing',
+  'seo.toFix': 'To improve ({n})',
+  'seo.passed': 'Done well ({n})',
+  'seo.jsonld': 'Structured data (JSON-LD)',
+  'seo.jsonldHint':
+    'Paste this into the page’s HTML so search engines understand the article and show your FAQ in results. Add the publication date when the page goes live.',
+  'seo.copied': 'Copied',
+  'seo.title-length': 'SEO title is {n} characters (aim for 30 to 60).',
+  'seo.meta-length': 'Meta description is {n} characters (aim for 70 to 160).',
+  'seo.structure': '{n} section(s) under the main heading (aim for at least 2).',
+  'seo.word-count': '{n} words (target for a {length} article is about {target}).',
+  'seo.faq': 'FAQ items: {n}.',
+  'seo.alt-text': 'Featured image has alt text.',
+  'seo.keyword-title': 'Primary keyword "{keyword}" in the SEO title.',
+  'seo.keyword-meta': 'Primary keyword in the meta description.',
+  'seo.keyword-h1': 'Primary keyword in the main heading (H1).',
+  'seo.keyword-intro': 'Primary keyword in the introduction.',
+  'seo.keyword-slug': 'Primary keyword in the URL slug.',
+  'seo.keyword-subheading': 'Primary keyword in at least one subheading (H2 or H3).',
+  'seo.keyword-density':
+    'The keyword makes up {density}% of the text, {count} time(s) (aim for 0.4% to 2.5%; more reads as keyword stuffing).',
+  'seo.sentence-length':
+    'Sentences average {avg} words, {long} over 35 words (aim for an average under 22).',
+  'seo.paragraph-length':
+    'The longest paragraph has {n} words (aim for 160 or fewer, split long blocks).',
+  'seo.heading-length': '{n} heading(s) over 70 characters (aim for none).',
+  'seo.heading-unique': '{n} heading(s) repeat another heading (aim for none).',
+  'seo.internal-links': '{n} internal link idea(s) (aim for at least 2).',
+  'seo.slug-length': 'The URL slug is {n} characters (aim for 75 or fewer).',
+  'seo.structured-data': 'Structured data type: {type}.',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2132,6 +2165,39 @@ export const fr: Messages = {
   'au.whenSlot': 'à la prochaine heure {time} ({zone})',
   'au.lastRun': 'Dernière exécution le {date} : {result}',
   'au.neverRun': 'Pas encore exécutée.',
+  'seo.scoreLabel': 'Score SEO : {n} sur 100',
+  'seo.good': 'Bien optimisé',
+  'seo.okay': 'Bon début, quelques corrections aideront',
+  'seo.weak': 'À améliorer avant publication',
+  'seo.toFix': 'À améliorer ({n})',
+  'seo.passed': 'Bien fait ({n})',
+  'seo.jsonld': 'Données structurées (JSON-LD)',
+  'seo.jsonldHint':
+    'Collez ceci dans le HTML de la page pour que les moteurs de recherche comprennent l’article et affichent votre FAQ dans les résultats. Ajoutez la date de publication à la mise en ligne.',
+  'seo.copied': 'Copié',
+  'seo.title-length': 'Le titre SEO fait {n} caractères (visez 30 à 60).',
+  'seo.meta-length': 'La méta-description fait {n} caractères (visez 70 à 160).',
+  'seo.structure': '{n} section(s) sous le titre principal (visez au moins 2).',
+  'seo.word-count': '{n} mots (l’objectif d’un article {length} est d’environ {target}).',
+  'seo.faq': 'Questions de la FAQ : {n}.',
+  'seo.alt-text': 'L’image à la une a un texte alternatif.',
+  'seo.keyword-title': 'Mot-clé principal « {keyword} » dans le titre SEO.',
+  'seo.keyword-meta': 'Mot-clé principal dans la méta-description.',
+  'seo.keyword-h1': 'Mot-clé principal dans le titre principal (H1).',
+  'seo.keyword-intro': 'Mot-clé principal dans l’introduction.',
+  'seo.keyword-slug': 'Mot-clé principal dans le slug de l’URL.',
+  'seo.keyword-subheading': 'Mot-clé principal dans au moins un intertitre (H2 ou H3).',
+  'seo.keyword-density':
+    'Le mot-clé représente {density} % du texte, {count} fois (visez 0,4 % à 2,5 % ; au-delà, c’est du bourrage de mots-clés).',
+  'seo.sentence-length':
+    'Les phrases font {avg} mots en moyenne, dont {long} de plus de 35 mots (visez une moyenne sous 22).',
+  'seo.paragraph-length':
+    'Le plus long paragraphe fait {n} mots (visez 160 au maximum, découpez les longs blocs).',
+  'seo.heading-length': '{n} intertitre(s) de plus de 70 caractères (visez zéro).',
+  'seo.heading-unique': '{n} intertitre(s) répètent un autre intertitre (visez zéro).',
+  'seo.internal-links': '{n} idée(s) de lien interne (visez au moins 2).',
+  'seo.slug-length': 'Le slug de l’URL fait {n} caractères (visez 75 au maximum).',
+  'seo.structured-data': 'Type de données structurées : {type}.',
 };
 
 export const ar: Messages = {
@@ -3165,6 +3231,38 @@ export const ar: Messages = {
   'au.whenSlot': 'في أقرب {time} ({zone})',
   'au.lastRun': 'آخر تشغيل {date}: {result}',
   'au.neverRun': 'لم تُشغَّل بعد.',
+  'seo.scoreLabel': 'نتيجة SEO: {n} من 100',
+  'seo.good': 'محسَّن جيدًا',
+  'seo.okay': 'بداية جيدة، وبعض التصحيحات ستفيد',
+  'seo.weak': 'يحتاج إلى تحسين قبل النشر',
+  'seo.toFix': 'للتحسين ({n})',
+  'seo.passed': 'منجز جيدًا ({n})',
+  'seo.jsonld': 'البيانات المنظمة (JSON-LD)',
+  'seo.jsonldHint':
+    'الصق هذا في HTML الصفحة ليفهم محرك البحث المقال ويعرض الأسئلة الشائعة في النتائج. أضف تاريخ النشر عند إطلاق الصفحة.',
+  'seo.copied': 'تم النسخ',
+  'seo.title-length': 'عنوان SEO طوله {n} حرفًا (الأفضل بين 30 و60).',
+  'seo.meta-length': 'الوصف التعريفي طوله {n} حرفًا (الأفضل بين 70 و160).',
+  'seo.structure': '{n} قسم تحت العنوان الرئيسي (الأفضل قسمان على الأقل).',
+  'seo.word-count': '{n} كلمة (الهدف لمقال {length} نحو {target}).',
+  'seo.faq': 'عدد الأسئلة الشائعة: {n}.',
+  'seo.alt-text': 'للصورة الرئيسية نص بديل.',
+  'seo.keyword-title': 'الكلمة المفتاحية "{keyword}" في عنوان SEO.',
+  'seo.keyword-meta': 'الكلمة المفتاحية في الوصف التعريفي.',
+  'seo.keyword-h1': 'الكلمة المفتاحية في العنوان الرئيسي (H1).',
+  'seo.keyword-intro': 'الكلمة المفتاحية في المقدمة.',
+  'seo.keyword-slug': 'الكلمة المفتاحية في مُعرّف الرابط.',
+  'seo.keyword-subheading': 'الكلمة المفتاحية في عنوان فرعي واحد على الأقل (H2 أو H3).',
+  'seo.keyword-density':
+    'تمثل الكلمة المفتاحية {density}% من النص، بتكرار {count} (الأفضل من 0.4% إلى 2.5%؛ أكثر من ذلك يُعد حشوًا).',
+  'seo.sentence-length':
+    'متوسط طول الجملة {avg} كلمة، منها {long} تتجاوز 35 كلمة (الأفضل متوسط أقل من 22).',
+  'seo.paragraph-length': 'أطول فقرة تضم {n} كلمة (الأفضل 160 كلمة أو أقل، قسّم الكتل الطويلة).',
+  'seo.heading-length': '{n} عنوان يتجاوز 70 حرفًا (الأفضل ألا يوجد أي منها).',
+  'seo.heading-unique': '{n} عنوان يكرر عنوانًا آخر (الأفضل ألا يوجد أي منها).',
+  'seo.internal-links': '{n} فكرة رابط داخلي (الأفضل اثنتان على الأقل).',
+  'seo.slug-length': 'مُعرّف الرابط طوله {n} حرفًا (الأفضل 75 أو أقل).',
+  'seo.structured-data': 'نوع البيانات المنظمة: {type}.',
 };
 
 export const LOCALES = ['en', 'fr', 'ar'] as const;

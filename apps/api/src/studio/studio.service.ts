@@ -10,7 +10,13 @@ import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalsService } from './approvals.service';
-import { ClaimWarning, findUnsupportedClaims, flattenStrings, seoChecks } from './content-guard';
+import {
+  ClaimWarning,
+  findUnsupportedClaims,
+  flattenStrings,
+  seoChecks,
+  seoScore,
+} from './content-guard';
 import { PromptContext, buildPrompt, buildTranslationPrompt } from './content-prompts';
 import {
   ARTICLE_WORD_TARGET,
@@ -165,17 +171,12 @@ export class StudioService {
 
   private present(piece: any) {
     const opts = (piece.options ?? {}) as Partial<GenerationOptions>;
-    return {
-      piece,
-      ...(piece.kind === ContentKind.ARTICLE
-        ? {
-            seoChecks: seoChecks(piece.content as ArticleContent, {
-              primaryKeyword: opts.primaryKeyword,
-              length: opts.length ?? 'medium',
-            }),
-          }
-        : {}),
-    };
+    if (piece.kind !== ContentKind.ARTICLE) return { piece };
+    const checks = seoChecks(piece.content as ArticleContent, {
+      primaryKeyword: opts.primaryKeyword,
+      length: opts.length ?? 'medium',
+    });
+    return { piece, seoChecks: checks, seoScore: seoScore(checks) };
   }
 
   // ---------- generation ----------
