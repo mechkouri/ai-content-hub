@@ -1,4 +1,4 @@
-import { stripInline } from '../common/inline';
+import { imageBlocksIn, removeImages, stripInline } from '../common/inline';
 import { ARTICLE_WORD_TARGET, ArticleContent, articleWordCount, slugify } from './content-schemas';
 
 export interface ClaimWarning {
@@ -57,7 +57,8 @@ export function findUnsupportedClaims(content: unknown, allowedParts: string[]):
   const corpusNumbers = new Set(corpusNoUrls.replace(EMAIL_RE, ' ').match(NUMBER_RE) ?? []);
   const corpusPlain = new Set([...corpusNumbers].map(stripSeparators));
 
-  const text = normalizeDigits(flattenStrings(content).join('\n')).toLowerCase();
+  // Pictures (their ids, captions and credits) are not claims about the facts.
+  const text = normalizeDigits(flattenStrings(content).map(removeImages).join('\n')).toLowerCase();
   const warnings: ClaimWarning[] = [];
   const seen = new Set<string>();
   const add = (w: ClaimWarning) => {
@@ -323,6 +324,110 @@ export function seoChecks(
       a.structuredData.type !== 'Other',
       `Structured data type: ${a.structuredData.type}.`,
       { type: a.structuredData.type },
+    ),
+  );
+  checks.push(...pictureAndGeoChecks(a));
+  return checks;
+}
+
+/** The article's text blocks exactly as written, pictures and links included. */
+function rawBlocks(a: ArticleContent): string[] {
+  const out = [a.introduction, a.conclusion];
+  for (const sec of a.sections) out.push(sec.body, ...(sec.subsections ?? []).map((x) => x.body));
+  out.push(...a.faq.map((f) => f.answer));
+  return out.filter((b) => b.trim());
+}
+
+/** A heading or FAQ question phrased as a question, in English, French or Arabic. */
+const QUESTION =
+  /[?؟]\s*$|^\s*(what|how|why|when|where|who|which|can|do|does|is|are|should|will|comment|pourquoi|quand|où|qui|quel|quelle|quels|quelles|que|quoi|est-ce|ما|ماذا|كيف|لماذا|متى|أين|من|هل)(?=\s|$|['’])/i;
+
+const MD_LINK = /\[[^\]\n]{1,200}\]\(https?:\/\/[^\s)]{1,500}\)/g;
+
+/**
+ * Checks for being found and quoted by AI search (Generative Engine Optimization) and for pictures. AI answer engines
+ * favour pages that answer first and briefly, use questions people really ask, give short complete answers
+ * and cite their sources. Pictures need a description (alt text) so they count for search and for screen readers.
+ */
+function pictureAndGeoChecks(a: ArticleContent): SeoCheck[] {
+  const checks: SeoCheck[] = [];
+  const raw = rawBlocks(a);
+
+  const pictures = raw.flatMap(imageBlocksIn);
+  const text = words(bodyBlocks(a).join(' '));
+  checks.push(
+    make(
+      'images',
+      pictures.length >= 1 || text < 300,
+      `${pictures.length} picture(s) in the text (an article of 300 words or more should have at least one).`,
+      { n: pictures.length },
+    ),
+  );
+  if (pictures.length > 0) {
+    const bad = pictures.filter((p) => !p.alt.trim() || p.alt.length > 125).length;
+    checks.push(
+      make(
+        'images-alt',
+        bad === 0,
+        bad
+          ? `${bad} picture(s) have no description, or one over 125 characters.`
+          : 'Every picture has a description (alt text).',
+        { n: bad },
+      ),
+    );
+  }
+
+  // Answer first: the opening paragraph should already give the answer, in a few sentences.
+  const firstPara =
+    a.introduction
+      .split(/\n{2,}/)
+      .map(stripInline)
+      .find((p) => p.trim()) ?? '';
+  const firstWords = words(firstPara);
+  checks.push(
+    make(
+      'geo-answer',
+      firstWords > 0 && firstWords <= 60,
+      `The opening paragraph has ${firstWords} words (aim for 60 or fewer, so it can stand alone as the answer).`,
+      { n: firstWords },
+    ),
+  );
+
+  const questionTexts = [
+    ...a.sections.flatMap((s) => [s.heading, ...(s.subsections ?? []).map((x) => x.heading)]),
+    ...a.faq.map((f) => f.question),
+  ];
+  const questions = questionTexts.filter((q) => QUESTION.test(q.trim())).length;
+  checks.push(
+    make(
+      'geo-questions',
+      questions >= 2,
+      `${questions} heading(s) or FAQ question(s) are phrased as a question (aim for at least 2).`,
+      { n: questions },
+    ),
+  );
+
+  if (a.faq.length > 0) {
+    const long = a.faq.filter((f) => words(stripInline(f.answer)) > 80).length;
+    checks.push(
+      make(
+        'geo-faq-concise',
+        long === 0,
+        long
+          ? `${long} FAQ answer(s) are over 80 words (short, complete answers are quoted more often).`
+          : 'Every FAQ answer is 80 words or fewer.',
+        { n: long },
+      ),
+    );
+  }
+
+  const links = raw.join('\n').match(MD_LINK)?.length ?? 0;
+  checks.push(
+    make(
+      'geo-citations',
+      links >= 1,
+      `${links} link(s) to a source in the text (cite at least one, answer engines trust cited pages).`,
+      { n: links },
     ),
   );
   return checks;

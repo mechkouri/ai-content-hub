@@ -157,10 +157,13 @@ export const defaultTransport: Transport = async (req) => {
   }
 };
 
-async function readCapped(res: Response, maxBytes: number): Promise<Uint8Array> {
+async function readCapped(
+  res: Response,
+  maxBytes: number,
+  tooLarge = 'The page is too large to import',
+): Promise<Uint8Array> {
   const declared = Number(res.headers.get('content-length'));
-  if (Number.isFinite(declared) && declared > maxBytes)
-    throw new FetchFailedError('The page is too large to import');
+  if (Number.isFinite(declared) && declared > maxBytes) throw new FetchFailedError(tooLarge);
   if (!res.body) return new Uint8Array();
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -171,7 +174,7 @@ async function readCapped(res: Response, maxBytes: number): Promise<Uint8Array> 
     total += value.length;
     if (total > maxBytes) {
       await reader.cancel().catch(() => undefined);
-      throw new FetchFailedError('The page is too large to import');
+      throw new FetchFailedError(tooLarge);
     }
     chunks.push(value);
   }
@@ -200,11 +203,25 @@ function decode(bytes: Uint8Array, contentType: string): string {
   }
 }
 
-/** Fetches text content from a public website with SSRF protection, validated redirects, size and time limits. */
-export async function safeFetchText(
+export interface FetchedBytes {
+  finalUrl: string;
+  contentType: string;
+  bytes: Uint8Array;
+}
+
+/**
+ * The shared download: SSRF protection (public addresses only, the IP pinned after the check), every redirect
+ * validated again, and strict size and time limits. `accept` is only a hint to the server; the caller still checks.
+ */
+async function safeFetchRaw(
   input: string,
-  opts: SafeFetchOptions = {},
-): Promise<FetchedPage> {
+  opts: SafeFetchOptions & {
+    accept: string;
+    tooLarge: string;
+    wrongType: string;
+    blocked?: string;
+  },
+): Promise<FetchedBytes> {
   const resolver = opts.resolver ?? defaultResolver;
   const transport = opts.transport ?? defaultTransport;
   const timeoutMs = opts.timeoutMs ?? 15_000;
@@ -217,7 +234,7 @@ export async function safeFetchText(
     const res = await transport({
       ...target,
       timeoutMs,
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,text/plain;q=0.9,*/*;q=0.1' },
+      headers: { 'User-Agent': USER_AGENT, Accept: opts.accept },
     });
 
     if ([301, 302, 303, 307, 308].includes(res.status)) {
@@ -230,7 +247,7 @@ export async function safeFetchText(
     if ([401, 403, 429, 503].includes(res.status)) {
       await res.body?.cancel().catch(() => undefined);
       throw new FetchFailedError(
-        'This website does not allow automated access. Paste the text instead.',
+        opts.blocked ?? 'This website does not allow automated access. Paste the text instead.',
       );
     }
     if (!res.ok) {
@@ -240,12 +257,45 @@ export async function safeFetchText(
     const contentType = res.headers.get('content-type') ?? '';
     if (allowed && !allowed.some((t) => contentType.toLowerCase().startsWith(t))) {
       await res.body?.cancel().catch(() => undefined);
-      throw new FetchFailedError('Only web pages and plain text can be imported from a URL');
+      throw new FetchFailedError(opts.wrongType);
     }
-    const bytes = await readCapped(res, maxBytes);
-    return { finalUrl: target.url.toString(), contentType, body: decode(bytes, contentType) };
+    const bytes = await readCapped(res, maxBytes, opts.tooLarge);
+    return { finalUrl: target.url.toString(), contentType, bytes };
   }
   throw new FetchFailedError('The website redirected too many times');
+}
+
+/** Fetches text content from a public website with SSRF protection, validated redirects, size and time limits. */
+export async function safeFetchText(
+  input: string,
+  opts: SafeFetchOptions = {},
+): Promise<FetchedPage> {
+  const r = await safeFetchRaw(input, {
+    ...opts,
+    accept: 'text/html,text/plain;q=0.9,*/*;q=0.1',
+    tooLarge: 'The page is too large to import',
+    wrongType: 'Only web pages and plain text can be imported from a URL',
+  });
+  return { finalUrl: r.finalUrl, contentType: r.contentType, body: decode(r.bytes, r.contentType) };
+}
+
+/**
+ * Downloads a picture from a public website with the same protections. The caller must still check that the
+ * bytes really are an image: the server's content type is only a first filter.
+ */
+export async function safeFetchImage(
+  input: string,
+  opts: SafeFetchOptions = {},
+): Promise<FetchedBytes> {
+  return safeFetchRaw(input, {
+    ...opts,
+    allowedTypes: opts.allowedTypes ?? ['image/'],
+    maxBytes: opts.maxBytes ?? 12 * 1024 * 1024,
+    accept: 'image/jpeg,image/png,image/webp,image/gif;q=0.9,*/*;q=0.1',
+    tooLarge: 'The picture is too large to import',
+    wrongType: 'That address is not a picture',
+    blocked: 'That site does not allow importing this picture. Try another one.',
+  });
 }
 
 // ---- robots.txt (good-citizen check; we never try to bypass access controls) ----

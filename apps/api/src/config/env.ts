@@ -42,6 +42,8 @@ const schema = z.object({
     .string()
     .regex(/^[a-z0-9][a-z0-9_-]{1,62}$/)
     .default('public-media'),
+  // Free picture search. Openverse needs no key; add a free Pexels key (pexels.com/api) to search Pexels too.
+  PEXELS_API_KEY: z.string().min(10).optional(),
   SUPABASE_JWT_SECRET: z.string().min(1).optional(),
   SUPABASE_JWKS_URL: z.string().url().optional(),
 });

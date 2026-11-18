@@ -1,5 +1,5 @@
 import { seoChecks, seoScore } from './content-guard';
-import { ArticleContent } from './content-schemas';
+import { ArticleContent, articleWordCount } from './content-schemas';
 
 const para = (n: number, word = 'word') => Array.from({ length: n }, () => word).join(' ');
 const sentence = (n: number) => `${para(n)}.`;
@@ -164,7 +164,24 @@ describe('messages carry the numbers a translation needs', () => {
       // "H1", "H2" and "H3" are heading names, not quantities.
       if (['keyword-h1', 'keyword-subheading'].includes(c.id)) continue;
       for (const num of c.message.match(/[0-9]+([.][0-9]+)?/g) ?? []) {
-        if (['30', '60', '70', '160', '2', '75', '22', '35', '0.4', '2.5'].includes(num)) continue; // fixed advice
+        if (
+          [
+            '30',
+            '60',
+            '70',
+            '160',
+            '2',
+            '75',
+            '22',
+            '35',
+            '0.4',
+            '2.5',
+            '300',
+            '80',
+            '125',
+          ].includes(num)
+        )
+          continue; // fixed advice
         const values = Object.values(c.params ?? {}).map(String);
         expect({ id: c.id, num, found: values.includes(num) }).toEqual({
           id: c.id,
@@ -284,5 +301,145 @@ describe('structured data (JSON-LD)', () => {
     const first = text.split('\n').slice(1, text.split('\n').indexOf('</script>')).join('\n');
     // read back, the escaped closing tag is the original text and the whole thing is valid JSON
     expect(JSON.parse(first.split('<\\/').join('</'))['@type']).toBe('Article');
+  });
+});
+
+describe('pictures and AI-search (GEO) checks', () => {
+  const ID = '11111111-1111-4111-8111-111111111111';
+  const pic = (alt: string, caption = '') =>
+    `![${alt}](media:${ID}${caption ? ` "${caption}"` : ''})`;
+  const only = (a: ArticleContent) => byId(a);
+
+  it('wants at least one picture in a long article, but not in a short one', () => {
+    expect(only(article())['images'].ok).toBe(true); // short article: fine without
+    const long = article({ introduction: para(320) });
+    expect(only(long)['images'].ok).toBe(false);
+    expect(only(long)['images'].params).toEqual({ n: 0 });
+    const withPic = article({
+      introduction: `${para(320)}
+
+${pic('A lecture hall')}`,
+    });
+    expect(only(withPic)['images'].ok).toBe(true);
+    expect(only(withPic)['images'].params).toEqual({ n: 1 });
+  });
+
+  it('checks every picture has a description of a sensible length', () => {
+    expect(only(article())['images-alt']).toBeUndefined(); // no pictures, nothing to check
+    const good = only(
+      article({
+        introduction: `Text.
+
+${pic('A lecture hall')}`,
+      }),
+    );
+    expect(good['images-alt'].ok).toBe(true);
+    const bad = only(
+      article({
+        introduction: `Text.
+
+${pic('')}
+
+${pic('x'.repeat(126))}
+
+${pic('Fine')}`,
+      }),
+    );
+    expect(bad['images-alt'].ok).toBe(false);
+    expect(bad['images-alt'].params).toEqual({ n: 2 });
+  });
+
+  it('does not count a picture, its caption or its credit as words', () => {
+    const base = article();
+    const withPic = article({
+      introduction: `${base.introduction}
+
+${pic('Students', 'Photo: Jane Doe · CC BY 4.0 · flickr')}`,
+    });
+    expect(articleWordCount(withPic)).toBe(articleWordCount(base));
+    expect(only(withPic)['sentence-length'].params).toEqual(only(base)['sentence-length'].params);
+  });
+
+  it('wants an opening paragraph that gives the answer in 60 words or fewer', () => {
+    expect(only(article())['geo-answer'].ok).toBe(true);
+    const wall = only(article({ introduction: sentence(90) }))['geo-answer'];
+    expect(wall.ok).toBe(false);
+    expect(wall.params).toEqual({ n: 90 });
+    // only the first paragraph counts, and a picture does not
+    const second = only(
+      article({
+        introduction: `${pic('x')}
+
+Short answer here.
+
+${para(100)}`,
+      }),
+    );
+    expect(second['geo-answer'].ok).toBe(true);
+    expect(only(article({ introduction: '' }))['geo-answer'].ok).toBe(false);
+  });
+
+  it('wants headings or FAQ questions phrased as real questions, in three languages', () => {
+    const q = (a: Partial<ArticleContent>) => only(article(a))['geo-questions'];
+    // "Why visit the open day", "How to register" and the FAQ "Is it free?" all open like a question
+    expect(q({})).toMatchObject({ ok: true, params: { n: 3 } });
+    expect(
+      q({
+        sections: [
+          { heading: 'The campus', body: 'x' },
+          { heading: 'Our programs', body: 'x' },
+        ],
+        faq: [],
+      }),
+    ).toMatchObject({ ok: false, params: { n: 0 } });
+    expect(
+      q({
+        sections: [
+          { heading: 'Is it free?', body: 'x' },
+          { heading: 'Comment s’inscrire', body: 'x' },
+        ],
+        faq: [],
+      }).ok,
+    ).toBe(true);
+    expect(
+      q({
+        sections: [{ heading: 'ما هي المواعيد', body: 'x' }],
+        faq: [{ question: 'هل التسجيل مجاني؟', answer: 'نعم' }],
+      }).ok,
+    ).toBe(true);
+    expect(
+      q({
+        sections: [{ heading: 'Campus tour?', body: 'x' }],
+        faq: [{ question: 'Free?', answer: 'Yes' }],
+      }).ok,
+    ).toBe(true);
+  });
+
+  it('wants short FAQ answers, and has no opinion when there is no FAQ', () => {
+    expect(only(article())['geo-faq-concise'].ok).toBe(true);
+    const long = only(
+      article({
+        faq: [
+          { question: 'Free?', answer: para(90) },
+          { question: 'Where?', answer: 'Rabat.' },
+        ],
+      }),
+    );
+    expect(long['geo-faq-concise'].ok).toBe(false);
+    expect(long['geo-faq-concise'].params).toEqual({ n: 1 });
+    expect(only(article({ faq: [] }))['geo-faq-concise']).toBeUndefined();
+  });
+
+  it('wants at least one cited source, as a link', () => {
+    expect(only(article())['geo-citations'].ok).toBe(false);
+    const cited = only(
+      article({ conclusion: 'See [the ministry](https://example.gov/education) for details.' }),
+    );
+    expect(cited['geo-citations'].ok).toBe(true);
+    expect(cited['geo-citations'].params).toEqual({ n: 1 });
+    // an address written without a link does not count
+    expect(
+      only(article({ conclusion: 'See https://example.gov/education' }))['geo-citations'].ok,
+    ).toBe(false);
   });
 });

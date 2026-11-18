@@ -1,4 +1,4 @@
-import { inlineToHtml } from '../common/inline';
+import { inlineToHtml, parseImageBlock } from '../common/inline';
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -6,6 +6,16 @@ const esc = (s: unknown) =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+
+/**
+ * A picture with its description and, when it has one, its caption (where the credit for a free picture goes).
+ * The address is a placeholder, media:ID, that the publisher replaces with the website's own address and the
+ * picture's size. Lazy loading keeps the page fast; the alt text is what search engines and screen readers use.
+ */
+const figure = (b: { alt: string; assetId: string; caption: string }) =>
+  `<figure><img src="media:${b.assetId}" alt="${esc(b.alt)}" loading="lazy" decoding="async">${
+    b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ''
+  }</figure>`;
 
 /**
  * Blank-line separated text becomes paragraphs; single line breaks inside one stay as <br>. **Bold**, *italic*
@@ -16,7 +26,10 @@ const paragraphs = (text: unknown) =>
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) => `<p>${inlineToHtml(p).replace(/\n/g, '<br>')}</p>`)
+    .map((p) => {
+      const img = parseImageBlock(p);
+      return img ? figure(img) : `<p>${inlineToHtml(p).replace(/\n/g, '<br>')}</p>`;
+    })
     .join('\n');
 
 /**

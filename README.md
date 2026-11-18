@@ -43,18 +43,19 @@ The web app runs on http://localhost:3000 and the API on http://localhost:4000/a
 
 ### API settings (`.env`)
 
-| Setting                                                                                       | What it is                                                                                             |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`, `DIRECT_URL`                                                                  | Supabase Postgres connection strings (pooled and direct)                                               |
-| `SUPABASE_JWKS_URL` or `SUPABASE_JWT_SECRET`                                                  | How the API checks sign-in tokens (set one)                                                            |
-| `WEB_ORIGIN`                                                                                  | The web app's address, allowed by CORS (default `http://localhost:3000`)                               |
-| `OPENROUTER_API_KEY`                                                                          | Text generation. Only free models are called                                                           |
-| `CLOUDFLARE_IMAGE_WORKER_URL` + `_TOKEN`, or `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` | Image generation                                                                                       |
-| `ENCRYPTION_KEY`                                                                              | Encrypts channel logins at rest. Generate with the command in `.env.example`. Do not lose or change it |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_MEDIA_BUCKET`                            | Public picture storage, needed for Instagram only (see below)                                          |
-| `PUBLISH_WORKER`, `PUBLISH_POLL_SECONDS`                                                      | The background publisher. Set `PUBLISH_WORKER=off` on extra copies of the server                       |
-| `LINKEDIN_API_VERSION`                                                                        | LinkedIn retires API versions after about a year. Update it when LinkedIn says so                      |
-| `AI_*_LIMIT`, `AI_RATE_PER_MINUTE`                                                            | Platform caps per organization. Organizations can lower them, never raise them                         |
+| Setting                                                                                       | What it is                                                                                                        |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`, `DIRECT_URL`                                                                  | Supabase Postgres connection strings (pooled and direct)                                                          |
+| `SUPABASE_JWKS_URL` or `SUPABASE_JWT_SECRET`                                                  | How the API checks sign-in tokens (set one)                                                                       |
+| `WEB_ORIGIN`                                                                                  | The web app's address, allowed by CORS (default `http://localhost:3000`)                                          |
+| `OPENROUTER_API_KEY`                                                                          | Text generation. Only free models are called                                                                      |
+| `CLOUDFLARE_IMAGE_WORKER_URL` + `_TOKEN`, or `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` | Image generation                                                                                                  |
+| `ENCRYPTION_KEY`                                                                              | Encrypts channel logins at rest. Generate with the command in `.env.example`. Do not lose or change it            |
+| `PEXELS_API_KEY`                                                                              | Optional. A free key from pexels.com/api adds Pexels to the free picture search (Openverse works without any key) |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_MEDIA_BUCKET`                            | Public picture storage, needed for Instagram only (see below)                                                     |
+| `PUBLISH_WORKER`, `PUBLISH_POLL_SECONDS`                                                      | The background publisher. Set `PUBLISH_WORKER=off` on extra copies of the server                                  |
+| `LINKEDIN_API_VERSION`                                                                        | LinkedIn retires API versions after about a year. Update it when LinkedIn says so                                 |
+| `AI_*_LIMIT`, `AI_RATE_PER_MINUTE`                                                            | Platform caps per organization. Organizations can lower them, never raise them                                    |
 
 ### Web settings (`apps/web/.env.local`)
 

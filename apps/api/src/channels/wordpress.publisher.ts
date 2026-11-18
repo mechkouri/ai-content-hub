@@ -140,6 +140,7 @@ export class WordPressPublisher implements Publisher {
     channel: PublishChannel,
     payload: PostPayload,
     media: PublishMedia[] = [],
+    inline: PublishMedia[] = [],
   ): Promise<PublishResult> {
     const cfg = channel.config as Partial<WpConfig> | null;
     const secret = channel.secret;
@@ -168,15 +169,17 @@ export class WordPressPublisher implements Publisher {
     // The first picture becomes the featured image. It is uploaded only now, after the duplicate check,
     // so a retry never re-uploads for a post that already exists. A failure here is safe to retry.
     const featured = media[0]
-      ? await this.uploadFeatured(cfg.siteUrl, headers, media[0])
+      ? (await this.uploadPicture(cfg.siteUrl, headers, media[0])).id
       : undefined;
+    // Pictures inside the text go to the site's media library too, and the page then points at them.
+    const html = await this.placeInlinePictures(cfg.siteUrl, headers, payload.html, inline);
 
     const res = await this.call(api, {
       method: 'POST',
       headers,
       body: {
         title: payload.title,
-        content: payload.html,
+        content: html,
         excerpt: payload.excerpt ?? '',
         slug: payload.slug,
         status: cfg.publishAs === 'draft' ? 'draft' : 'publish',
@@ -187,12 +190,58 @@ export class WordPressPublisher implements Publisher {
     return { externalId: String(res.json.id), url: res.json.link ?? null };
   }
 
-  /** Adds the picture to the site's media library, with its description, and returns its id. */
-  private async uploadFeatured(
+  /**
+   * Uploads each picture the text refers to and swaps the placeholder address for the site's own, adding the
+   * picture's size (so the page does not jump while it loads). A picture that could not be found is removed from
+   * the page together with its caption, never left as a broken image.
+   */
+  private async placeInlinePictures(
+    siteUrl: string,
+    headers: Record<string, string>,
+    html: string,
+    inline: PublishMedia[],
+  ): Promise<string> {
+    const ids = [
+      ...new Set(
+        [...html.matchAll(/src="media:([0-9a-fA-F-]{36})"/g)].map((m) => m[1].toLowerCase()),
+      ),
+    ];
+    let out = html;
+    for (const id of ids) {
+      const picture = inline.find((m) => m.assetId?.toLowerCase() === id);
+      if (!picture) {
+        out = out.replace(
+          new RegExp(
+            `<figure><img src="media:${id}"[^>]*>(?:<figcaption>.*?</figcaption>)?</figure>\\n?`,
+            'gi',
+          ),
+          '',
+        );
+        continue;
+      }
+      const { url } = await this.uploadPicture(siteUrl, headers, picture, true);
+      const size =
+        picture.width && picture.height
+          ? ` width="${picture.width}" height="${picture.height}"`
+          : '';
+      const safe = url
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      // A function, so "$&" and similar in an address are never read as replacement patterns.
+      out = out.replace(new RegExp(`src="media:${id}"`, 'gi'), () => `src="${safe}"${size}`);
+    }
+    return out;
+  }
+
+  /** Adds the picture to the site's media library, with its description, and returns its id and address. */
+  private async uploadPicture(
     siteUrl: string,
     headers: Record<string, string>,
     m: PublishMedia,
-  ): Promise<number> {
+    needUrl = false,
+  ): Promise<{ id: number; url: string }> {
     const media = `${siteUrl}/wp-json/wp/v2/media`;
     const filename = m.filename.replace(/[\r\n"\\]/g, '_') || 'image';
     const up = await this.call(media, {
@@ -205,7 +254,12 @@ export class WordPressPublisher implements Publisher {
     if (m.altText) {
       await this.call(`${media}/${id}`, { method: 'POST', headers, body: { alt_text: m.altText } });
     }
-    return id;
+    const url = String(up.json?.source_url ?? '');
+    // A picture inside the text is useless without its address; the featured image is attached by id.
+    if (needUrl && !/^https?:\/\//.test(url)) {
+      throw new Error('WordPress did not confirm the picture upload.');
+    }
+    return { id, url };
   }
 
   /** One request, with failures sorted into "try again later" and "will never work". */
