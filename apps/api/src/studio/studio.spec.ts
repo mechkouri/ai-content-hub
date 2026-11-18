@@ -972,6 +972,43 @@ describe('content studio API', () => {
         .expect(403);
     });
 
+    it('keeps the pictures of an article through translation, with their description translated', async () => {
+      const a = await make();
+      const ASSET = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+      const stored = pieces.find((p) => p.id === a.id);
+      stored.content.introduction = `Welcome.\n\n![Students on campus](media:${ASSET} "Photo: Jane Doe · CC BY 4.0 · flickr")\n\nSee you.`;
+      aiMock.generateJson.mockClear();
+      nextRaw = {
+        usedFacts: [],
+        content: article({
+          slug: 'x',
+          seoTitle: 'Journée portes ouvertes à Atlas University : 14 mars 2027',
+          introduction: 'Bienvenue.\n\n[[PICTURE 1: Des étudiants sur le campus]]\n\nÀ bientôt.',
+        }),
+      };
+      const res = await request(app.getHttpServer())
+        .post(`${base}/${a.id}/translate`)
+        .set('Authorization', as(U_EDITOR))
+        .send({ language: 'fr' })
+        .expect(201);
+
+      // the translator saw a marker, never the picture's address or credit
+      const [, opts] = aiMock.generateJson.mock.calls[0] as any[];
+      expect(opts.prompt).toContain('[[PICTURE 1: Students on campus]]');
+      expect(opts.prompt).not.toContain(ASSET);
+      expect(opts.prompt).not.toContain('Jane Doe');
+      expect(opts.system).toMatch(/PICTURE/);
+
+      // the saved translation has the real picture, a translated description and the original credit
+      expect(res.body.piece.content.introduction).toBe(
+        `Bienvenue.\n\n![Des étudiants sur le campus](media:${ASSET} "Photo: Jane Doe · CC BY 4.0 · flickr")\n\nÀ bientôt.`,
+      );
+      // the picture's address (digits and all) is not mistaken for an invented number
+      expect(res.body.piece.warnings.map((w: any) => w.value)).not.toEqual(
+        expect.arrayContaining(['0', '1', '4']),
+      );
+    });
+
     it('refuses a translation that comes back untranslated, and saves nothing', async () => {
       const a = await make();
       expect(pieces).toHaveLength(1);
