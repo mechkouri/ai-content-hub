@@ -6,10 +6,18 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ApprovalStatus, ChannelStatus, Prisma, PublishStatus } from '@prisma/client';
+import { ApprovalStatus, ChannelStatus, ContentKind, Prisma, PublishStatus } from '@prisma/client';
+import sharp from 'sharp';
+import { imageBlocksIn } from '../common/inline';
 import { PrismaService } from '../prisma/prisma.service';
 import { STORAGE, StorageProvider } from '../storage/storage';
-import { ChannelAuthError, PermanentPublishError, Publisher, PUBLISHERS } from './publisher';
+import {
+  ChannelAuthError,
+  PermanentPublishError,
+  Publisher,
+  PublishMedia,
+  PUBLISHERS,
+} from './publisher';
 import { SecretsService } from './secrets.service';
 import { checkPost, renderPost } from './publishing-rules';
 
@@ -294,10 +302,12 @@ export class PublishingService {
       const payload = renderPost(piece.kind, piece.title, piece.content, piece.language);
       const secret = channel.credentials ? this.secrets.decrypt(channel.credentials) : null;
       const media = await this.loadMedia(piece.id);
+      const inline = await this.loadInline(piece.organizationId, piece.kind, piece.content);
       const result = await publisher.publish(
         { id: channel.id, name: channel.name, config: channel.config, secret },
         payload,
         media,
+        inline,
       );
       await this.prisma.publishJob.update({
         where: { id: job.id },
@@ -331,6 +341,51 @@ export class PublishingService {
       await fail(message.slice(0, 500), e instanceof PermanentPublishError);
       return false;
     }
+  }
+
+  /**
+   * The pictures an article's text refers to, read from storage just before posting. Only the organization's own
+   * pictures can be found, so a reference to anybody else's picture simply has nothing to load.
+   */
+  private async loadInline(orgId: string, kind: string, content: any) {
+    if (kind !== ContentKind.ARTICLE) return [];
+    const texts: string[] = [
+      content?.introduction,
+      content?.conclusion,
+      ...(content?.sections ?? []).flatMap((s: any) => [
+        s?.body,
+        ...(s?.subsections ?? []).map((x: any) => x?.body),
+      ]),
+      ...(content?.faq ?? []).map((f: any) => f?.answer),
+    ].filter((t): t is string => typeof t === 'string');
+    const blocks = texts.flatMap(imageBlocksIn);
+    const ids = [...new Set(blocks.map((b) => b.assetId))];
+    if (ids.length === 0) return [];
+    const assets = await this.prisma.mediaAsset.findMany({
+      where: { organizationId: orgId, id: { in: ids } },
+    });
+    const out: PublishMedia[] = [];
+    for (const id of ids) {
+      const asset = assets.find((a: any) => a.id === id);
+      if (!asset) continue;
+      const data = await this.storage.get(asset.storageKey);
+      let size: { width?: number; height?: number } = {};
+      try {
+        size = await sharp(data).metadata();
+      } catch {
+        // an unreadable size only means the page gets no width and height attributes
+      }
+      out.push({
+        assetId: id,
+        filename: asset.filename as string,
+        mimeType: asset.mimeType as string,
+        data,
+        altText: blocks.find((b) => b.assetId === id)?.alt || undefined,
+        width: size.width,
+        height: size.height,
+      });
+    }
+    return out;
   }
 
   /** The content's pictures, in order, read from storage just before posting. */

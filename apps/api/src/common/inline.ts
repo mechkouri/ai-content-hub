@@ -74,6 +74,14 @@ export function imageAssetIds(text: string): string[] {
   return ids;
 }
 
+/** Every picture block in a text, in order (the same picture may appear more than once). */
+export function imageBlocksIn(text: string): ImageBlock[] {
+  return text
+    .split(/\n{2,}/)
+    .map((p) => parseImageBlock(p))
+    .filter((b): b is ImageBlock => b !== null);
+}
+
 /** The text without its pictures. Their ids, captions and credits are not words to check or count. */
 export function removeImages(text: string): string {
   return text.replace(IMAGE_ANYWHERE, '');

@@ -35,6 +35,10 @@ export interface PublishMedia {
   data: Buffer;
   /** Description for people who cannot see the picture. */
   altText?: string;
+  /** Pictures inside an article's text: the media library id the text refers to, and the picture's size. */
+  assetId?: string;
+  width?: number;
+  height?: number;
 }
 
 /** One network or website. Real providers (WordPress, Meta, LinkedIn) plug in here. */
@@ -60,6 +64,8 @@ export interface Publisher {
     channel: PublishChannel,
     payload: PostPayload,
     media: PublishMedia[],
+    /** Pictures that sit inside the article text (websites place them in the page; networks ignore them). */
+    inline?: PublishMedia[],
   ): Promise<PublishResult>;
 }
 
