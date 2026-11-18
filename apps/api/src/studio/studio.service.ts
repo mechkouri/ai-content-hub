@@ -10,6 +10,7 @@ import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalsService } from './approvals.service';
+import { protectPictures, restorePictures } from './translation-pictures';
 import {
   ClaimWarning,
   findUnsupportedClaims,
@@ -275,9 +276,12 @@ export class StudioService {
     const kind = original.kind as Kind;
     const { org, brand, verified } = await this.context(orgId, original.sourceId);
 
+    // Pictures inside an article are taken out for the translator and put back afterwards, so the translation
+    // keeps them (with their description translated) instead of the model mangling the syntax.
+    const protectedArticle = kind === 'ARTICLE' ? protectPictures(original.content) : null;
     const { system, prompt, maxTokens } = buildTranslationPrompt(
       kind,
-      original.content,
+      protectedArticle ? protectedArticle.content : original.content,
       target,
       original.language,
     );
@@ -286,7 +290,12 @@ export class StudioService {
       { system, prompt, maxTokens, temperature: 0.2, schema: generationEnvelope(kind) },
     );
 
-    const content = this.postProcess(kind, out.data.content as any);
+    const content = this.postProcess(
+      kind,
+      protectedArticle
+        ? restorePictures(out.data.content, protectedArticle.pictures)
+        : (out.data.content as any),
+    );
     // Lazy models sometimes hand the text back untranslated: refuse that instead of saving a fake translation.
     const before = mainText(kind, original.content);
     if (before.length > 0 && before === mainText(kind, content)) {
