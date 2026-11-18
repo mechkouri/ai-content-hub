@@ -386,6 +386,43 @@ const ENTRIES: readonly Entry[] = [
   ['Invalid time', 'Heure invalide', 'وقت غير صالح'],
   ['No time found', 'Aucune heure trouvée', 'لم يُعثر على وقت'],
   ['Unknown time zone', 'Fuseau horaire inconnu', 'منطقة زمنية غير معروفة'],
+  [
+    'The picture search is not available right now',
+    'La recherche d’images n’est pas disponible pour le moment',
+    'البحث عن الصور غير متاح حاليًا',
+  ],
+  [
+    'The picture search is busy. Try again in a minute.',
+    'La recherche d’images est occupée. Réessayez dans une minute.',
+    'البحث عن الصور مشغول. حاول مجددًا بعد دقيقة.',
+  ],
+  [
+    'Type 2 to 100 characters to search',
+    'Saisissez de 2 à 100 caractères pour rechercher',
+    'اكتب من 2 إلى 100 حرف للبحث',
+  ],
+  [
+    'Pexels is not set up on the server (missing PEXELS_API_KEY)',
+    'Pexels n’est pas configuré sur le serveur (PEXELS_API_KEY manquante)',
+    'لم يتم إعداد Pexels على الخادم (PEXELS_API_KEY مفقود)',
+  ],
+  [
+    'Only https picture addresses can be imported',
+    'Seules les adresses d’images en https peuvent être importées',
+    'يمكن استيراد عناوين الصور بـ https فقط',
+  ],
+  [
+    'That address is not a PNG, JPEG, WebP or GIF picture',
+    'Cette adresse n’est pas une image PNG, JPEG, WebP ou GIF',
+    'هذا العنوان ليس صورة PNG أو JPEG أو WebP أو GIF',
+  ],
+  ['That picture could not be read', 'Cette image n’a pas pu être lue', 'تعذّرت قراءة هذه الصورة'],
+  ['That address is not a picture', 'Cette adresse n’est pas une image', 'هذا العنوان ليس صورة'],
+  [
+    'The picture is too large to import',
+    'L’image est trop volumineuse pour être importée',
+    'الصورة أكبر من أن يتم استيرادها',
+  ],
   ['Template not found', 'Modèle introuvable', 'القالب غير موجود'],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
@@ -584,6 +621,11 @@ const PATTERNS: readonly (readonly [RegExp, string, string])[] = [
     /^An organization can keep up to (\d+) automation rules\. Delete one first\.$/,
     'Une organisation peut conserver jusqu’à $1 règles d’automatisation. Supprimez-en une d’abord.',
     'يمكن للمؤسسة الاحتفاظ بما يصل إلى $1 قاعدة أتمتة. احذف واحدة أولًا.',
+  ],
+  [
+    /^That picture is too small \(under (\d+) pixels wide\)$/,
+    'Cette image est trop petite (moins de $1 pixels de large)',
+    'هذه الصورة صغيرة جدًا (أقل من $1 بكسل عرضًا)',
   ],
   [
     /^The channel "(.*)" is not connected$/,

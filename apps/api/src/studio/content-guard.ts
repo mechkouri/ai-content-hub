@@ -1,4 +1,4 @@
-import { stripInline } from '../common/inline';
+import { removeImages, stripInline } from '../common/inline';
 import { ARTICLE_WORD_TARGET, ArticleContent, articleWordCount, slugify } from './content-schemas';
 
 export interface ClaimWarning {
@@ -57,7 +57,8 @@ export function findUnsupportedClaims(content: unknown, allowedParts: string[]):
   const corpusNumbers = new Set(corpusNoUrls.replace(EMAIL_RE, ' ').match(NUMBER_RE) ?? []);
   const corpusPlain = new Set([...corpusNumbers].map(stripSeparators));
 
-  const text = normalizeDigits(flattenStrings(content).join('\n')).toLowerCase();
+  // Pictures (their ids, captions and credits) are not claims about the facts.
+  const text = normalizeDigits(flattenStrings(content).map(removeImages).join('\n')).toLowerCase();
   const warnings: ClaimWarning[] = [];
   const seen = new Set<string>();
   const add = (w: ClaimWarning) => {

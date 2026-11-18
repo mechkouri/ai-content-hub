@@ -11,6 +11,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.service';
 import { SourcesModule } from './sources/sources.module';
 import { StudioModule } from './studio/studio.module';
+import { StockModule } from './stock/stock.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { StorageModule } from './storage/storage.module';
     DesignModule,
     ChannelsModule,
     AnalyticsModule,
+    StockModule,
   ],
   controllers: [HealthController],
 })

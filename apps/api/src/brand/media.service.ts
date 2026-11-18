@@ -46,6 +46,37 @@ export class MediaService {
     }
   }
 
+  /**
+   * Stores a picture that this server has already checked and converted (for example one imported from a stock
+   * site). Unlike {@link upload} it takes no client file, so it needs no extra size limit beyond the caller's.
+   */
+  async addProcessed(
+    orgId: string,
+    userId: string,
+    file: { buffer: Buffer; filename: string; mimeType: string },
+  ) {
+    const type = detectImageType(file.buffer);
+    if (!type || type.mime !== file.mimeType)
+      throw new BadRequestException('Only PNG, JPEG, WebP and GIF images are allowed');
+    const storageKey = `${orgId}/${randomUUID()}.${type.ext}`;
+    await this.storage.put(storageKey, file.buffer);
+    try {
+      return await this.prisma.mediaAsset.create({
+        data: {
+          organizationId: orgId,
+          filename: sanitizeFilename(file.filename),
+          mimeType: type.mime,
+          sizeBytes: file.buffer.length,
+          storageKey,
+          createdById: userId,
+        },
+      });
+    } catch (e) {
+      await this.storage.delete(storageKey);
+      throw e;
+    }
+  }
+
   list(orgId: string) {
     return this.prisma.mediaAsset.findMany({
       where: { organizationId: orgId },
