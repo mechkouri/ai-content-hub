@@ -1,3 +1,4 @@
+import { stripInline } from '../common/inline';
 import { ARTICLE_WORD_TARGET, ArticleContent, articleWordCount, slugify } from './content-schemas';
 
 export interface ClaimWarning {
@@ -127,7 +128,8 @@ function bodyBlocks(a: ArticleContent): string[] {
   const out = [a.introduction, a.conclusion];
   for (const s of a.sections) out.push(s.body, ...(s.subsections ?? []).map((x) => x.body));
   out.push(...a.faq.map((f) => f.answer));
-  return out.filter((b) => b.trim());
+  // Readability and keyword checks look at the words people read, not the formatting marks.
+  return out.map(stripInline).filter((b) => b.trim());
 }
 
 /** Sentences, for Latin and Arabic text alike (full stop, "!", "?", Arabic question mark, line breaks). */

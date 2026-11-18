@@ -1,3 +1,4 @@
+import { stripInline } from '../common/inline';
 import { z } from 'zod';
 
 export const LANGUAGES = ['fr', 'ar', 'en'] as const;
@@ -181,7 +182,7 @@ export function articleWordCount(a: ArticleContent): number {
     parts.push(s.body, ...(s.subsections ?? []).map((x) => x.body));
   }
   parts.push(...a.faq.map((f) => f.answer));
-  return parts.reduce((n, p) => n + wordCount(p), 0);
+  return parts.reduce((n, p) => n + wordCount(stripInline(p)), 0);
 }
 
 export const ARTICLE_WORD_TARGET: Record<(typeof LENGTHS)[number], number> = {

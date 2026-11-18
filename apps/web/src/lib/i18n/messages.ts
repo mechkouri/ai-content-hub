@@ -1126,6 +1126,14 @@ export const en = {
   'rm.group.title': 'Title readability',
   'rm.group.content': 'Content readability',
   'rm.groupCount': '{ok} of {total} passed',
+  'wp.bold': 'Bold (Ctrl+B)',
+  'wp.italic': 'Italic (Ctrl+I)',
+  'wp.link': 'Link (Ctrl+K)',
+  'wp.linkUrl': 'Paste the link address (https://…)',
+  'wp.linkApply': 'Add link',
+  'wp.linkInvalid': 'Use a full address starting with https:// or http://',
+  'wp.formatHint':
+    'Select text to make it bold, italic or a link. You can also type **bold**, *italic* and [text](https://…).',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2275,6 +2283,14 @@ export const fr: Messages = {
   'rm.group.title': 'Lisibilité du titre',
   'rm.group.content': 'Lisibilité du contenu',
   'rm.groupCount': '{ok} sur {total} réussis',
+  'wp.bold': 'Gras (Ctrl+B)',
+  'wp.italic': 'Italique (Ctrl+I)',
+  'wp.link': 'Lien (Ctrl+K)',
+  'wp.linkUrl': 'Collez l’adresse du lien (https://…)',
+  'wp.linkApply': 'Ajouter le lien',
+  'wp.linkInvalid': 'Utilisez une adresse complète commençant par https:// ou http://',
+  'wp.formatHint':
+    'Sélectionnez du texte pour le mettre en gras, en italique ou en lien. Vous pouvez aussi saisir **gras**, *italique* et [texte](https://…).',
 };
 
 export const ar: Messages = {
@@ -3377,6 +3393,14 @@ export const ar: Messages = {
   'rm.group.title': 'وضوح العناوين',
   'rm.group.content': 'وضوح المحتوى',
   'rm.groupCount': 'نجح {ok} من {total}',
+  'wp.bold': 'عريض (Ctrl+B)',
+  'wp.italic': 'مائل (Ctrl+I)',
+  'wp.link': 'رابط (Ctrl+K)',
+  'wp.linkUrl': 'الصق عنوان الرابط (https://…)',
+  'wp.linkApply': 'إضافة الرابط',
+  'wp.linkInvalid': 'استخدم عنوانًا كاملًا يبدأ بـ https:// أو http://',
+  'wp.formatHint':
+    'حدّد النص لجعله عريضًا أو مائلًا أو رابطًا. يمكنك أيضًا كتابة **عريض** و*مائل* و[النص](https://…).',
 };
 
 export const LOCALES = ['en', 'fr', 'ar'] as const;

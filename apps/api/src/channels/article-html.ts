@@ -1,3 +1,5 @@
+import { inlineToHtml } from '../common/inline';
+
 const esc = (s: unknown) =>
   String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -5,13 +7,16 @@ const esc = (s: unknown) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-/** Blank-line separated text becomes paragraphs; single line breaks inside one stay as <br>. */
+/**
+ * Blank-line separated text becomes paragraphs; single line breaks inside one stay as <br>. **Bold**, *italic*
+ * and [links](https://…) become tags; everything else is escaped.
+ */
 const paragraphs = (text: unknown) =>
   String(text ?? '')
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)
+    .map((p) => `<p>${inlineToHtml(p).replace(/\n/g, '<br>')}</p>`)
     .join('\n');
 
 /**
