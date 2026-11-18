@@ -1,4 +1,5 @@
 import { ContentKind } from '@prisma/client';
+import { stripInline } from '../common/inline';
 import { articleHtml } from './article-html';
 
 /** What will actually be posted for a piece of content, as plain text. Kept with the job as the audit trail. */
@@ -68,11 +69,14 @@ export function renderPost(
       return {
         kind,
         title: content.h1 ?? title,
-        text: join([
-          content.introduction,
-          ...sections.map((s: any) => join([s.heading, s.body])),
-          content.conclusion,
-        ]),
+        // The plain text, without the formatting marks, is what limits and the audit trail are based on.
+        text: stripInline(
+          join([
+            content.introduction,
+            ...sections.map((s: any) => join([s.heading, s.body])),
+            content.conclusion,
+          ]),
+        ),
         html: articleHtml(content, language),
         slug: content.slug,
         excerpt: content.excerpt,

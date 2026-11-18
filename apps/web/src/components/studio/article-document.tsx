@@ -1,7 +1,7 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { ReactNode, useEffect, useRef } from 'react';
+import { ArrowDown, ArrowUp, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ArticleContent, ClaimWarning } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { Field, flagsIn, ListEditor, TextBox } from './fields';
@@ -31,6 +31,7 @@ function Flow({
   disabled,
   className = '',
   single = false,
+  format = false,
   label,
 }: {
   value: string;
@@ -42,19 +43,162 @@ function Flow({
   className?: string;
   /** A heading: no line breaks. */
   single?: boolean;
+  /** Offer bold, italic and links (paragraph text, not headings). */
+  format?: boolean;
   label: string;
 }) {
   const { t } = useI18n();
   const ref = useRef<HTMLTextAreaElement>(null);
+  const [focused, setFocused] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [url, setUrl] = useState('https://');
+  const [urlError, setUrlError] = useState(false);
+  const picked = useRef({ s: 0, e: 0 });
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, [value]);
+
+  /** Applies a change, then puts the selection back so formatting can be repeated or undone. */
+  const apply = (next: string, from: number, to: number) => {
+    onChange(next);
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      ref.current?.setSelectionRange(from, to);
+    });
+  };
+
+  /** Wraps the selection in a mark (** or *), or takes the mark off if it is already there. */
+  function wrap(mark: string) {
+    const el = ref.current;
+    if (!el || disabled) return;
+    const s = el.selectionStart;
+    const e = el.selectionEnd;
+    const sel = value.slice(s, e);
+    const m = mark.length;
+    if (value.slice(s - m, s) === mark && value.slice(e, e + m) === mark) {
+      apply(value.slice(0, s - m) + sel + value.slice(e + m), s - m, e - m);
+    } else if (sel.length > 2 * m && sel.startsWith(mark) && sel.endsWith(mark)) {
+      const inner = sel.slice(m, sel.length - m);
+      apply(value.slice(0, s) + inner + value.slice(e), s, s + inner.length);
+    } else {
+      apply(value.slice(0, s) + mark + sel + mark + value.slice(e), s + m, e + m);
+    }
+  }
+
+  function openLink() {
+    const el = ref.current;
+    if (!el || disabled) return;
+    picked.current = { s: el.selectionStart, e: el.selectionEnd };
+    setUrl('https://');
+    setUrlError(false);
+    setLinkOpen(true);
+  }
+
+  function addLink() {
+    const address = url.trim();
+    if (!/^https?:\/\/[^\s)<>"']+$/.test(address) || address.length > 500) {
+      setUrlError(true);
+      return;
+    }
+    const { s, e } = picked.current;
+    const text = value.slice(s, e).replace(/[\][\n]/g, ' ') || address;
+    const md = `[${text}](${address})`;
+    setLinkOpen(false);
+    apply(value.slice(0, s) + md + value.slice(e), s, s + md.length);
+  }
+
   const flags = flagsIn(value, warnings);
+  const tool =
+    'flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm font-semibold text-slate-700 hover:bg-slate-100';
   return (
-    <div>
+    <div
+      className="relative"
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setFocused(false);
+          setLinkOpen(false);
+        }
+      }}
+    >
+      {format && !disabled && (focused || linkOpen) && (
+        <div
+          className="absolute -top-10 start-2 z-20 flex items-center gap-0.5 rounded-lg border border-line bg-white p-1 shadow-md"
+          // keep the text selected when a button is pressed
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault();
+          }}
+        >
+          {linkOpen ? (
+            <>
+              <input
+                autoFocus
+                dir="ltr"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  setUrlError(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addLink();
+                  } else if (e.key === 'Escape') {
+                    setLinkOpen(false);
+                    ref.current?.focus();
+                  }
+                }}
+                aria-label={t('wp.linkUrl')}
+                placeholder={t('wp.linkUrl')}
+                aria-invalid={urlError}
+                className={`h-8 w-64 rounded-md border px-2 text-sm outline-none ${urlError ? 'border-red-400' : 'border-line'}`}
+              />
+              <button type="button" className={`${tool} text-brand`} onClick={addLink}>
+                {t('wp.linkApply')}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={tool}
+                onClick={() => wrap('**')}
+                title={t('wp.bold')}
+                aria-label={t('wp.bold')}
+              >
+                <span className="font-bold">B</span>
+              </button>
+              <button
+                type="button"
+                className={tool}
+                onClick={() => wrap('*')}
+                title={t('wp.italic')}
+                aria-label={t('wp.italic')}
+              >
+                <span className="italic">I</span>
+              </button>
+              <button
+                type="button"
+                className={tool}
+                onClick={openLink}
+                title={t('wp.link')}
+                aria-label={t('wp.link')}
+              >
+                <LinkIcon size={15} aria-hidden />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {urlError && linkOpen && (
+        <p className="absolute -top-14 start-2 z-20 rounded bg-red-600 px-2 py-0.5 text-[11px] text-white">
+          {t('wp.linkInvalid')}
+        </p>
+      )}
       <textarea
         ref={ref}
         rows={1}
@@ -67,6 +211,19 @@ function Flow({
         onChange={(e) => onChange(single ? e.target.value.replace(/\n/g, ' ') : e.target.value)}
         onKeyDown={(e) => {
           if (single && e.key === 'Enter') e.preventDefault();
+          if (format && (e.ctrlKey || e.metaKey)) {
+            const k = e.key.toLowerCase();
+            if (k === 'b') {
+              e.preventDefault();
+              wrap('**');
+            } else if (k === 'i') {
+              e.preventDefault();
+              wrap('*');
+            } else if (k === 'k') {
+              e.preventDefault();
+              openLink();
+            }
+          }
         }}
         className={`block w-full resize-none overflow-hidden rounded-md border-0 bg-transparent px-2 py-1 outline-none ring-0 transition placeholder:text-slate-300 hover:bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand/30 ${
           flags.length ? 'bg-amber-50 ring-2 ring-amber-300' : ''
@@ -218,12 +375,14 @@ export function ArticleDocument({
           />
         </div>
 
-        <div className="pt-4">
+        <p className="px-2 pt-2 text-[11px] text-slate-400">{t('wp.formatHint')}</p>
+        <div className="pt-2">
           <Flow
             {...props}
             value={a.introduction}
             onChange={(v) => set({ introduction: v })}
             max={2500}
+            format
             label={t('ed.intro')}
             placeholder={t('wp.introPh')}
             className="text-lg leading-relaxed"
@@ -255,6 +414,7 @@ export function ArticleDocument({
               value={s.body}
               onChange={(v) => setSection(i, { body: v })}
               max={4500}
+              format
               label={t('ed.text')}
               placeholder={t('wp.bodyPh')}
               className="text-base leading-relaxed"
@@ -298,6 +458,7 @@ export function ArticleDocument({
                     })
                   }
                   max={3500}
+                  format
                   label={t('ed.text')}
                   placeholder={t('wp.bodyPh')}
                   className="text-base leading-relaxed"
@@ -336,6 +497,7 @@ export function ArticleDocument({
             value={a.conclusion}
             onChange={(v) => set({ conclusion: v })}
             max={2500}
+            format
             label={t('ed.conclusion')}
             placeholder={t('wp.conclusionPh')}
             className="text-base leading-relaxed"
@@ -370,6 +532,7 @@ export function ArticleDocument({
                   value={f.answer}
                   onChange={(v) => setFaq(i, { answer: v })}
                   max={900}
+                  format
                   label={t('ed.answer')}
                   placeholder={t('wp.answerPh')}
                   className="text-base leading-relaxed"
