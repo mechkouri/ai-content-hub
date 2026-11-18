@@ -215,7 +215,12 @@ export interface FetchedBytes {
  */
 async function safeFetchRaw(
   input: string,
-  opts: SafeFetchOptions & { accept: string; tooLarge: string; wrongType: string },
+  opts: SafeFetchOptions & {
+    accept: string;
+    tooLarge: string;
+    wrongType: string;
+    blocked?: string;
+  },
 ): Promise<FetchedBytes> {
   const resolver = opts.resolver ?? defaultResolver;
   const transport = opts.transport ?? defaultTransport;
@@ -242,7 +247,7 @@ async function safeFetchRaw(
     if ([401, 403, 429, 503].includes(res.status)) {
       await res.body?.cancel().catch(() => undefined);
       throw new FetchFailedError(
-        'This website does not allow automated access. Paste the text instead.',
+        opts.blocked ?? 'This website does not allow automated access. Paste the text instead.',
       );
     }
     if (!res.ok) {
@@ -289,6 +294,7 @@ export async function safeFetchImage(
     accept: 'image/jpeg,image/png,image/webp,image/gif;q=0.9,*/*;q=0.1',
     tooLarge: 'The picture is too large to import',
     wrongType: 'That address is not a picture',
+    blocked: 'That site does not allow importing this picture. Try another one.',
   });
 }
 

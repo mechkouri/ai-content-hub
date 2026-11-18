@@ -1134,6 +1134,45 @@ export const en = {
   'wp.linkInvalid': 'Use a full address starting with https:// or http://',
   'wp.formatHint':
     'Select text to make it bold, italic or a link. You can also type **bold**, *italic* and [text](https://…).',
+  'pk.title': 'Add a picture',
+  'pk.tab.free': 'Free pictures',
+  'pk.tab.library': 'My library',
+  'pk.tab.upload': 'Upload',
+  'pk.provider': 'Source',
+  'pk.search': 'Search free pictures',
+  'pk.searchPh': 'e.g. students in a lecture hall',
+  'pk.go': 'Search',
+  'pk.searching': 'Searching…',
+  'pk.freeNote':
+    'Only pictures that may be used on a business website are listed. They are copied to your library, scaled down and converted to WebP so pages load fast.',
+  'pk.none': 'No pictures found. Try another word.',
+  'pk.more': 'Show more',
+  'pk.use': 'Use this picture',
+  'pk.importing': 'Adding…',
+  'pk.creditNote':
+    'This licence asks you to credit the author. The credit is added as the caption: keep it.',
+  'pk.libraryEmpty': 'Your media library is empty. Search free pictures or upload one.',
+  'pk.chooseFile': 'Choose a picture',
+  'pk.uploadHint': 'PNG, JPEG, WebP or GIF, up to 5 MB.',
+  'pk.close': 'Close',
+  'wp.addPicture': 'Picture',
+  'wp.pictureAlt': 'Picture description (alt text)',
+  'wp.pictureAltPh': 'Describe what the picture shows, for search engines and screen readers',
+  'wp.pictureCaption': 'Caption or credit',
+  'wp.pictureCaptionPh': 'Optional. The credit for a free picture goes here',
+  'seo.images':
+    'Pictures in the text: {n} (an article of 300 words or more should have at least one).',
+  'seo.images-alt':
+    'Pictures without a good description: {n} (each needs alt text of 125 characters or fewer).',
+  'seo.geo-answer':
+    'The opening paragraph has {n} words (aim for 60 or fewer, so it can stand alone as the answer).',
+  'seo.geo-questions':
+    '{n} heading(s) or FAQ question(s) phrased as a question (aim for at least 2).',
+  'seo.geo-faq-concise':
+    'FAQ answers over 80 words: {n} (short, complete answers are quoted more often).',
+  'seo.geo-citations':
+    '{n} link(s) to a source (cite at least one: answer engines trust cited pages).',
+  'rm.group.geo': 'AI search (GEO)',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2291,6 +2330,46 @@ export const fr: Messages = {
   'wp.linkInvalid': 'Utilisez une adresse complète commençant par https:// ou http://',
   'wp.formatHint':
     'Sélectionnez du texte pour le mettre en gras, en italique ou en lien. Vous pouvez aussi saisir **gras**, *italique* et [texte](https://…).',
+  'pk.title': 'Ajouter une image',
+  'pk.tab.free': 'Images libres',
+  'pk.tab.library': 'Ma médiathèque',
+  'pk.tab.upload': 'Importer',
+  'pk.provider': 'Source',
+  'pk.search': 'Rechercher des images libres',
+  'pk.searchPh': 'ex. étudiants dans un amphithéâtre',
+  'pk.go': 'Rechercher',
+  'pk.searching': 'Recherche…',
+  'pk.freeNote':
+    'Seules les images utilisables sur un site professionnel sont listées. Elles sont copiées dans votre médiathèque, réduites et converties en WebP pour des pages rapides.',
+  'pk.none': 'Aucune image trouvée. Essayez un autre mot.',
+  'pk.more': 'Afficher plus',
+  'pk.use': 'Utiliser cette image',
+  'pk.importing': 'Ajout…',
+  'pk.creditNote':
+    'Cette licence demande de créditer l’auteur. Le crédit est ajouté en légende : conservez-le.',
+  'pk.libraryEmpty': 'Votre médiathèque est vide. Cherchez des images libres ou importez-en une.',
+  'pk.chooseFile': 'Choisir une image',
+  'pk.uploadHint': 'PNG, JPEG, WebP ou GIF, jusqu’à 5 Mo.',
+  'pk.close': 'Fermer',
+  'wp.addPicture': 'Image',
+  'wp.pictureAlt': 'Description de l’image (texte alternatif)',
+  'wp.pictureAltPh':
+    'Décrivez ce que montre l’image, pour les moteurs de recherche et les lecteurs d’écran',
+  'wp.pictureCaption': 'Légende ou crédit',
+  'wp.pictureCaptionPh': 'Facultatif. Le crédit d’une image libre se met ici',
+  'seo.images':
+    'Images dans le texte : {n} (un article de 300 mots ou plus devrait en avoir au moins une).',
+  'seo.images-alt':
+    'Images sans bonne description : {n} (chacune a besoin d’un texte alternatif de 125 caractères maximum).',
+  'seo.geo-answer':
+    'Le premier paragraphe fait {n} mots (visez 60 au maximum, pour qu’il puisse servir seul de réponse).',
+  'seo.geo-questions':
+    '{n} intertitre(s) ou question(s) de FAQ formulé(s) comme une question (visez au moins 2).',
+  'seo.geo-faq-concise':
+    'Réponses de FAQ de plus de 80 mots : {n} (les réponses courtes et complètes sont plus souvent citées).',
+  'seo.geo-citations':
+    '{n} lien(s) vers une source (citez-en au moins une : les moteurs de réponse font confiance aux pages qui citent leurs sources).',
+  'rm.group.geo': 'Recherche par IA (GEO)',
 };
 
 export const ar: Messages = {
@@ -3401,6 +3480,41 @@ export const ar: Messages = {
   'wp.linkInvalid': 'استخدم عنوانًا كاملًا يبدأ بـ https:// أو http://',
   'wp.formatHint':
     'حدّد النص لجعله عريضًا أو مائلًا أو رابطًا. يمكنك أيضًا كتابة **عريض** و*مائل* و[النص](https://…).',
+  'pk.title': 'إضافة صورة',
+  'pk.tab.free': 'صور مجانية',
+  'pk.tab.library': 'مكتبتي',
+  'pk.tab.upload': 'رفع',
+  'pk.provider': 'المصدر',
+  'pk.search': 'ابحث عن صور مجانية',
+  'pk.searchPh': 'مثال: طلاب في قاعة محاضرات',
+  'pk.go': 'بحث',
+  'pk.searching': 'جارٍ البحث…',
+  'pk.freeNote':
+    'تُعرض فقط الصور التي يجوز استخدامها في موقع تجاري. تُنسخ إلى مكتبتك وتُصغَّر وتُحوَّل إلى WebP لتحميل الصفحات بسرعة.',
+  'pk.none': 'لم يتم العثور على صور. جرّب كلمة أخرى.',
+  'pk.more': 'عرض المزيد',
+  'pk.use': 'استخدام هذه الصورة',
+  'pk.importing': 'جارٍ الإضافة…',
+  'pk.creditNote': 'يشترط هذا الترخيص ذكر المؤلف. يُضاف الذكر كتعليق على الصورة: احتفظ به.',
+  'pk.libraryEmpty': 'مكتبة الوسائط فارغة. ابحث عن صور مجانية أو ارفع صورة.',
+  'pk.chooseFile': 'اختيار صورة',
+  'pk.uploadHint': 'PNG أو JPEG أو WebP أو GIF، حتى 5 ميغابايت.',
+  'pk.close': 'إغلاق',
+  'wp.addPicture': 'صورة',
+  'wp.pictureAlt': 'وصف الصورة (النص البديل)',
+  'wp.pictureAltPh': 'صف ما تُظهره الصورة، لمحركات البحث وقارئات الشاشة',
+  'wp.pictureCaption': 'التعليق أو الذكر',
+  'wp.pictureCaptionPh': 'اختياري. يوضع هنا ذكر مصدر الصورة المجانية',
+  'seo.images':
+    'الصور في النص: {n} (يُفضَّل أن يحتوي المقال الذي يبلغ 300 كلمة أو أكثر على صورة واحدة على الأقل).',
+  'seo.images-alt': 'صور بلا وصف جيد: {n} (تحتاج كل صورة إلى نص بديل من 125 حرفًا أو أقل).',
+  'seo.geo-answer': 'الفقرة الافتتاحية من {n} كلمة (الأفضل 60 كلمة أو أقل لتصلح وحدها كإجابة).',
+  'seo.geo-questions': '{n} عنوان أو سؤال شائع بصيغة سؤال (الأفضل اثنان على الأقل).',
+  'seo.geo-faq-concise':
+    'إجابات الأسئلة الشائعة التي تتجاوز 80 كلمة: {n} (الإجابات القصيرة الكاملة يُستشهد بها أكثر).',
+  'seo.geo-citations':
+    '{n} رابط إلى مصدر (استشهد بمصدر واحد على الأقل: تثق محركات الإجابة بالصفحات التي تذكر مصادرها).',
+  'rm.group.geo': 'البحث بالذكاء الاصطناعي (GEO)',
 };
 
 export const LOCALES = ['en', 'fr', 'ar'] as const;

@@ -1,10 +1,14 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, ImagePlus, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { AuthImage } from '@/components/auth-image';
 import { ArticleContent, ClaimWarning } from '@/lib/api';
+import { useApp } from '@/lib/app-context';
+import { ImageSegment, joinBody, Segment, SegmentData, splitBody } from '@/lib/article-images';
 import { useI18n } from '@/lib/i18n';
 import { Field, flagsIn, ListEditor, TextBox } from './fields';
+import { PickedPicture, PicturePicker } from './picture-picker';
 
 type Section = ArticleContent['sections'][number];
 type Faq = ArticleContent['faq'][number];
@@ -243,6 +247,179 @@ function Flow({
   );
 }
 
+/** A segment without its React key. */
+const plain = (s: Segment): SegmentData =>
+  s.type === 'text'
+    ? { type: 'text', text: s.text }
+    : { type: 'image', assetId: s.assetId, alt: s.alt, caption: s.caption };
+
+/** One picture inside the text: a thumbnail, its description (alt text) and its caption or credit. */
+function PictureCard({
+  orgId,
+  seg,
+  onChange,
+  onRemove,
+  onUp,
+  onDown,
+  first,
+  last,
+  disabled,
+}: {
+  orgId: string;
+  seg: ImageSegment & { key: number };
+  onChange: (alt: string, caption: string) => void;
+  onRemove: () => void;
+  onUp: () => void;
+  onDown: () => void;
+  first: boolean;
+  last: boolean;
+  disabled?: boolean;
+}) {
+  const { t } = useI18n();
+  const missing = !seg.alt.trim();
+  return (
+    <figure className="group relative my-2 flex gap-3 rounded-xl border border-line bg-slate-50 p-3">
+      <BlockTools
+        disabled={disabled}
+        first={first}
+        last={last}
+        onUp={onUp}
+        onDown={onDown}
+        onRemove={onRemove}
+      />
+      <AuthImage
+        orgId={orgId}
+        assetId={seg.assetId}
+        alt={seg.alt}
+        className="h-24 w-32 shrink-0 rounded-lg bg-white object-cover"
+      />
+      <div className="min-w-0 flex-1 space-y-2">
+        <label className="block text-xs font-semibold text-slate-600">
+          {t('wp.pictureAlt')}
+          <input
+            className={`input mt-1 ${missing ? '!border-amber-400 !ring-2 !ring-amber-200' : ''}`}
+            dir="auto"
+            maxLength={125}
+            disabled={disabled}
+            placeholder={t('wp.pictureAltPh')}
+            value={seg.alt}
+            onChange={(e) => onChange(e.target.value, seg.caption)}
+          />
+        </label>
+        <label className="block text-xs font-semibold text-slate-600">
+          {t('wp.pictureCaption')}
+          <input
+            className="input mt-1"
+            dir="auto"
+            maxLength={300}
+            disabled={disabled}
+            placeholder={t('wp.pictureCaptionPh')}
+            value={seg.caption}
+            onChange={(e) => onChange(seg.alt, e.target.value)}
+          />
+        </label>
+      </div>
+    </figure>
+  );
+}
+
+/**
+ * The body of a section: paragraphs you type in, with pictures between them. The text stays one string (pictures are
+ * paragraphs of their own), so the rest of the app is unaffected.
+ */
+function Body({
+  value,
+  onChange,
+  max,
+  placeholder,
+  warnings,
+  disabled,
+  className,
+  label,
+  onPicture,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  max: number;
+  placeholder: string;
+  warnings: ClaimWarning[];
+  disabled?: boolean;
+  className?: string;
+  label: string;
+  /** Bodies always offer formatting; accepted so a block can switch between Flow and Body unchanged. */
+  format?: boolean;
+  onPicture: (add: (p: PickedPicture) => void) => void;
+}) {
+  const { t } = useI18n();
+  const { currentOrgId } = useApp();
+  const segs = useMemo(() => splitBody(value), [value]);
+  const put = (i: number, next: SegmentData | null) => {
+    const copy: SegmentData[] = segs.map(plain);
+    if (next === null) copy.splice(i, 1);
+    else copy[i] = next;
+    onChange(joinBody(copy));
+  };
+  const swap = (i: number, j: number) => {
+    const copy: SegmentData[] = segs.map(plain);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+    onChange(joinBody(copy));
+  };
+  return (
+    <div>
+      {segs.map((seg, i) =>
+        seg.type === 'text' ? (
+          <Flow
+            key={seg.key}
+            warnings={warnings}
+            disabled={disabled}
+            format
+            // together with the pictures, the whole body must stay within its limit
+            max={Math.max(0, max - (value.length - seg.text.length))}
+            value={seg.text}
+            onChange={(v) => put(i, { type: 'text', text: v })}
+            label={label}
+            placeholder={i === 0 && segs.length === 1 ? placeholder : ''}
+            className={className}
+          />
+        ) : currentOrgId ? (
+          <PictureCard
+            key={seg.key}
+            orgId={currentOrgId}
+            seg={seg}
+            disabled={disabled}
+            first={i === 0}
+            last={i === segs.length - 1}
+            onChange={(alt, caption) =>
+              put(i, { type: 'image', assetId: seg.assetId, alt, caption })
+            }
+            onRemove={() => put(i, null)}
+            onUp={() => i > 0 && swap(i, i - 1)}
+            onDown={() => i < segs.length - 1 && swap(i, i + 1)}
+          />
+        ) : null,
+      )}
+      {!disabled && (
+        <div className="px-2 pt-1">
+          <AddButton
+            onClick={() =>
+              onPicture((p) =>
+                onChange(
+                  joinBody([
+                    ...segs.map(plain),
+                    { type: 'image', assetId: p.assetId, alt: p.alt, caption: p.caption },
+                  ]),
+                ),
+              )
+            }
+          >
+            <ImagePlus size={13} aria-hidden /> {t('wp.addPicture')}
+          </AddButton>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Move up, move down and remove, shown beside a block when it is hovered or focused. */
 function BlockTools({
   onUp,
@@ -331,6 +508,9 @@ export function ArticleDocument({
   disabled?: boolean;
 }) {
   const { t } = useI18n();
+  const { currentOrgId } = useApp();
+  const [picker, setPicker] = useState<((p: PickedPicture) => void) | null>(null);
+  const addPicture = (add: (p: PickedPicture) => void) => setPicker(() => add);
   const set = (patch: Partial<ArticleContent>) => onChange({ ...a, ...patch });
   const setSection = (i: number, patch: Partial<Section>) =>
     set({ sections: a.sections.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
@@ -377,7 +557,7 @@ export function ArticleDocument({
 
         <p className="px-2 pt-2 text-[11px] text-slate-400">{t('wp.formatHint')}</p>
         <div className="pt-2">
-          <Flow
+          <Body
             {...props}
             value={a.introduction}
             onChange={(v) => set({ introduction: v })}
@@ -386,6 +566,7 @@ export function ArticleDocument({
             label={t('ed.intro')}
             placeholder={t('wp.introPh')}
             className="text-lg leading-relaxed"
+            onPicture={addPicture}
           />
         </div>
 
@@ -409,7 +590,7 @@ export function ArticleDocument({
               placeholder={t('wp.headingPh')}
               className="font-display text-2xl font-semibold leading-snug"
             />
-            <Flow
+            <Body
               {...props}
               value={s.body}
               onChange={(v) => setSection(i, { body: v })}
@@ -418,6 +599,7 @@ export function ArticleDocument({
               label={t('ed.text')}
               placeholder={t('wp.bodyPh')}
               className="text-base leading-relaxed"
+              onPicture={addPicture}
             />
             {(s.subsections ?? []).map((sub, k) => (
               <div key={k} className="group relative ms-4 border-s-2 border-slate-100 ps-3 pt-2">
@@ -447,7 +629,7 @@ export function ArticleDocument({
                   placeholder={t('wp.subheadingPh')}
                   className="font-display text-xl font-semibold"
                 />
-                <Flow
+                <Body
                   {...props}
                   value={sub.body}
                   onChange={(v) =>
@@ -462,6 +644,7 @@ export function ArticleDocument({
                   label={t('ed.text')}
                   placeholder={t('wp.bodyPh')}
                   className="text-base leading-relaxed"
+                  onPicture={addPicture}
                 />
               </div>
             ))}
@@ -492,7 +675,7 @@ export function ArticleDocument({
         )}
 
         <div className="pt-4">
-          <Flow
+          <Body
             {...props}
             value={a.conclusion}
             onChange={(v) => set({ conclusion: v })}
@@ -501,6 +684,7 @@ export function ArticleDocument({
             label={t('ed.conclusion')}
             placeholder={t('wp.conclusionPh')}
             className="text-base leading-relaxed"
+            onPicture={addPicture}
           />
         </div>
 
@@ -550,6 +734,17 @@ export function ArticleDocument({
         )}
         <p className="pt-4 text-end text-xs text-slate-400">{t('wp.words', { n: words })}</p>
       </article>
+
+      {picker && currentOrgId && (
+        <PicturePicker
+          orgId={currentOrgId}
+          onClose={() => setPicker(null)}
+          onPick={(p) => {
+            picker(p);
+            setPicker(null);
+          }}
+        />
+      )}
 
       <details className="card mx-auto max-w-3xl p-5">
         <summary className="cursor-pointer font-display text-base font-semibold">

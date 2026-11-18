@@ -417,6 +417,11 @@ const ENTRIES: readonly Entry[] = [
     'هذا العنوان ليس صورة PNG أو JPEG أو WebP أو GIF',
   ],
   ['That picture could not be read', 'Cette image n’a pas pu être lue', 'تعذّرت قراءة هذه الصورة'],
+  [
+    'That site does not allow importing this picture. Try another one.',
+    'Ce site n’autorise pas l’importation de cette image. Essayez-en une autre.',
+    'لا يسمح هذا الموقع باستيراد هذه الصورة. جرّب صورة أخرى.',
+  ],
   ['That address is not a picture', 'Cette adresse n’est pas une image', 'هذا العنوان ليس صورة'],
   [
     'The picture is too large to import',

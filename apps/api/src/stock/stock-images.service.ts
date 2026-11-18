@@ -135,8 +135,11 @@ export class StockImagesService {
       new URLSearchParams({
         q,
         page: String(page),
-        page_size: '24',
+        page_size: '20', // the most Openverse allows without an account
         license_type: 'commercial', // may be used on a business website
+        // Only sources whose pictures a server may download. Others (Flickr, for one) refuse automated downloads,
+        // and this app does not try to get around that. Add a free Pexels key for a wider choice.
+        source: 'stocksnap,rawpixel',
         mature: 'false',
       });
     const body = await this.getJson(url);

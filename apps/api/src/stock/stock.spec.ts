@@ -63,6 +63,8 @@ describe('free picture search', () => {
     expect(url.searchParams.get('page')).toBe('2');
     expect(url.searchParams.get('license_type')).toBe('commercial');
     expect(url.searchParams.get('mature')).toBe('false');
+    expect(url.searchParams.get('source')).toBe('stocksnap,rawpixel'); // only sources that allow downloads
+    expect(url.searchParams.get('page_size')).toBe('20'); // the most Openverse allows without an account
 
     expect(out.map((i) => i.id)).toEqual(['abc-1', 'cc0', 'pd']);
     expect(out[0]).toMatchObject({

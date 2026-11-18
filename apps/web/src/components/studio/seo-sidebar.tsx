@@ -7,7 +7,7 @@ import type { MessageKey } from '@/lib/i18n/messages';
 import { articleJsonLd, jsonLdScripts } from '@/lib/seo-schema';
 
 /** Like Rank Math: checks are grouped by what they are about. */
-const GROUPS: { id: 'basic' | 'additional' | 'title' | 'content'; ids: string[] }[] = [
+const GROUPS: { id: 'basic' | 'additional' | 'title' | 'content' | 'geo'; ids: string[] }[] = [
   {
     id: 'basic',
     ids: [
@@ -28,6 +28,8 @@ const GROUPS: { id: 'basic' | 'additional' | 'title' | 'content'; ids: string[] 
       'alt-text',
       'internal-links',
       'structured-data',
+      'images',
+      'images-alt',
       'faq',
       'slug-length',
       'structure',
@@ -35,6 +37,8 @@ const GROUPS: { id: 'basic' | 'additional' | 'title' | 'content'; ids: string[] 
   },
   { id: 'title', ids: ['title-length', 'heading-length', 'heading-unique'] },
   { id: 'content', ids: ['sentence-length', 'paragraph-length'] },
+  // Being found and quoted by AI answer engines.
+  { id: 'geo', ids: ['geo-answer', 'geo-questions', 'geo-faq-concise', 'geo-citations'] },
 ];
 
 const tone = (score: number) =>
