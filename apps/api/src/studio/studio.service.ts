@@ -420,19 +420,45 @@ export class StudioService {
   }
 
   /** Live check while editing: the same verdict saving would give, without saving and without any AI call. */
-  async check(orgId: string, id: string, rawContent: unknown) {
+  async check(orgId: string, id: string, rawContent: unknown, keyword?: string | null) {
     const piece = await this.find(orgId, id);
-    const { warnings } = await this.evaluate(orgId, piece, rawContent);
+    const { kind, content, warnings } = await this.evaluate(orgId, piece, rawContent);
+    const seo =
+      kind === ContentKind.ARTICLE
+        ? this.seoFor(content as ArticleContent, piece.options, keyword)
+        : {};
     return {
       warnings,
       status: warnings.length ? ContentStatus.NEEDS_REVIEW : ContentStatus.DRAFT,
+      ...seo,
     };
   }
 
-  async update(orgId: string, id: string, rawContent: unknown, actorId: string) {
+  /** The SEO checks for a text, with the focus keyword given now or, failing that, the one saved earlier. */
+  private seoFor(content: ArticleContent, options: unknown, keyword?: string | null) {
+    const opts = (options ?? {}) as Partial<GenerationOptions>;
+    const checks = seoChecks(content, {
+      primaryKeyword: keyword === undefined ? opts.primaryKeyword : (keyword ?? undefined),
+      length: opts.length ?? 'medium',
+    });
+    return { seoChecks: checks, seoScore: seoScore(checks) };
+  }
+
+  async update(
+    orgId: string,
+    id: string,
+    rawContent: unknown,
+    actorId: string,
+    keyword?: string | null,
+  ) {
     const piece = await this.find(orgId, id);
     const { kind, content, warnings } = await this.evaluate(orgId, piece, rawContent);
 
+    const options = {
+      ...((piece.options ?? {}) as Record<string, unknown>),
+      // Clearing the box removes the keyword; leaving it out of the request keeps the saved one.
+      ...(keyword === undefined ? {} : { primaryKeyword: keyword?.trim() || undefined }),
+    };
     const updated = await this.prisma.contentPiece.update({
       where: { id: piece.id },
       data: {
@@ -441,6 +467,7 @@ export class StudioService {
         warnings: warnings as unknown as Prisma.InputJsonValue,
         status: warnings.length ? ContentStatus.NEEDS_REVIEW : ContentStatus.DRAFT,
         edited: true,
+        ...(keyword === undefined ? {} : { options: options as Prisma.InputJsonValue }),
       },
     });
     // An edit voids any pending review or approval: the reviewed text is no longer the saved text.

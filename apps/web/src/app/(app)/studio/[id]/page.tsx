@@ -3,23 +3,14 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ArticleEditor,
-  FacebookEditor,
-  InstagramEditor,
-  LinkedinEditor,
-} from '@/components/studio/editors';
-import {
-  FacebookPreview,
-  InstagramPreview,
-  LinkedinPreview,
-  SerpPreview,
-} from '@/components/studio/previews';
+import { FacebookEditor, InstagramEditor, LinkedinEditor } from '@/components/studio/editors';
+import { FacebookPreview, InstagramPreview, LinkedinPreview } from '@/components/studio/previews';
 import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
 import { PublishPanel } from '@/components/channels/publish-panel';
 import { ImagesPanel } from '@/components/studio/images-panel';
 import { ScheduleBox } from '@/components/studio/schedule-box';
-import { SeoPanel } from '@/components/studio/seo-panel';
+import { ArticleDocument } from '@/components/studio/article-document';
+import { SeoSidebar } from '@/components/studio/seo-sidebar';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
 import {
@@ -33,6 +24,7 @@ import {
   CONTENT_KINDS,
   ContentDetail,
   ClaimWarning,
+  SeoCheck,
   ContentSummary,
   FacebookContent,
   InstagramContent,
@@ -82,6 +74,9 @@ export default function ContentDetailPage() {
   const [reviews, setReviews] = useState<ContentReview[]>([]);
   const [comment, setComment] = useState('');
   const [deciding, setDeciding] = useState(false);
+  // An article's focus keyword is saved with its text, and drives the SEO checks.
+  const [keyword, setKeyword] = useState('');
+  const [savedKeyword, setSavedKeyword] = useState('');
 
   const load = useCallback(async () => {
     if (!currentOrgId) return;
@@ -90,6 +85,9 @@ export default function ContentDetailPage() {
       setDetail(d);
       setDraft(d.piece.content);
       setSaved(d.piece.content);
+      const kw = String(d.piece.options?.primaryKeyword ?? '');
+      setKeyword(kw);
+      setSavedKeyword(kw);
       const all = await apiFetch<ContentSummary[]>(
         `/organizations/${currentOrgId}/content?sourceId=${d.piece.sourceId}`,
       );
@@ -104,30 +102,46 @@ export default function ContentDetailPage() {
     load();
   }, [load]);
 
-  const dirty = draft !== null && saved !== null && isDirty(draft, saved);
+  const isArticle = detail?.piece.kind === 'ARTICLE';
+  const dirty =
+    draft !== null &&
+    saved !== null &&
+    (isDirty(draft, saved) || (isArticle && keyword.trim() !== savedKeyword.trim()));
 
   // Live check: while editing, ask the server (no AI involved) which details are not in the verified facts,
   // so invented dates, prices and links are highlighted as you type, not only after saving.
   const [live, setLive] = useState<ClaimWarning[] | null>(null);
+  const [liveSeo, setLiveSeo] = useState<{ checks: SeoCheck[]; score: number } | null>(null);
   useEffect(() => {
     if (!dirty || !draft || !currentOrgId) {
       setLive(null);
+      setLiveSeo(null);
       return;
     }
     let current = true;
     const timer = setTimeout(() => {
-      apiFetch<{ warnings: ClaimWarning[] }>(`${base}/check`, {
-        method: 'POST',
-        body: JSON.stringify({ content: draft }),
-      })
-        .then((r) => current && setLive(r.warnings))
+      apiFetch<{ warnings: ClaimWarning[]; seoChecks?: SeoCheck[]; seoScore?: number }>(
+        `${base}/check`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            content: draft,
+            ...(isArticle ? { primaryKeyword: keyword.trim() || null } : {}),
+          }),
+        },
+      )
+        .then((r) => {
+          if (!current) return;
+          setLive(r.warnings);
+          setLiveSeo(r.seoChecks ? { checks: r.seoChecks, score: r.seoScore ?? 0 } : null);
+        })
         .catch(() => current && setLive(null)); // an unfinished edit may not validate yet: keep the last saved result
     }, 700);
     return () => {
       current = false;
       clearTimeout(timer);
     };
-  }, [dirty, draft, currentOrgId, base]);
+  }, [dirty, draft, keyword, isArticle, currentOrgId, base]);
 
   // Warn before leaving with unsaved edits.
   useEffect(() => {
@@ -147,11 +161,18 @@ export default function ContentDetailPage() {
     try {
       const res = await apiFetch<ContentDetail>(base, {
         method: 'PATCH',
-        body: JSON.stringify({ content: draft }),
+        body: JSON.stringify({
+          content: draft,
+          ...(isArticle ? { primaryKeyword: keyword.trim() || null } : {}),
+        }),
       });
       setDetail((prev) => ({ ...res, source: prev?.source }));
       setDraft(res.piece.content);
       setSaved(res.piece.content);
+      const kw = String(res.piece.options?.primaryKeyword ?? '');
+      setKeyword(kw);
+      setSavedKeyword(kw);
+      setLiveSeo(null);
       apiFetch<ContentReview[]>(`${base}/reviews`)
         .then(setReviews)
         .catch(() => undefined);
@@ -347,10 +368,32 @@ export default function ContentDetailPage() {
         ]}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div
+        className={`grid gap-4 ${
+          piece.kind === 'ARTICLE'
+            ? 'xl:grid-cols-[340px_minmax(0,1fr)_340px]'
+            : 'lg:grid-cols-[1fr_360px]'
+        }`}
+      >
+        {piece.kind === 'ARTICLE' && (
+          <div className="min-w-0 xl:order-first">
+            <SeoSidebar
+              article={draft as ArticleContent}
+              onChange={setDraft}
+              keyword={keyword}
+              onKeyword={setKeyword}
+              checks={dirty && liveSeo ? liveSeo.checks : (seoChecks ?? [])}
+              score={dirty && liveSeo ? liveSeo.score : (seoScore ?? 0)}
+              siteName={orgName}
+              language={piece.language}
+              disabled={!canWrite}
+              live={dirty && !!liveSeo}
+            />
+          </div>
+        )}
         <div className="min-w-0 space-y-4">
           {piece.kind === 'ARTICLE' && (
-            <ArticleEditor value={draft as ArticleContent} onChange={setDraft} {...props} />
+            <ArticleDocument value={draft as ArticleContent} onChange={setDraft} {...props} />
           )}
           {piece.kind === 'INSTAGRAM' && (
             <InstagramEditor value={draft as InstagramContent} onChange={setDraft} {...props} />
@@ -508,7 +551,6 @@ export default function ContentDetailPage() {
             </section>
           )}
 
-          {piece.kind === 'ARTICLE' && <SerpPreview a={draft as ArticleContent} />}
           {piece.kind === 'INSTAGRAM' && (
             <InstagramPreview p={draft as InstagramContent} org={orgName} />
           )}
@@ -517,16 +559,6 @@ export default function ContentDetailPage() {
           )}
           {piece.kind === 'LINKEDIN' && (
             <LinkedinPreview p={draft as LinkedinContent} org={orgName} />
-          )}
-
-          {seoChecks && (
-            <SeoPanel
-              checks={seoChecks}
-              score={seoScore ?? 0}
-              article={piece.content as ArticleContent}
-              siteName={orgName}
-              language={piece.language}
-            />
           )}
 
           {canWrite && (
