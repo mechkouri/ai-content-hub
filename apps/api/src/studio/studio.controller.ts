@@ -34,7 +34,11 @@ const generateSchema = z.object({
   options: optionsSchema.default({}),
 });
 const translateSchema = z.object({ language: z.enum(LANGUAGES) });
-const updateSchema = z.object({ content: z.record(z.unknown()) });
+// The focus keyword belongs to an article's SEO and can be changed with the text.
+const updateSchema = z.object({
+  content: z.record(z.unknown()),
+  primaryKeyword: z.string().trim().max(80).nullable().optional(),
+});
 const commentSchema = z.object({ comment: z.string().trim().max(1000).optional() });
 const changesSchema = z.object({ comment: z.string().trim().min(3).max(1000) });
 const listSchema = z.object({
@@ -94,11 +98,12 @@ export class StudioController {
     );
   }
 
-  /** Dry run of an edit: returns the claim warnings without saving (used for live highlighting). */
+  /** Dry run of an edit: returns the claim warnings (and, for articles, the SEO checks) without saving. */
   @Post(':id/check')
   @RequirePermission('content:read')
   check(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: unknown) {
-    return this.studio.check(orgId, uuid(id), parseBody(updateSchema, body).content);
+    const b = parseBody(updateSchema, body);
+    return this.studio.check(orgId, uuid(id), b.content, b.primaryKeyword);
   }
 
   @Patch(':id')
@@ -109,7 +114,8 @@ export class StudioController {
     @Param('id') id: string,
     @Body() body: unknown,
   ) {
-    return this.studio.update(orgId, uuid(id), parseBody(updateSchema, body).content, req.user.id);
+    const b = parseBody(updateSchema, body);
+    return this.studio.update(orgId, uuid(id), b.content, req.user.id, b.primaryKeyword);
   }
 
   @Get(':id/reviews')

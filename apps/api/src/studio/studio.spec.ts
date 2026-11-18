@@ -803,6 +803,32 @@ describe('content studio API', () => {
         .expect(404);
     });
 
+    it('saves the focus keyword with the text, keeps it when left out, and clears it with null', async () => {
+      const a = await make();
+      const save = (body: object) =>
+        request(app.getHttpServer())
+          .patch(`${base}/${a.id}`)
+          .set('Authorization', as(U_EDITOR))
+          .send({ content: article(), ...body });
+      const ids = (r: any) => r.body.seoChecks.map((c: any) => c.id);
+
+      const set = await save({ primaryKeyword: '  open day  ' }).expect(200);
+      expect(pieces.find((p) => p.id === a.id).options.primaryKeyword).toBe('open day'); // trimmed
+      expect(ids(set)).toEqual(expect.arrayContaining(['keyword-title', 'keyword-density']));
+
+      const kept = await save({}).expect(200); // not mentioned: unchanged
+      expect(pieces.find((p) => p.id === a.id).options.primaryKeyword).toBe('open day');
+      expect(ids(kept)).toContain('keyword-title');
+      // other settings of the article are untouched
+      expect(pieces.find((p) => p.id === a.id).options.length).toBeDefined();
+
+      const cleared = await save({ primaryKeyword: null }).expect(200);
+      expect(pieces.find((p) => p.id === a.id).options.primaryKeyword).toBeUndefined();
+      expect(ids(cleared).some((i: string) => i.startsWith('keyword'))).toBe(false);
+
+      await save({ primaryKeyword: 'x'.repeat(81) }).expect(400);
+    });
+
     it('checks an edit live without saving anything or calling the AI', async () => {
       const a = await make();
       const callsBefore = aiMock.generateJson.mock.calls.length;
@@ -813,7 +839,21 @@ describe('content studio API', () => {
           .send({ content });
 
       const clean = await check(article()).expect(201);
-      expect(clean.body).toEqual({ warnings: [], status: 'DRAFT' });
+      expect(clean.body).toMatchObject({ warnings: [], status: 'DRAFT' });
+      // an article also gets its SEO checks and score, for the live score beside the editor
+      expect(clean.body.seoChecks.length).toBeGreaterThan(10);
+      expect(typeof clean.body.seoScore).toBe('number');
+      const ids = (r: any) => r.body.seoChecks.map((c: any) => c.id);
+      expect(ids(clean).some((i: string) => i.startsWith('keyword'))).toBe(false); // no keyword saved
+      const withKw = await request(app.getHttpServer())
+        .post(`/api/organizations/${ORG_A}/content/${a.id}/check`)
+        .set('Authorization', as(U_VIEWER))
+        .send({ content: article(), primaryKeyword: 'open day' })
+        .expect(201);
+      expect(ids(withKw)).toEqual(expect.arrayContaining(['keyword-title', 'keyword-density']));
+      expect(
+        pieces.find((p) => p.id === a.id).options?.primaryKeyword, // a dry run saves nothing
+      ).not.toBe('open day');
 
       const risky = await check(
         article({ introduction: 'The event moves to 25 June 2031. Fee: 800 MAD.' }),
