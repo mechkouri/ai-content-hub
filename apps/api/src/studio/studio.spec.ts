@@ -1023,6 +1023,78 @@ describe('content studio API', () => {
       expect(pieces).toHaveLength(1);
     });
 
+    it('suggests SEO titles, descriptions and keywords from the article, keeping only safe ones', async () => {
+      const a = await make();
+      const ask = (body: object, user = U_EDITOR, id = a.id) =>
+        request(app.getHttpServer())
+          .post(`/api/organizations/${ORG_A}/content/${id}/seo-suggest`)
+          .set('Authorization', as(user))
+          .send(body);
+      aiMock.generateJson.mockClear();
+      nextRaw = {
+        suggestions: [
+          'Open Day at Atlas University: meet our teachers',
+          'Open Day at Atlas University: fees from 9999 MAD', // a number nobody gave: dropped
+          'x', // too short: dropped
+          '"Visit the Atlas University campus on open day"', // quotes removed
+          'Open Day at Atlas University: meet our teachers', // repeated: dropped
+        ],
+      };
+      const r = await ask({ field: 'title', keyword: 'open day' }).expect(201);
+      expect(r.body).toEqual({
+        field: 'title',
+        suggestions: [
+          'Open Day at Atlas University: meet our teachers',
+          'Visit the Atlas University campus on open day',
+        ],
+      });
+      const [ctx, opts] = aiMock.generateJson.mock.calls[0] as any[];
+      expect(ctx).toMatchObject({ orgId: ORG_A, userId: U_EDITOR });
+      expect(opts.prompt).toContain('"focusKeyword":"open day"');
+      expect(opts.prompt).toContain('Open Day at Atlas University'); // the article's own heading
+
+      // the draft being edited is what the assistant reads, not only what was saved
+      await ask({ field: 'meta', content: article({ h1: 'A brand new heading' }) }).expect(201);
+      expect((aiMock.generateJson.mock.calls[1] as any[])[1].prompt).toContain(
+        'A brand new heading',
+      );
+
+      // keywords need no particular wording
+      nextRaw = { suggestions: ['open day rabat', 'how to register for the open day', 'a'] };
+      const k = await ask({ field: 'keywords' }).expect(201);
+      expect(k.body.suggestions).toEqual(['open day rabat', 'how to register for the open day']);
+
+      // asking saves nothing
+      expect(pieces.find((p) => p.id === a.id).options.primaryKeyword).toBeUndefined();
+      expect(pieces.find((p) => p.id === a.id).edited).toBe(false);
+    });
+
+    it('limits who may ask for SEO suggestions, and for what', async () => {
+      const a = await make();
+      const ask = (body: object, user = U_EDITOR, id = a.id) =>
+        request(app.getHttpServer())
+          .post(`/api/organizations/${ORG_A}/content/${id}/seo-suggest`)
+          .set('Authorization', as(user))
+          .send(body);
+      nextRaw = { suggestions: ['open day rabat'] };
+      aiMock.generateJson.mockClear();
+      await ask({ field: 'keywords' }, U_VIEWER).expect(403); // read-only
+      await ask({ field: 'keywords' }, U_OTHER).expect(404); // another organization
+      await ask({ field: 'slug' }).expect(400); // not something it offers
+      await ask({}).expect(400);
+      await ask({ field: 'keywords', keyword: 'x'.repeat(81) }).expect(400);
+      await ask({ field: 'keywords' }, U_EDITOR, '00000000-0000-4000-8000-000000000000').expect(
+        404,
+      );
+      expect(aiMock.generateJson).not.toHaveBeenCalled(); // none of these reached the AI
+
+      // only articles have SEO titles and meta descriptions
+      nextRaw = { usedFacts: [], content: instagram() };
+      const ig = (await generate({ sourceId: SRC, kind: 'INSTAGRAM' }).expect(201)).body.piece;
+      nextRaw = { suggestions: ['open day rabat'] };
+      await ask({ field: 'keywords' }, U_EDITOR, ig.id).expect(400);
+    });
+
     it('deletes content', async () => {
       const a = await make();
       await request(app.getHttpServer())

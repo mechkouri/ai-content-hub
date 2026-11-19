@@ -5,6 +5,7 @@ import { ArticleContent, SeoCheck } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 import { articleJsonLd, jsonLdScripts } from '@/lib/seo-schema';
+import { SeoSuggest } from './seo-suggest';
 
 /** Like Rank Math: checks are grouped by what they are about. */
 const GROUPS: { id: 'basic' | 'additional' | 'title' | 'content' | 'geo'; ids: string[] }[] = [
@@ -99,6 +100,8 @@ export function SeoSidebar({
   language,
   disabled,
   live,
+  orgId,
+  contentId,
 }: {
   article: ArticleContent;
   onChange: (a: ArticleContent) => void;
@@ -111,6 +114,8 @@ export function SeoSidebar({
   disabled?: boolean;
   /** The score is for unsaved edits. */
   live: boolean;
+  orgId: string;
+  contentId: string;
 }) {
   const { t } = useI18n();
   const [mobile, setMobile] = useState(false);
@@ -206,6 +211,15 @@ export function SeoSidebar({
           />
           <span className="mt-1 block text-[11px] text-slate-400">{t('rm.focusHint')}</span>
         </label>
+        <SeoSuggest
+          orgId={orgId}
+          contentId={contentId}
+          article={article}
+          keyword={keyword}
+          disabled={disabled}
+          field="keywords"
+          onApply={onKeyword}
+        />
       </section>
 
       <section className="card p-4">
@@ -260,6 +274,15 @@ export function SeoSidebar({
               />
               <LengthBar n={article.seoTitle.length} min={30} max={60} />
             </label>
+            <SeoSuggest
+              orgId={orgId}
+              contentId={contentId}
+              article={article}
+              keyword={keyword}
+              disabled={disabled}
+              field="title"
+              onApply={(text) => set({ seoTitle: text })}
+            />
             <label className="block text-sm">
               <span className="font-semibold">{t('rm.permalink')}</span>
               <input
@@ -285,6 +308,15 @@ export function SeoSidebar({
               />
               <LengthBar n={article.metaDescription.length} min={70} max={160} />
             </label>
+            <SeoSuggest
+              orgId={orgId}
+              contentId={contentId}
+              article={article}
+              keyword={keyword}
+              disabled={disabled}
+              field="meta"
+              onApply={(text) => set({ metaDescription: text })}
+            />
           </div>
         </details>
       </section>

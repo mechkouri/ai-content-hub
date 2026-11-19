@@ -388,6 +388,8 @@ export default function ContentDetailPage() {
               language={piece.language}
               disabled={!canWrite}
               live={dirty && !!liveSeo}
+              orgId={currentOrgId ?? ''}
+              contentId={piece.id}
             />
           </div>
         )}
