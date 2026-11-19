@@ -1173,6 +1173,12 @@ export const en = {
   'seo.geo-citations':
     '{n} link(s) to a source (cite at least one: answer engines trust cited pages).',
   'rm.group.geo': 'AI search (GEO)',
+  'sg.suggest': 'Suggest with AI',
+  'sg.thinking': 'Thinking…',
+  'sg.pick': 'Click one to use it. You can still edit it.',
+  'sg.none': 'No usable suggestion this time. Try again.',
+  'sg.cost':
+    'Uses one of your daily AI generations. Suggestions only use what the article already says.',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -2370,6 +2376,12 @@ export const fr: Messages = {
   'seo.geo-citations':
     '{n} lien(s) vers une source (citez-en au moins une : les moteurs de réponse font confiance aux pages qui citent leurs sources).',
   'rm.group.geo': 'Recherche par IA (GEO)',
+  'sg.suggest': 'Suggérer avec l’IA',
+  'sg.thinking': 'Réflexion…',
+  'sg.pick': 'Cliquez sur une proposition pour l’utiliser. Vous pourrez encore la modifier.',
+  'sg.none': 'Aucune suggestion utilisable cette fois. Réessayez.',
+  'sg.cost':
+    'Utilise l’une de vos générations d’IA du jour. Les suggestions n’utilisent que ce que dit déjà l’article.',
 };
 
 export const ar: Messages = {
@@ -3515,6 +3527,11 @@ export const ar: Messages = {
   'seo.geo-citations':
     '{n} رابط إلى مصدر (استشهد بمصدر واحد على الأقل: تثق محركات الإجابة بالصفحات التي تذكر مصادرها).',
   'rm.group.geo': 'البحث بالذكاء الاصطناعي (GEO)',
+  'sg.suggest': 'اقتراح بالذكاء الاصطناعي',
+  'sg.thinking': 'جارٍ التفكير…',
+  'sg.pick': 'انقر على اقتراح لاستخدامه. يمكنك تعديله بعد ذلك.',
+  'sg.none': 'لا يوجد اقتراح صالح هذه المرة. حاول مجددًا.',
+  'sg.cost': 'يستهلك إحدى عمليات التوليد اليومية. تعتمد الاقتراحات فقط على ما يقوله المقال.',
 };
 
 export const LOCALES = ['en', 'fr', 'ar'] as const;

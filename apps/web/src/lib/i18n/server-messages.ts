@@ -429,6 +429,11 @@ const ENTRIES: readonly Entry[] = [
     'الصورة أكبر من أن يتم استيرادها',
   ],
   ['Template not found', 'Modèle introuvable', 'القالب غير موجود'],
+  [
+    'SEO suggestions are for articles',
+    'Les suggestions SEO sont réservées aux articles',
+    'اقتراحات SEO مخصصة للمقالات فقط',
+  ],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
     'Only http and https URLs are allowed',

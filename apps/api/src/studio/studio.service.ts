@@ -10,6 +10,7 @@ import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalsService } from './approvals.service';
+import { briefOf, buildSeoPrompt, SeoField, seoSuggestionSchema, usable } from './seo-assist';
 import { protectPictures, restorePictures } from './translation-pictures';
 import {
   ClaimWarning,
@@ -482,6 +483,57 @@ export class StudioService {
     // An edit voids any pending review or approval: the reviewed text is no longer the saved text.
     const final = (await this.approvals.invalidateAfterEdit(orgId, piece, actorId)) ?? updated;
     return this.present(final);
+  }
+
+  /**
+   * Ideas for an article's SEO title, meta description or focus keyword, written by the AI from the article itself.
+   * Anything that mentions a date, number, link or email the article and its verified facts do not support is
+   * dropped, and so is anything too short or too long to pass the SEO checks. Nothing is saved: the person chooses.
+   */
+  async seoSuggest(
+    orgId: string,
+    userId: string,
+    id: string,
+    input: { field: SeoField; keyword?: string | null; content?: unknown },
+  ) {
+    const piece = await this.find(orgId, id);
+    if (piece.kind !== ContentKind.ARTICLE) {
+      throw new BadRequestException('SEO suggestions are for articles');
+    }
+    const draft =
+      input.content && typeof input.content === 'object' ? input.content : piece.content;
+    const language = (isLanguage(piece.language) ? piece.language : 'en') as Language;
+    const keyword = (
+      input.keyword ??
+      ((piece.options as any)?.primaryKeyword as string | undefined) ??
+      ''
+    )
+      .toString()
+      .trim()
+      .slice(0, 80);
+    const { org, brand, verified } = await this.context(orgId, piece.sourceId);
+    const { system, prompt, maxTokens } = buildSeoPrompt(
+      input.field,
+      briefOf(draft),
+      language,
+      keyword || undefined,
+      org?.name ?? '',
+    );
+    const out = await this.ai.generateJson(
+      { orgId, userId },
+      { system, prompt, maxTokens, temperature: 0.6, schema: seoSuggestionSchema },
+    );
+    const allowed = this.corpus(
+      verified,
+      org,
+      brand,
+      { primaryKeyword: keyword || undefined },
+      flattenStrings(draft),
+    );
+    const supported = out.data.suggestions.filter(
+      (text) => findUnsupportedClaims({ text }, allowed).length === 0,
+    );
+    return { field: input.field, suggestions: usable(input.field, supported) };
   }
 
   private async originalText(orgId: string, id: string): Promise<string[]> {

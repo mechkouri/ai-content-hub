@@ -19,6 +19,7 @@ import { OrgAccessGuard, RequirePermission } from '../organizations/org-access.g
 import { ApprovalsService } from './approvals.service';
 import { KINDS, LANGUAGES, optionsSchema } from './content-schemas';
 import { ImagesService } from './images.service';
+import { SEO_FIELDS } from './seo-assist';
 import { ScheduleService } from './schedule.service';
 import { StudioService } from './studio.service';
 
@@ -32,6 +33,11 @@ const generateSchema = z.object({
   sourceId: z.string().uuid(),
   kind: z.enum(KINDS),
   options: optionsSchema.default({}),
+});
+const seoSuggestInput = z.object({
+  field: z.enum(SEO_FIELDS),
+  keyword: z.string().trim().max(80).nullable().optional(),
+  content: z.record(z.unknown()).optional(),
 });
 const translateSchema = z.object({ language: z.enum(LANGUAGES) });
 // The focus keyword belongs to an article's SEO and can be changed with the text.
@@ -116,6 +122,18 @@ export class StudioController {
   ) {
     const b = parseBody(updateSchema, body);
     return this.studio.update(orgId, uuid(id), b.content, req.user.id, b.primaryKeyword);
+  }
+
+  /** AI ideas for an article's SEO title, meta description or focus keyword. Nothing is saved. */
+  @Post(':id/seo-suggest')
+  @RequirePermission('content:write')
+  seoSuggest(
+    @Param('orgId') orgId: string,
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    return this.studio.seoSuggest(orgId, req.user.id, uuid(id), parseBody(seoSuggestInput, body));
   }
 
   @Get(':id/reviews')
