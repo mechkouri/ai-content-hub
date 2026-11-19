@@ -277,7 +277,7 @@ export function Overview({
           </section>
         </div>
 
-        <aside className="space-y-6">
+        <aside className={`space-y-6 ${allDone ? '' : 'max-xl:order-first'}`}>
           {!allDone && (
             <section className="card p-5">
               <h2 className="font-display text-lg font-semibold">{t('dash.gettingStarted')}</h2>

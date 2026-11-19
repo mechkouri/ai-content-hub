@@ -33,12 +33,9 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
     title: 'nav.workspace',
     items: [
       { href: '/dashboard', label: 'nav.overview', icon: LayoutGrid },
-      { href: '/sources', label: 'nav.sources', icon: FileText },
       { href: '/studio', label: 'nav.studio', icon: PenLine },
+      { href: '/sources', label: 'nav.sources', icon: FileText },
       { href: '/calendar', label: 'nav.calendar', icon: CalendarDays },
-      { href: '/campaigns', label: 'nav.campaigns', icon: Megaphone },
-      { href: '/channels', label: 'nav.channels', icon: Share2 },
-      { href: '/automation', label: 'nav.workflow', icon: Workflow },
       { href: '/analytics', label: 'nav.analytics', icon: LineChart },
     ],
   },
@@ -46,11 +43,18 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
     title: 'nav.aiStudio',
     items: [
       { href: '/brand', label: 'nav.brand', icon: Palette },
+      { href: '/channels', label: 'nav.channels', icon: Share2 },
       { href: '/design', label: 'nav.designStudio', icon: Wand2 },
-      { href: '/media', label: 'nav.media', icon: ImageIcon },
-      { href: '/ai', label: 'nav.aiProviders', icon: Sparkles },
     ],
   },
+];
+
+/** Used less often, so they stay out of the way until opened (or until one of them is the current page). */
+export const MORE_ITEMS: NavItem[] = [
+  { href: '/media', label: 'nav.media', icon: ImageIcon },
+  { href: '/campaigns', label: 'nav.campaigns', icon: Megaphone },
+  { href: '/automation', label: 'nav.workflow', icon: Workflow },
+  { href: '/ai', label: 'nav.aiProviders', icon: Sparkles },
 ];
 
 export interface SidebarProps {
@@ -65,6 +69,36 @@ export interface SidebarProps {
 
 const isActive = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
+
+function NavLink({
+  item: { href, label, icon: Icon },
+  pathname,
+  onClose,
+}: {
+  item: NavItem;
+  pathname: string;
+  onClose: () => void;
+}) {
+  const t = useT();
+  const active = isActive(pathname, href);
+  return (
+    <li>
+      <Link
+        href={href}
+        onClick={onClose}
+        aria-current={active ? 'page' : undefined}
+        className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm transition ${
+          active
+            ? 'bg-brand-soft font-semibold text-brand-dark'
+            : 'font-medium text-slate-600 hover:bg-surface hover:text-ink'
+        }`}
+      >
+        <Icon size={18} strokeWidth={active ? 2.2 : 1.8} aria-hidden />
+        {t(label)}
+      </Link>
+    </li>
+  );
+}
 
 export function Sidebar({ pathname, brandName, credits, open, onClose }: SidebarProps) {
   const t = useT();
@@ -105,29 +139,20 @@ export function Sidebar({ pathname, brandName, credits, open, onClose }: Sidebar
             <div key={g.title}>
               <p className="eyebrow px-3 pb-1.5">{t(g.title)}</p>
               <ul className="space-y-0.5">
-                {g.items.map(({ href, label, icon: Icon }) => {
-                  const active = isActive(pathname, href);
-                  return (
-                    <li key={href}>
-                      <Link
-                        href={href}
-                        onClick={onClose}
-                        aria-current={active ? 'page' : undefined}
-                        className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm transition ${
-                          active
-                            ? 'bg-brand-soft font-semibold text-brand-dark'
-                            : 'font-medium text-slate-600 hover:bg-surface hover:text-ink'
-                        }`}
-                      >
-                        <Icon size={18} strokeWidth={active ? 2.2 : 1.8} aria-hidden />
-                        {t(label)}
-                      </Link>
-                    </li>
-                  );
-                })}
+                {g.items.map((item) => (
+                  <NavLink key={item.href} item={item} pathname={pathname} onClose={onClose} />
+                ))}
               </ul>
             </div>
           ))}
+          <details open={MORE_ITEMS.some((i) => isActive(pathname, i.href))}>
+            <summary className="eyebrow cursor-pointer px-3 pb-1.5">{t('nav.more')}</summary>
+            <ul className="space-y-0.5">
+              {MORE_ITEMS.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} onClose={onClose} />
+              ))}
+            </ul>
+          </details>
         </nav>
 
         <div className="shrink-0 space-y-2 border-t border-line p-3">
