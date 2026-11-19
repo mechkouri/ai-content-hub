@@ -434,6 +434,11 @@ const ENTRIES: readonly Entry[] = [
     'Les suggestions SEO sont réservées aux articles',
     'اقتراحات SEO مخصصة للمقالات فقط',
   ],
+  [
+    'Link checks are for articles',
+    'La vérification des liens est réservée aux articles',
+    'فحص الروابط مخصص للمقالات فقط',
+  ],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
     'Only http and https URLs are allowed',

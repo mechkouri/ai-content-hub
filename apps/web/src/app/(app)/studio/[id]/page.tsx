@@ -11,6 +11,7 @@ import { ImagesPanel } from '@/components/studio/images-panel';
 import { ScheduleBox } from '@/components/studio/schedule-box';
 import { ArticleDocument } from '@/components/studio/article-document';
 import { SeoSidebar } from '@/components/studio/seo-sidebar';
+import { LinkChecker } from '@/components/studio/link-checker';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
 import { StatusBadge } from '@/components/studio/status-badge';
 import {
@@ -391,6 +392,23 @@ export default function ContentDetailPage() {
               orgId={currentOrgId ?? ''}
               contentId={piece.id}
             />
+            <div className="mt-4">
+              <LinkChecker
+                orgId={currentOrgId ?? ''}
+                contentId={piece.id}
+                article={draft as ArticleContent}
+                disabled={!canWrite}
+                onFix={(from, to) =>
+                  setDraft((d) =>
+                    JSON.parse(
+                      JSON.stringify(d)
+                        .split(JSON.stringify(from).slice(1, -1))
+                        .join(JSON.stringify(to).slice(1, -1)),
+                    ),
+                  )
+                }
+              />
+            </div>
           </div>
         )}
         <div className="min-w-0 space-y-4">

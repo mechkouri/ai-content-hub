@@ -10,6 +10,7 @@ import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalsService } from './approvals.service';
+import { checkLinks, linksIn } from './link-check';
 import { briefOf, buildSeoPrompt, SeoField, seoSuggestionSchema, usable } from './seo-assist';
 import { protectPictures, restorePictures } from './translation-pictures';
 import {
@@ -57,6 +58,9 @@ export class StudioService {
     private readonly ai: AiService,
     private readonly approvals: ApprovalsService,
   ) {}
+
+  /** Replaceable in tests so no real network is used. */
+  linkDeps: import('./link-check').LinkCheckDeps = {};
 
   // ---------- helpers ----------
 
@@ -534,6 +538,29 @@ export class StudioService {
       (text) => findUnsupportedClaims({ text }, allowed).length === 0,
     );
     return { field: input.field, suggestions: usable(input.field, supported) };
+  }
+
+  /**
+   * Checks the links of an article (the draft being edited, or the saved text) and says which work, which move,
+   * which are broken and which could not be checked. Only public web addresses are ever contacted.
+   */
+  async checkArticleLinks(orgId: string, id: string, draft?: unknown) {
+    const piece = await this.find(orgId, id);
+    if (piece.kind !== ContentKind.ARTICLE) {
+      throw new BadRequestException('Link checks are for articles');
+    }
+    const content: any = draft && typeof draft === 'object' ? draft : piece.content;
+    const texts = [
+      content?.introduction,
+      content?.conclusion,
+      ...(Array.isArray(content?.sections) ? content.sections : []).flatMap((x: any) => [
+        x?.body,
+        ...(Array.isArray(x?.subsections) ? x.subsections : []).map((y: any) => y?.body),
+      ]),
+      ...(Array.isArray(content?.faq) ? content.faq : []).map((f: any) => f?.answer),
+    ].filter((t): t is string => typeof t === 'string');
+    const urls = linksIn(texts);
+    return { checked: urls.length, results: await checkLinks(urls, this.linkDeps) };
   }
 
   private async originalText(orgId: string, id: string): Promise<string[]> {

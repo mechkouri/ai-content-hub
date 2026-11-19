@@ -136,6 +136,13 @@ export class StudioController {
     return this.studio.seoSuggest(orgId, req.user.id, uuid(id), parseBody(seoSuggestInput, body));
   }
 
+  /** Checks the links in an article (the draft being edited, if sent). Only public web addresses are contacted. */
+  @Post(':id/check-links')
+  @RequirePermission('content:write')
+  checkLinks(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: any) {
+    return this.studio.checkArticleLinks(orgId, uuid(id), body?.content);
+  }
+
   @Get(':id/reviews')
   @RequirePermission('content:read')
   reviews(@Param('orgId') orgId: string, @Param('id') id: string) {
