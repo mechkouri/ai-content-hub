@@ -220,106 +220,116 @@ export default function StudioPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <label className="block text-sm">
-                <span className="font-semibold">{t('studio.language')}</span>
-                <select
-                  className="input mt-1"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as '' | Lang)}
-                  disabled={busy}
-                >
-                  <option value="">{t('studio.langAuto')}</option>
-                  {Object.entries(LANG_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
-                <span className="font-semibold">{t('studio.style')}</span>
-                <select
-                  className="input mt-1"
-                  value={style}
-                  onChange={(e) => setStyle(e.target.value)}
-                  disabled={busy}
-                >
-                  {STYLE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {t(`style.${s}` as MessageKey)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
-                <span className="font-semibold">{t('studio.tone')}</span>
-                <select
-                  className="input mt-1"
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  disabled={busy}
-                >
-                  {TONE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {t(`tone.${s}` as MessageKey)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
-                <span className="font-semibold">{t('studio.length')}</span>
-                <select
-                  className="input mt-1"
-                  value={length}
-                  onChange={(e) => setLength(e.target.value as GenerateOptions['length'])}
-                  disabled={busy}
-                >
-                  <option value="short">{t('len.short')}</option>
-                  <option value="medium">{t('len.medium')}</option>
-                  <option value="long">{t('len.long')}</option>
-                </select>
-              </label>
-            </div>
+            <details className="rounded-xl border border-line p-4">
+              <summary className="cursor-pointer text-sm font-semibold">
+                {t('studio.moreOptions')}
+                <span className="ms-2 text-xs font-normal text-muted">
+                  {t('studio.moreOptionsHint')}
+                </span>
+              </summary>
+              <div className="mt-4 space-y-5">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="block text-sm">
+                    <span className="font-semibold">{t('studio.language')}</span>
+                    <select
+                      className="input mt-1"
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value as '' | Lang)}
+                      disabled={busy}
+                    >
+                      <option value="">{t('studio.langAuto')}</option>
+                      {Object.entries(LANG_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    <span className="font-semibold">{t('studio.style')}</span>
+                    <select
+                      className="input mt-1"
+                      value={style}
+                      onChange={(e) => setStyle(e.target.value)}
+                      disabled={busy}
+                    >
+                      {STYLE_OPTIONS.map((s) => (
+                        <option key={s} value={s}>
+                          {t(`style.${s}` as MessageKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    <span className="font-semibold">{t('studio.tone')}</span>
+                    <select
+                      className="input mt-1"
+                      value={tone}
+                      onChange={(e) => setTone(e.target.value)}
+                      disabled={busy}
+                    >
+                      {TONE_OPTIONS.map((s) => (
+                        <option key={s} value={s}>
+                          {t(`tone.${s}` as MessageKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    <span className="font-semibold">{t('studio.length')}</span>
+                    <select
+                      className="input mt-1"
+                      value={length}
+                      onChange={(e) => setLength(e.target.value as GenerateOptions['length'])}
+                      disabled={busy}
+                    >
+                      <option value="short">{t('len.short')}</option>
+                      <option value="medium">{t('len.medium')}</option>
+                      <option value="long">{t('len.long')}</option>
+                    </select>
+                  </label>
+                </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm">
-                <span className="font-semibold">{t('studio.audience')}</span>
-                <input
-                  className="input mt-1"
-                  maxLength={150}
-                  placeholder={t('studio.audiencePh')}
-                  value={audience}
-                  onChange={(e) => setAudience(e.target.value)}
-                  disabled={busy}
-                />
-              </label>
-              {kind === 'ARTICLE' && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="font-semibold">{t('studio.audience')}</span>
+                    <input
+                      className="input mt-1"
+                      maxLength={150}
+                      placeholder={t('studio.audiencePh')}
+                      value={audience}
+                      onChange={(e) => setAudience(e.target.value)}
+                      disabled={busy}
+                    />
+                  </label>
+                  {kind === 'ARTICLE' && (
+                    <label className="block text-sm">
+                      <span className="font-semibold">{t('studio.keyword')}</span>
+                      <input
+                        className="input mt-1"
+                        maxLength={80}
+                        placeholder={t('studio.keywordPh')}
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        disabled={busy}
+                      />
+                    </label>
+                  )}
+                </div>
                 <label className="block text-sm">
-                  <span className="font-semibold">{t('studio.keyword')}</span>
-                  <input
+                  <span className="font-semibold">{t('studio.extra')}</span>
+                  <textarea
                     className="input mt-1"
-                    maxLength={80}
-                    placeholder={t('studio.keywordPh')}
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
+                    rows={2}
+                    maxLength={500}
+                    placeholder={t('studio.extraPh')}
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
                     disabled={busy}
                   />
                 </label>
-              )}
-            </div>
-            <label className="block text-sm">
-              <span className="font-semibold">{t('studio.extra')}</span>
-              <textarea
-                className="input mt-1"
-                rows={2}
-                maxLength={500}
-                placeholder={t('studio.extraPh')}
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                disabled={busy}
-              />
-            </label>
+              </div>
+            </details>
 
             <div className="flex flex-wrap items-center gap-3">
               <button className="btn-primary" disabled={busy || !sourceId || noFacts}>
