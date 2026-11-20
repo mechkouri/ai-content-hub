@@ -27,6 +27,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm --filter @aich/database validate
+      # The API imports types from @prisma/client, which only exist once the client is generated.
+      - run: pnpm --filter @aich/database generate
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
