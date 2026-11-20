@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { BUSINESS_TYPES, BusinessType, businessTable, hasBlanks } from '@/lib/business-ideas';
 import { apiFetch, CONTENT_KINDS, ContentDetail, ContentKind, SourceDetail } from '@/lib/api';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
@@ -14,7 +15,7 @@ const IS_URL = /^https?:\/\/\S+$/i;
  * It saves the text as a source, reads the facts out of it and writes the draft from the facts it could confirm.
  */
 export function QuickCreate({ orgId }: { orgId: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [input, setInput] = useState('');
   const [kind, setKind] = useState<ContentKind>('INSTAGRAM');
@@ -22,9 +23,29 @@ export function QuickCreate({ orgId }: { orgId: string }) {
   const [error, setError] = useState('');
   const [reviewId, setReviewId] = useState('');
 
+  const [business, setBusiness] = useState<BusinessType | ''>('');
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('aich.business');
+      if (BUSINESS_TYPES.includes(saved as BusinessType)) setBusiness(saved as BusinessType);
+    } catch {
+      /* remembering the choice is optional */
+    }
+  }, []);
+  const table = businessTable(locale);
+  const pickBusiness = (b: BusinessType | '') => {
+    setBusiness(b);
+    try {
+      localStorage.setItem('aich.business', b);
+    } catch {
+      /* remembering the choice is optional */
+    }
+  };
+
   const base = `/organizations/${orgId}`;
   const value = input.trim();
   const busy = step !== '';
+  const blanks = hasBlanks(value);
 
   async function go(e: FormEvent) {
     e.preventDefault();
@@ -72,6 +93,40 @@ export function QuickCreate({ orgId }: { orgId: string }) {
         <h2 className="font-display text-lg font-semibold">{t('qc.title')}</h2>
         <p className="text-sm text-muted">{t('qc.hint')}</p>
       </div>
+      <div className="space-y-2">
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold">{t('qc.business')}</span>
+          <select
+            className="input !w-auto"
+            value={business}
+            onChange={(e) => pickBusiness(e.target.value as BusinessType | '')}
+            disabled={busy}
+          >
+            <option value="">{t('qc.businessAny')}</option>
+            {BUSINESS_TYPES.map((b) => (
+              <option key={b} value={b}>
+                {table[b].label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {business && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('qc.ideas')}>
+            <span className="self-center text-xs text-muted">{t('qc.ideas')}</span>
+            {table[business].ideas.map((idea) => (
+              <button
+                key={idea.title}
+                type="button"
+                disabled={busy}
+                onClick={() => setInput(idea.text)}
+                className="rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold hover:border-brand hover:bg-brand-soft"
+              >
+                {idea.title}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <textarea
         className="input min-h-28"
         rows={5}
@@ -102,10 +157,11 @@ export function QuickCreate({ orgId }: { orgId: string }) {
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-primary" disabled={busy || value.length < 20}>
+        <button className="btn-primary" disabled={busy || value.length < 20 || blanks}>
           {step === 'reading' ? t('qc.reading') : step === 'writing' ? t('qc.writing') : t('qc.go')}
         </button>
         {busy && <p className="text-sm text-muted">{t('qc.wait')}</p>}
+        {!busy && blanks && <p className="text-sm text-amber-700">{t('qc.fillBlanks')}</p>}
       </div>
       {error && (
         <p className="rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
