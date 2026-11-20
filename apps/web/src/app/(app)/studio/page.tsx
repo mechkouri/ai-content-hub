@@ -22,6 +22,7 @@ import {
 import { useApp } from '@/lib/app-context';
 import { KindBadge } from '@/components/dashboard/widgets';
 import { ApprovalBadge } from '@/components/studio/approval';
+import { QuickCreate } from '@/components/studio/quick-create';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
@@ -138,6 +139,8 @@ export default function StudioPage() {
           </p>
         )}
       </section>
+
+      {canWrite && currentOrgId && <QuickCreate orgId={currentOrgId} />}
 
       {canWrite ? (
         sources && sources.length === 0 ? (

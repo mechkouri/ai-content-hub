@@ -451,6 +451,20 @@ export const en = {
   'studio.whatCreate': 'What do you want to create?',
   'studio.moreOptions': 'More options',
   'studio.moreOptionsHint': 'Language, tone, length… The defaults work well.',
+  'qc.title': 'Create a post in one step',
+  'qc.hint':
+    'Paste your text or a web page address, choose what to create, and we write the first draft for you.',
+  'qc.placeholder':
+    'Example: Our bakery opens a new shop in Casablanca on 5 December. Free coffee for the first 50 customers…',
+  'qc.go': 'Create my draft',
+  'qc.reading': 'Reading your text…',
+  'qc.writing': 'Writing your draft…',
+  'qc.wait': 'This takes about half a minute.',
+  'qc.noFacts':
+    'We could not find clear facts to write from. Add more details (dates, names, places) and try again.',
+  'qc.readFailed': 'We could not read your text just now. Please try again.',
+  'qc.review': 'Open it to check',
+  'qc.safe': 'We only write from what your text says. Nothing is published without your approval.',
   'studio.language': 'Language',
   'studio.langAuto': 'Automatic (brand default)',
   'studio.style': 'Writing style',
@@ -1656,6 +1670,21 @@ export const fr: Messages = {
   'studio.whatCreate': 'Que voulez-vous créer ?',
   'studio.moreOptions': 'Plus d’options',
   'studio.moreOptionsHint': 'Langue, ton, longueur… Les réglages par défaut conviennent bien.',
+  'qc.title': 'Créez une publication en une étape',
+  'qc.hint':
+    'Collez votre texte ou l’adresse d’une page web, choisissez ce que vous voulez créer, et nous rédigeons le premier brouillon.',
+  'qc.placeholder':
+    'Exemple : Notre boulangerie ouvre une nouvelle boutique à Casablanca le 5 décembre. Café offert aux 50 premiers clients…',
+  'qc.go': 'Créer mon brouillon',
+  'qc.reading': 'Lecture de votre texte…',
+  'qc.writing': 'Rédaction du brouillon…',
+  'qc.wait': 'Cela prend environ une demi-minute.',
+  'qc.noFacts':
+    'Nous n’avons pas trouvé de faits clairs pour rédiger. Ajoutez plus de détails (dates, noms, lieux) et réessayez.',
+  'qc.readFailed': 'Nous n’avons pas pu lire votre texte. Veuillez réessayer.',
+  'qc.review': 'L’ouvrir pour vérifier',
+  'qc.safe':
+    'Nous ne rédigeons qu’à partir de ce que dit votre texte. Rien n’est publié sans votre accord.',
   'studio.language': 'Langue',
   'studio.langAuto': 'Automatique (par défaut de la marque)',
   'studio.style': 'Style d’écriture',
@@ -2856,6 +2885,19 @@ export const ar: Messages = {
   'studio.whatCreate': 'ماذا تريد أن تنشئ؟',
   'studio.moreOptions': 'المزيد من الخيارات',
   'studio.moreOptionsHint': 'اللغة والنبرة والطول… الإعدادات الافتراضية مناسبة.',
+  'qc.title': 'أنشئ منشورًا في خطوة واحدة',
+  'qc.hint': 'الصق نصك أو عنوان صفحة ويب، واختر ما تريد إنشاءه، وسنكتب لك المسودة الأولى.',
+  'qc.placeholder':
+    'مثال: يفتح مخبزنا فرعًا جديدًا في الدار البيضاء يوم 5 ديسمبر. قهوة مجانية لأول 50 زبونًا…',
+  'qc.go': 'أنشئ مسودتي',
+  'qc.reading': 'جارٍ قراءة نصك…',
+  'qc.writing': 'جارٍ كتابة المسودة…',
+  'qc.wait': 'يستغرق هذا نحو نصف دقيقة.',
+  'qc.noFacts':
+    'لم نجد حقائق واضحة للكتابة منها. أضف المزيد من التفاصيل (تواريخ وأسماء وأماكن) وحاول مجددًا.',
+  'qc.readFailed': 'تعذرت قراءة نصك الآن. حاول مرة أخرى.',
+  'qc.review': 'افتحه للتحقق',
+  'qc.safe': 'نكتب فقط مما يقوله نصك. لا يُنشر شيء دون موافقتك.',
   'studio.language': 'اللغة',
   'studio.langAuto': 'تلقائي (حسب الإعداد الافتراضي للعلامة)',
   'studio.style': 'أسلوب الكتابة',
