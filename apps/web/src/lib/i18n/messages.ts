@@ -451,6 +451,10 @@ export const en = {
   'studio.whatCreate': 'What do you want to create?',
   'studio.moreOptions': 'More options',
   'studio.moreOptionsHint': 'Language, tone, length… The defaults work well.',
+  'qc.business': 'Your business:',
+  'qc.businessAny': 'Choose…',
+  'qc.ideas': 'Need an idea? Start from:',
+  'qc.fillBlanks': 'Replace the [brackets] with your own details.',
   'qc.title': 'Create a post in one step',
   'qc.hint':
     'Paste your text or a web page address, choose what to create, and we write the first draft for you.',
@@ -1670,6 +1674,10 @@ export const fr: Messages = {
   'studio.whatCreate': 'Que voulez-vous créer ?',
   'studio.moreOptions': 'Plus d’options',
   'studio.moreOptionsHint': 'Langue, ton, longueur… Les réglages par défaut conviennent bien.',
+  'qc.business': 'Votre activité :',
+  'qc.businessAny': 'Choisir…',
+  'qc.ideas': 'Besoin d’une idée ? Partez de :',
+  'qc.fillBlanks': 'Remplacez les [crochets] par vos informations.',
   'qc.title': 'Créez une publication en une étape',
   'qc.hint':
     'Collez votre texte ou l’adresse d’une page web, choisissez ce que vous voulez créer, et nous rédigeons le premier brouillon.',
@@ -2885,6 +2893,10 @@ export const ar: Messages = {
   'studio.whatCreate': 'ماذا تريد أن تنشئ؟',
   'studio.moreOptions': 'المزيد من الخيارات',
   'studio.moreOptionsHint': 'اللغة والنبرة والطول… الإعدادات الافتراضية مناسبة.',
+  'qc.business': 'نشاطك:',
+  'qc.businessAny': 'اختر…',
+  'qc.ideas': 'تحتاج فكرة؟ ابدأ من:',
+  'qc.fillBlanks': 'استبدل ما بين [الأقواس] بمعلوماتك.',
   'qc.title': 'أنشئ منشورًا في خطوة واحدة',
   'qc.hint': 'الصق نصك أو عنوان صفحة ويب، واختر ما تريد إنشاءه، وسنكتب لك المسودة الأولى.',
   'qc.placeholder':
