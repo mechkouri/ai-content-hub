@@ -2,6 +2,7 @@
 const share = require('../../web/src/lib/share') as {
   WHATSAPP_MAX: number;
   whatsappUrl: (t: string) => string;
+  downloadName: (f: string, type: string) => string;
 };
 
 const textOf = (url: string) => new URL(url).searchParams.get('text') as string;
@@ -18,5 +19,14 @@ describe('whatsappUrl', () => {
     const out = textOf(share.whatsappUrl('🎉'.repeat(share.WHATSAPP_MAX + 10)));
     expect(Array.from(out)).toHaveLength(share.WHATSAPP_MAX);
     expect(out.endsWith('…')).toBe(true);
+  });
+});
+
+describe('downloadName', () => {
+  it('matches the ending to the real file type and removes unsafe characters', () => {
+    expect(share.downloadName('summer sale.png', 'image/webp')).toBe('summer sale.webp');
+    expect(share.downloadName('../a/b:c.jpg', 'image/jpeg')).toBe('a-b-c.jpg');
+    expect(share.downloadName('عرض الصيف', 'image/png')).toBe('عرض الصيف.png');
+    expect(share.downloadName('...', '')).toBe('picture.jpg');
   });
 });
