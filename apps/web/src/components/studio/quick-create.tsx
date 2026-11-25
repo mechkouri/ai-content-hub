@@ -7,6 +7,7 @@ import { BUSINESS_TYPES, BusinessType, businessTable, hasBlanks } from '@/lib/bu
 import { apiFetch, CONTENT_KINDS, ContentDetail, ContentKind, SourceDetail } from '@/lib/api';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
+import { createDrafts } from '@/lib/quick-create';
 
 const IS_URL = /^https?:\/\/\S+$/i;
 
@@ -14,11 +15,22 @@ const IS_URL = /^https?:\/\/\S+$/i;
  * The shortest way to a first draft: paste text (or a web address), pick what to create, press one button.
  * It saves the text as a source, reads the facts out of it and writes the draft from the facts it could confirm.
  */
-export function QuickCreate({ orgId }: { orgId: string }) {
+export function QuickCreate({
+  orgId,
+  onCreated,
+}: {
+  orgId: string;
+  /** Called after several drafts were made, so the list below can show them. */
+  onCreated?: () => void;
+}) {
   const { t, locale } = useI18n();
   const router = useRouter();
   const [input, setInput] = useState('');
-  const [kind, setKind] = useState<ContentKind>('INSTAGRAM');
+  const [kinds, setKinds] = useState<ContentKind[]>(['INSTAGRAM']);
+  const [done, setDone] = useState(0);
+  const [made, setMade] = useState<{ kind: ContentKind; id: string }[]>([]);
+  const toggle = (k: ContentKind) =>
+    setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
   const [step, setStep] = useState<'' | 'reading' | 'writing'>('');
   const [error, setError] = useState('');
   const [reviewId, setReviewId] = useState('');
@@ -51,6 +63,8 @@ export function QuickCreate({ orgId }: { orgId: string }) {
     e.preventDefault();
     setError('');
     setReviewId('');
+    setMade([]);
+    setDone(0);
     setStep('reading');
     try {
       const isUrl = IS_URL.test(value);
@@ -72,15 +86,32 @@ export function QuickCreate({ orgId }: { orgId: string }) {
         return;
       }
       setStep('writing');
-      const res = await apiFetch<ContentDetail>(`${base}/content/generate`, {
-        method: 'POST',
-        body: JSON.stringify({
-          sourceId: id,
-          kind,
-          options: { style: 'informative', tone: 'professional', length: 'medium' },
-        }),
-      });
-      router.push(`/studio/${res.piece.id}`);
+      const result = await createDrafts(
+        kinds,
+        async (kind) => {
+          const res = await apiFetch<ContentDetail>(`${base}/content/generate`, {
+            method: 'POST',
+            body: JSON.stringify({
+              sourceId: id,
+              kind,
+              options: { style: 'informative', tone: 'professional', length: 'medium' },
+            }),
+          });
+          return res.piece.id;
+        },
+        setDone,
+      );
+      if (result.made.length === 1 && result.failed.length === 0) {
+        router.push(`/studio/${result.made[0].id}`);
+        return;
+      }
+      setMade(result.made);
+      if (result.failed.length) {
+        const names = result.failed.map((f) => t(`kind.${f.kind}`)).join(', ');
+        setError(`${names}: ${describeError(result.failed[0].error)}`);
+      }
+      setStep('');
+      onCreated?.();
     } catch (err) {
       setError(describeError(err));
       setStep('');
@@ -144,10 +175,10 @@ export function QuickCreate({ orgId }: { orgId: string }) {
             key={k.id}
             type="button"
             disabled={busy}
-            aria-pressed={kind === k.id}
-            onClick={() => setKind(k.id)}
+            aria-pressed={kinds.includes(k.id)}
+            onClick={() => toggle(k.id)}
             className={`rounded-full border-2 px-3 py-1.5 text-sm font-semibold transition ${
-              kind === k.id
+              kinds.includes(k.id)
                 ? 'border-brand bg-brand-soft'
                 : 'border-slate-200 hover:border-slate-300'
             }`}
@@ -157,8 +188,19 @@ export function QuickCreate({ orgId }: { orgId: string }) {
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-primary" disabled={busy || value.length < 20 || blanks}>
-          {step === 'reading' ? t('qc.reading') : step === 'writing' ? t('qc.writing') : t('qc.go')}
+        <button
+          className="btn-primary"
+          disabled={busy || value.length < 20 || blanks || kinds.length === 0}
+        >
+          {step === 'reading'
+            ? t('qc.reading')
+            : step === 'writing'
+              ? kinds.length > 1
+                ? t('qc.writingN', { n: Math.min(done + 1, kinds.length), total: kinds.length })
+                : t('qc.writing')
+              : kinds.length > 1
+                ? t('qc.goN', { n: kinds.length })
+                : t('qc.go')}
         </button>
         {busy && <p className="text-sm text-muted">{t('qc.wait')}</p>}
         {!busy && blanks && <p className="text-sm text-amber-700">{t('qc.fillBlanks')}</p>}
@@ -172,6 +214,20 @@ export function QuickCreate({ orgId }: { orgId: string }) {
             </Link>
           )}
         </p>
+      )}
+      {made.length > 0 && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm">
+          <p className="font-semibold">{t('qc.ready')}</p>
+          <ul className="mt-1 flex flex-wrap gap-3">
+            {made.map((m) => (
+              <li key={m.id}>
+                <Link href={`/studio/${m.id}`} className="font-semibold text-brand underline">
+                  {t(`kind.${m.kind}`)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       <p className="text-xs text-muted">{t('qc.safe')}</p>
     </form>

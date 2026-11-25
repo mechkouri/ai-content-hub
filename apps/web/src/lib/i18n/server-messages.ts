@@ -516,8 +516,8 @@ const ENTRIES: readonly Entry[] = [
     'Le texte est trop long (200 000 caractères maximum)',
     'النص طويل جدًا (الحد الأقصى 200,000 حرف)',
   ],
-  ['Source not found', 'Source introuvable', 'المصدر غير موجود'],
-  ['Fact not found', 'Fait introuvable', 'الحقيقة غير موجودة'],
+  ['Document not found', 'Document introuvable', 'المستند غير موجود'],
+  ['Detail not found', 'Information introuvable', 'المعلومة غير موجودة'],
   [
     'No readable text found in this PDF. Scanned documents are not supported yet.',
     'Aucun texte lisible dans ce PDF. Les documents numérisés ne sont pas encore pris en charge.',
@@ -588,14 +588,14 @@ const ENTRIES: readonly Entry[] = [
   ],
   ['This content is not scheduled', 'Ce contenu n’est pas planifié', 'هذا المحتوى غير مجدول'],
   [
-    'Extract and review the facts of this source before creating content.',
-    'Extrayez et vérifiez les faits de cette source avant de créer du contenu.',
-    'استخرج حقائق هذا المصدر وراجعها قبل إنشاء المحتوى.',
+    'Read and check this document before creating content.',
+    'Faites lire et vérifiez ce document avant de créer du contenu.',
+    'اقرأ هذا المستند وراجعه قبل إنشاء المحتوى.',
   ],
   [
-    'This source has no verified facts yet. Review and confirm its facts first.',
-    'Cette source n’a pas encore de faits vérifiés. Relisez et confirmez d’abord ses faits.',
-    'ليس لهذا المصدر حقائق موثقة بعد. راجع حقائقه وأكدها أولًا.',
+    'This document has no confirmed details yet. Check and confirm its details first.',
+    'Ce document n’a pas encore d’informations confirmées. Vérifiez et confirmez-les d’abord.',
+    'لا توجد معلومات مؤكدة لهذا المستند بعد. راجع معلوماته وأكدها أولًا.',
   ],
   [
     'The content is already in this language.',

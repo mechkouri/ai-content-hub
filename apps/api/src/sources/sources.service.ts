@@ -250,7 +250,7 @@ export class SourcesService {
   private async find(orgId: string, id: string) {
     // Always scoped by organization: another tenant's id is simply "not found".
     const source = await this.prisma.source.findFirst({ where: { id, organizationId: orgId } });
-    if (!source) throw new NotFoundException('Source not found');
+    if (!source) throw new NotFoundException('Document not found');
     return source;
   }
 
@@ -300,7 +300,7 @@ export class SourcesService {
   private async findFact(orgId: string, sourceId: string, factId: string) {
     await this.find(orgId, sourceId);
     const fact = await this.prisma.sourceFact.findFirst({ where: { id: factId, sourceId } });
-    if (!fact) throw new NotFoundException('Fact not found');
+    if (!fact) throw new NotFoundException('Detail not found');
     return fact;
   }
 
