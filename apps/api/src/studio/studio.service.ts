@@ -10,6 +10,7 @@ import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalsService } from './approvals.service';
+import { fitMeta } from './fit-meta';
 import { checkLinks, linksIn } from './link-check';
 import { briefOf, buildSeoPrompt, SeoField, seoSuggestionSchema, usable } from './seo-assist';
 import { protectPictures, restorePictures } from './translation-pictures';
@@ -151,8 +152,11 @@ export class StudioService {
   }
 
   private postProcess(kind: Kind, content: any) {
-    if (kind === 'ARTICLE')
+    if (kind === 'ARTICLE') {
       content.slug = sanitizeSlug(content.slug, content.seoTitle ?? content.h1);
+      if (typeof content.metaDescription === 'string')
+        content.metaDescription = fitMeta(content.metaDescription);
+    }
     if (kind === 'LINKEDIN') return normalizeLinkedin(content);
     return content;
   }

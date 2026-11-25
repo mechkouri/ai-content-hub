@@ -264,7 +264,10 @@ export default function SeoPlanPage() {
             <p className="text-xs text-muted">{t('strat.articlesHint')}</p>
             <ol className="mt-3 divide-y divide-line">
               {plan.articles.map((a) => (
-                <li key={a.title} className="flex flex-wrap items-start justify-between gap-3 py-4">
+                <li
+                  key={a.title}
+                  className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
                       <span className="rounded-full bg-brand-soft px-2 py-0.5 text-brand-dark">

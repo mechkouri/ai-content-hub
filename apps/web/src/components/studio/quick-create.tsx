@@ -56,12 +56,14 @@ export function QuickCreate({
 
   // Coming from the SEO plan: start an article on that topic, with blanks for the client's own details.
   const [keyword, setKeyword] = useState('');
+  const [topicTitle, setTopicTitle] = useState('');
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const topic = params.get('topic')?.slice(0, 200);
     if (!topic) return;
     setKinds(['ARTICLE']);
     setKeyword(params.get('keyword')?.slice(0, 80) ?? '');
+    setTopicTitle(topic.slice(0, 150));
     setInput(t('qc.topicTemplate', { topic: topic.replace(/[[\]]/g, '') }));
     // only when the page opens, so a language change never overwrites what was typed
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +85,9 @@ export function QuickCreate({
       const isUrl = IS_URL.test(value);
       const src = await apiFetch<SourceDetail>(`${base}/sources/${isUrl ? 'url' : 'text'}`, {
         method: 'POST',
-        body: JSON.stringify(isUrl ? { url: value } : { text: value }),
+        body: JSON.stringify(
+          isUrl ? { url: value } : { text: value, ...(topicTitle ? { title: topicTitle } : {}) },
+        ),
       });
       const id = src.source.id;
       if (src.extraction && !src.extraction.ok) {
