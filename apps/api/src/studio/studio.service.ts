@@ -105,11 +105,11 @@ export class StudioService {
     const source = await this.prisma.source.findFirst({
       where: { id: sourceId, organizationId: orgId },
     });
-    if (!source) throw new NotFoundException('Source not found');
+    if (!source) throw new NotFoundException('Document not found');
     if (source.status !== SourceStatus.EXTRACTED) {
       throw new UnprocessableEntityException({
         code: 'SOURCE_NOT_READY',
-        message: 'Extract and review the facts of this source before creating content.',
+        message: 'Read and check this document before creating content.',
       });
     }
     return source;
@@ -197,7 +197,7 @@ export class StudioService {
     if (!verified.length) {
       throw new UnprocessableEntityException({
         code: 'NO_VERIFIED_FACTS',
-        message: 'This source has no verified facts yet. Review and confirm its facts first.',
+        message: 'This document has no confirmed details yet. Check and confirm its details first.',
       });
     }
 
