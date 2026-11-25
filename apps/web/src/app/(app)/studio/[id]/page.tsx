@@ -10,6 +10,7 @@ import { PublishPanel } from '@/components/channels/publish-panel';
 import { ImagesPanel } from '@/components/studio/images-panel';
 import { ScheduleBox } from '@/components/studio/schedule-box';
 import { ArticleDocument } from '@/components/studio/article-document';
+import { SharePost } from '@/components/studio/share-post';
 import { SeoSidebar } from '@/components/studio/seo-sidebar';
 import { LinkChecker } from '@/components/studio/link-checker';
 import { PipelineSteps } from '@/components/studio/pipeline-steps';
@@ -303,6 +304,9 @@ export default function ContentDetailPage() {
             <button className="btn-ghost" onClick={copy}>
               {t('det.copy')}
             </button>
+            {piece.kind !== 'ARTICLE' && (
+              <SharePost text={() => contentToText(piece.kind, draft)} />
+            )}
             {canWrite && (
               <>
                 <button className="btn-primary" onClick={save} disabled={saving || !dirty}>
