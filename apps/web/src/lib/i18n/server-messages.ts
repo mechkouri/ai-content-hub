@@ -439,6 +439,16 @@ const ENTRIES: readonly Entry[] = [
     'La vérification des liens est réservée aux articles',
     'فحص الروابط مخصص للمقالات فقط',
   ],
+  [
+    'This website asks not to be checked automatically.',
+    'Ce site demande à ne pas être vérifié automatiquement.',
+    'يطلب هذا الموقع عدم فحصه تلقائيًا.',
+  ],
+  [
+    'That address is not a web page.',
+    'Cette adresse n’est pas une page web.',
+    'هذا العنوان ليس صفحة ويب.',
+  ],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
     'Only http and https URLs are allowed',

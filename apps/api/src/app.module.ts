@@ -1,3 +1,4 @@
+import { StrategyModule } from './strategy/strategy.module';
 import { Module } from '@nestjs/common';
 import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -29,6 +30,7 @@ import { StorageModule } from './storage/storage.module';
     ChannelsModule,
     AnalyticsModule,
     StockModule,
+    StrategyModule,
   ],
   controllers: [HealthController],
 })
