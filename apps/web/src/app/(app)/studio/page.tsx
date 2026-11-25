@@ -26,6 +26,7 @@ import { QuickCreate } from '@/components/studio/quick-create';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
+import { matchesSearch } from '@/lib/quick-create';
 import type { MessageKey } from '@/lib/i18n/messages';
 
 const KIND_ICON = Object.fromEntries(CONTENT_KINDS.map((k) => [k.id, k.icon]));
@@ -51,6 +52,7 @@ export default function StudioPage() {
   const [instructions, setInstructions] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
   const [filterKind, setFilterKind] = useState<'' | ContentKind>('');
   const [filterApproval, setFilterApproval] = useState<'' | ApprovalStatus>('');
 
@@ -124,6 +126,7 @@ export default function StudioPage() {
   const noFacts = facts !== null && facts.verified === 0;
   const visible = (pieces ?? []).filter(
     (p) =>
+      matchesSearch(p.title, search) &&
       (!filterKind || p.kind === filterKind) &&
       (!filterApproval || p.approvalStatus === filterApproval),
   );
@@ -140,7 +143,7 @@ export default function StudioPage() {
         )}
       </section>
 
-      {canWrite && currentOrgId && <QuickCreate orgId={currentOrgId} />}
+      {canWrite && currentOrgId && <QuickCreate orgId={currentOrgId} onCreated={load} />}
 
       {canWrite ? (
         sources && sources.length === 0 ? (
@@ -350,6 +353,15 @@ export default function StudioPage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold">{t('studio.yourContent')}</h2>
           <div className="flex flex-wrap gap-2">
+            <input
+              type="search"
+              className="input !w-auto"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('studio.search')}
+              aria-label={t('studio.search')}
+              dir="auto"
+            />
             <select
               className="input !w-auto"
               value={filterApproval}
@@ -380,11 +392,15 @@ export default function StudioPage() {
         {pieces === null ? (
           <p className="text-sm text-muted">{t('common.loading')}</p>
         ) : visible.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted">
-            <p className="text-3xl">✍️</p>
-            <p className="mt-2 font-semibold text-slate-700">{t('studio.nothingYet')}</p>
-            <p>{t('studio.createFirst')}</p>
-          </div>
+          pieces.length > 0 ? (
+            <p className="py-8 text-center text-sm text-muted">{t('studio.noMatch')}</p>
+          ) : (
+            <div className="py-8 text-center text-sm text-muted">
+              <p className="text-3xl">✍️</p>
+              <p className="mt-2 font-semibold text-slate-700">{t('studio.nothingYet')}</p>
+              <p>{t('studio.createFirst')}</p>
+            </div>
+          )
         ) : (
           <ul className="divide-y divide-slate-100">
             {visible.map((p) => (
