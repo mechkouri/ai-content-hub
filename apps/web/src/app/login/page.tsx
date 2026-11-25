@@ -9,7 +9,9 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 function safeNext(): string {
   const next = new URLSearchParams(window.location.search).get('next');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+  return next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\')
+    ? next
+    : '/dashboard';
 }
 
 function LoginForm() {

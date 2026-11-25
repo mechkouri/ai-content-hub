@@ -50,10 +50,13 @@ export function Overview({
   data,
   name,
   orgName,
+  guest = false,
 }: {
   data: OverviewData;
   name: string;
   orgName: string;
+  /** A visitor who has not logged in: the same dashboard, with nothing of their own in it yet. */
+  guest?: boolean;
 }) {
   const t = useT();
   const { sources, content, ai, hasBrandKit } = data;
@@ -115,18 +118,20 @@ export function Overview({
     <div className="space-y-8">
       {/* Greeting + quick create */}
       <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="font-display text-[32px] font-semibold leading-tight">
-            {t('dash.hello', { greeting: greeting(t), name })}
-          </h1>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-            <span className="chip-ai">
-              <span className="h-1.5 w-1.5 rounded-full bg-ai" aria-hidden />
-              {orgName}
-            </span>
-            {t('dash.overviewLine')}
-          </p>
-        </div>
+        {!guest && (
+          <div>
+            <h1 className="font-display text-[32px] font-semibold leading-tight">
+              {t('dash.hello', { greeting: greeting(t), name })}
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
+              <span className="chip-ai">
+                <span className="h-1.5 w-1.5 rounded-full bg-ai" aria-hidden />
+                {orgName}
+              </span>
+              {t('dash.overviewLine')}
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {CONTENT_KINDS.map((k) => (
             <Link
@@ -166,7 +171,7 @@ export function Overview({
             review.length ? t('dash.needReview', { n: review.length }) : t('dash.nothingReview')
           }
         />
-        {ai ? (
+        {guest ? null : ai ? (
           <>
             <StatCard
               label={t('dash.aiText')}
@@ -296,39 +301,41 @@ export function Overview({
           )}
 
           {/* Provider connectivity (design: "Pipe connectivity") */}
-          <section className="card p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="eyebrow">{t('dash.aiProviders')}</h2>
-              <Link href="/ai" className="text-xs font-semibold text-brand hover:underline">
-                {t('dash.manage')}
-              </Link>
-            </div>
-            {ai ? (
-              <ul className="grid grid-cols-2 gap-2">
-                {[
-                  ...ai.providers.text.map((p) => ({ ...p, kind: t('dash.text') })),
-                  ...ai.providers.image.map((p) => ({ ...p, kind: t('dash.images') })),
-                ].map((p) => (
-                  <li
-                    key={`${p.kind}-${p.id}`}
-                    className="flex items-center justify-between rounded-lg bg-surface px-3 py-2.5"
-                  >
-                    <span>
-                      <span className="block text-sm font-medium capitalize">{p.id}</span>
-                      <span className="block text-[11px] text-muted">{p.kind}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted">
-                      <StatusDot ok={p.configured} />
-                      {p.configured ? t('dash.connected') : t('dash.notSetUpShort')}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted">{t('dash.providersVisible')}</p>
-            )}
-            <p className="mt-3 text-[11px] text-muted">{t('dash.freeOnly')}</p>
-          </section>
+          {!guest && (
+            <section className="card p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="eyebrow">{t('dash.aiProviders')}</h2>
+                <Link href="/ai" className="text-xs font-semibold text-brand hover:underline">
+                  {t('dash.manage')}
+                </Link>
+              </div>
+              {ai ? (
+                <ul className="grid grid-cols-2 gap-2">
+                  {[
+                    ...ai.providers.text.map((p) => ({ ...p, kind: t('dash.text') })),
+                    ...ai.providers.image.map((p) => ({ ...p, kind: t('dash.images') })),
+                  ].map((p) => (
+                    <li
+                      key={`${p.kind}-${p.id}`}
+                      className="flex items-center justify-between rounded-lg bg-surface px-3 py-2.5"
+                    >
+                      <span>
+                        <span className="block text-sm font-medium capitalize">{p.id}</span>
+                        <span className="block text-[11px] text-muted">{p.kind}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted">
+                        <StatusDot ok={p.configured} />
+                        {p.configured ? t('dash.connected') : t('dash.notSetUpShort')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted">{t('dash.providersVisible')}</p>
+              )}
+              <p className="mt-3 text-[11px] text-muted">{t('dash.freeOnly')}</p>
+            </section>
+          )}
         </aside>
       </div>
     </div>

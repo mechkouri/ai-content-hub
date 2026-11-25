@@ -3,29 +3,10 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from '@/components/shell/sidebar';
-import { AuthGate } from '@/components/auth-gate';
 import { GuestTopbar, Topbar } from '@/components/shell/topbar';
 import { useApp } from '@/lib/app-context';
 import { useT } from '@/lib/i18n';
-import type { MessageKey } from '@/lib/i18n/messages';
 import { useShellData } from '@/lib/use-shell-data';
-
-const FEATURES: [string, MessageKey][] = [
-  ['/sources', 'gate.sources'],
-  ['/studio', 'gate.studio'],
-  ['/calendar', 'gate.calendar'],
-  ['/campaigns', 'gate.campaigns'],
-  ['/channels', 'gate.channels'],
-  ['/automation', 'gate.automation'],
-  ['/analytics', 'gate.analytics'],
-  ['/brand', 'gate.brand'],
-  ['/design', 'gate.design'],
-  ['/media', 'gate.media'],
-  ['/ai', 'gate.ai'],
-  ['/members', 'gate.members'],
-];
-const featureKey = (path: string): MessageKey =>
-  FEATURES.find(([p]) => path === p || path.startsWith(`${p}/`))?.[1] ?? 'gate.page';
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const {
@@ -55,6 +36,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => setMenuOpen(false), [pathname]);
 
   const guest = !loading && !user;
+  // Visitors see the dashboard freely. Opening anything that uses the platform takes them to log in,
+  // and they come back to that page afterwards.
+  const needsLogin = guest && pathname !== '/dashboard';
+  useEffect(() => {
+    if (needsLogin) {
+      router.replace(`/login?next=${encodeURIComponent(pathname + window.location.search)}`);
+    }
+  }, [needsLogin, pathname, router]);
   if (user && !loading && membershipsStatus === 'error' && memberships.length === 0) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
@@ -65,7 +54,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (loading || (user && memberships.length === 0)) {
+  if (loading || needsLogin || (user && memberships.length === 0)) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted">
         {t('common.loading')}
@@ -93,18 +82,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
             userEmail={user?.email ?? ''}
             onSignOut={async () => {
               await signOut();
-              router.replace('/login');
+              router.replace('/dashboard');
             }}
             onMenu={() => setMenuOpen(true)}
           />
         )}
-        <main className="mx-auto w-full max-w-[1280px] px-4 py-6 lg:px-10 lg:py-8">
-          {guest && pathname !== '/dashboard' ? (
-            <AuthGate feature={t(featureKey(pathname))} next={pathname} />
-          ) : (
-            children
-          )}
-        </main>
+        <main className="mx-auto w-full max-w-[1280px] px-4 py-6 lg:px-10 lg:py-8">{children}</main>
       </div>
     </div>
   );

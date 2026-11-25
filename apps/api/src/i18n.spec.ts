@@ -74,7 +74,7 @@ describe('translate', () => {
     expect(translate('en', 'dash.stepsDone', { done: 2, total: 4 })).toBe('2 of 4 done');
     expect(translate('fr', 'dash.stepsDone', { done: 2, total: 4 })).toBe('2 sur 4 terminées');
     expect(translate('ar', 'time.minAgo', { n: 5 })).toBe('منذ 5 دقيقة');
-    expect(translate('en', 'gate.title', {})).toBe('Log in to use {feature}'); // missing value stays visible
+    expect(translate('en', 'studio.verifiedN', {})).toBe('{n} confirmed'); // missing value stays visible
     expect(translate('en', 'nav.overview')).toBe('Overview');
   });
 
@@ -91,8 +91,8 @@ describe('translate', () => {
   });
 
   it('does not treat values as markup or as further placeholders', () => {
-    expect(translate('en', 'gate.title', { feature: '{n} <b>x</b>' })).toBe(
-      'Log in to use {n} <b>x</b>',
+    expect(translate('en', 'studio.verifiedN', { n: '{n} <b>x</b>' })).toBe(
+      '{n} <b>x</b> confirmed',
     );
   });
 });
