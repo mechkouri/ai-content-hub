@@ -10,6 +10,7 @@ import {
   Megaphone,
   Palette,
   PenLine,
+  Search,
   Settings,
   Share2,
   Sparkles,
@@ -34,6 +35,7 @@ export const NAV_GROUPS: { title: MessageKey; items: NavItem[] }[] = [
     items: [
       { href: '/dashboard', label: 'nav.overview', icon: LayoutGrid },
       { href: '/studio', label: 'nav.studio', icon: PenLine },
+      { href: '/seo', label: 'nav.seo', icon: Search },
       { href: '/sources', label: 'nav.sources', icon: FileText },
       { href: '/calendar', label: 'nav.calendar', icon: CalendarDays },
       { href: '/analytics', label: 'nav.analytics', icon: LineChart },

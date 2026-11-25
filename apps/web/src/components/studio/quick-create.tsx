@@ -54,6 +54,19 @@ export function QuickCreate({
     }
   };
 
+  // Coming from the SEO plan: start an article on that topic, with blanks for the client's own details.
+  const [keyword, setKeyword] = useState('');
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const topic = params.get('topic')?.slice(0, 200);
+    if (!topic) return;
+    setKinds(['ARTICLE']);
+    setKeyword(params.get('keyword')?.slice(0, 80) ?? '');
+    setInput(t('qc.topicTemplate', { topic: topic.replace(/[[\]]/g, '') }));
+    // only when the page opens, so a language change never overwrites what was typed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const base = `/organizations/${orgId}`;
   const value = input.trim();
   const busy = step !== '';
@@ -94,7 +107,12 @@ export function QuickCreate({
             body: JSON.stringify({
               sourceId: id,
               kind,
-              options: { style: 'informative', tone: 'professional', length: 'medium' },
+              options: {
+                style: 'informative',
+                tone: 'professional',
+                length: 'medium',
+                ...(kind === 'ARTICLE' && keyword ? { primaryKeyword: keyword } : {}),
+              },
             }),
           });
           return res.piece.id;
