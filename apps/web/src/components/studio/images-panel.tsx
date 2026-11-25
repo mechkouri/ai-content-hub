@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AuthImage } from '@/components/auth-image';
-import { apiFetch, ContentImage, ContentKind, MediaAsset } from '@/lib/api';
+import { apiBlob, apiFetch, ContentImage, ContentKind, MediaAsset } from '@/lib/api';
 import { describeError } from '@/lib/errors';
 import { useT } from '@/lib/i18n';
+import { downloadName } from '@/lib/share';
 
 const LIMITS: Record<ContentKind, number> = {
   ARTICLE: 1,
@@ -250,6 +251,23 @@ function PictureRow({
   // Follow the server (e.g. after another change), but never overwrite what is being typed.
   useEffect(() => setAlt(image.altText ?? ''), [image.altText]);
   const changed = alt.trim() !== (image.altText ?? '');
+  const [failed, setFailed] = useState('');
+
+  // The picture is private, so it is fetched with the login first and then saved to the device.
+  async function save() {
+    setFailed('');
+    try {
+      const blob = await apiBlob(`/organizations/${orgId}/media/${image.assetId}/content`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = downloadName(image.asset.filename, blob.type);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setFailed(describeError(e));
+    }
+  }
 
   return (
     <li className="flex gap-2.5">
@@ -275,6 +293,9 @@ function PictureRow({
           <span className={image.altText ? 'text-ok-ink' : 'text-amber-700'}>
             {image.altText ? t('pic.altSaved') : t('pic.altNone')}
           </span>
+          <button type="button" className="font-semibold text-brand hover:underline" onClick={save}>
+            {t('pic.download')}
+          </button>
           {canEdit && (
             <button
               className="font-semibold text-slate-500 hover:text-danger"
@@ -286,6 +307,7 @@ function PictureRow({
             </button>
           )}
         </div>
+        {failed && <p className="text-[11px] text-danger-ink">{failed}</p>}
       </div>
     </li>
   );
