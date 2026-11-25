@@ -7,6 +7,8 @@ import { AiStatus, apiFetch, BrandKit, ContentSummary, SourceSummary } from '@/l
 import { useApp } from '@/lib/app-context';
 import { useT } from '@/lib/i18n';
 
+const EMPTY: OverviewData = { sources: [], content: [], ai: null, hasBrandKit: false };
+
 export default function Dashboard() {
   const { currentOrgId, memberships, user } = useApp();
   const t = useT();
@@ -39,7 +41,14 @@ export default function Dashboard() {
     };
   }, [currentOrgId]);
 
-  if (!user) return <GuestHome />;
+  if (!user) {
+    return (
+      <div className="space-y-8">
+        <GuestHome />
+        <Overview guest data={EMPTY} name="" orgName="" />
+      </div>
+    );
+  }
   if (!data) return <p className="text-sm text-muted">{t('common.loading')}</p>;
   const metaName = String(user?.user_metadata?.full_name ?? '').trim();
   const name = metaName ? metaName.split(/\s+/)[0] : nameFromEmail(user?.email ?? '');
