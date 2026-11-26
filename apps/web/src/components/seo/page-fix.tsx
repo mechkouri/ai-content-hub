@@ -61,7 +61,7 @@ export function PageFix({ orgId, url }: { orgId: string; url: string }) {
     );
 
   return (
-    <div className="mb-2 mt-1" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="mb-2 mt-1 break-normal" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={ask}>
         <Sparkles size={13} aria-hidden /> {busy ? t('fix.working') : t('fix.suggest')}
       </button>
@@ -75,7 +75,7 @@ export function PageFix({ orgId, url }: { orgId: string; url: string }) {
             <div>
               <p className="font-semibold">{t('fix.paste')}</p>
               <pre
-                className="mt-1 overflow-x-auto whitespace-pre-wrap rounded bg-slate-900 p-2 text-[11px] text-slate-100"
+                className="mt-1 overflow-x-auto whitespace-pre-wrap break-words rounded bg-slate-900 p-2 text-[11px] text-slate-100"
                 dir="ltr"
               >
                 {result.tags}
