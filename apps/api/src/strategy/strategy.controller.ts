@@ -35,4 +35,11 @@ export class StrategyController {
   audit(@Body() body: unknown) {
     return this.strategy.audit(parseBody(auditInput, body).website);
   }
+
+  /** Checks up to ten pages of the website. Uses no AI generation. */
+  @Post('audit-site')
+  @RequirePermission('content:write')
+  auditSite(@Body() body: unknown) {
+    return this.strategy.auditSite(parseBody(auditInput, body).website);
+  }
 }
