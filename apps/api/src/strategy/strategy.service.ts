@@ -15,7 +15,9 @@ import {
 } from '../sources/safe-fetch';
 import { PAGE_FETCHER, PageFetcher, RobotsDisallowedError } from '../sources/sources.service';
 import { Language } from '../studio/content-schemas';
+import { detectLanguage } from '../sources/extract-text';
 import { buildPlanPrompt, cleanPlan, planSchema } from './plan';
+import { buildSnippetPrompt, cleanSnippet, pageBrief, snippetSchema, snippetTags } from './snippet';
 import { auditPage, auditScore } from './site-audit';
 import { CheckedPage, combine, pickPages } from './site-crawl';
 
@@ -101,6 +103,32 @@ export class StrategyService {
       hasSitemap: !!sitemap?.includes('<loc>'),
       unreadable,
       ...combine(checked),
+    };
+  }
+
+  /**
+   * A better title and description for one page, written from what the page says, with the lines to paste.
+   * Uses one AI generation. The page's own language wins over the screen language.
+   */
+  async suggestSnippet(orgId: string, userId: string, url: string, fallback: Language) {
+    const loaded = await this.load(url);
+    const page = pageBrief(loaded.body);
+    if (page.text.length < 40) {
+      throw new UnprocessableEntityException('This page has too little text to work from.');
+    }
+    const detected = detectLanguage(page.text);
+    const language: Language = detected === 'unknown' ? fallback : detected;
+    const out = await this.ai.generateJson(
+      { orgId, userId },
+      { ...buildSnippetPrompt(page, language), temperature: 0.5, schema: snippetSchema },
+    );
+    const { titles, descriptions } = cleanSnippet(out.data, page);
+    return {
+      url: loaded.finalUrl,
+      current: page.title,
+      titles,
+      descriptions,
+      tags: titles[0] && descriptions[0] ? snippetTags(titles[0], descriptions[0]) : null,
     };
   }
 

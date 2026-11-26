@@ -1,5 +1,6 @@
 'use client';
 
+import { PageFix } from '@/components/seo/page-fix';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 import type { SiteReport as Report } from '@/lib/seo-plan';
@@ -10,7 +11,10 @@ const TONE = {
   3: 'bg-slate-100 text-slate-600',
 } as const;
 
-function PageList({ urls }: { urls: string[] }) {
+/** Problems the app can write a replacement for. */
+const FIXABLE = ['title', 'meta'];
+
+function PageList({ urls, orgId }: { urls: string[]; orgId?: string }) {
   return (
     <ul className="mt-1 space-y-0.5">
       {urls.map((u) => (
@@ -18,6 +22,7 @@ function PageList({ urls }: { urls: string[] }) {
           <a href={u} target="_blank" rel="noreferrer noopener" className="hover:underline">
             {u}
           </a>
+          {orgId && <PageFix orgId={orgId} url={u} />}
         </li>
       ))}
     </ul>
@@ -25,7 +30,7 @@ function PageList({ urls }: { urls: string[] }) {
 }
 
 /** What is wrong across the pages that were checked, most important first. */
-export function SiteReport({ report }: { report: Report }) {
+export function SiteReport({ report, orgId }: { report: Report; orgId: string }) {
   const { t } = useI18n();
   return (
     <section className="card p-6">
@@ -62,7 +67,7 @@ export function SiteReport({ report }: { report: Report }) {
                   <span className="font-semibold">{t(`site.name.${p.id}` as MessageKey)}</span>
                   <span className="text-muted">{t('strat.onPages', { n: p.pages.length })}</span>
                 </summary>
-                <PageList urls={p.pages} />
+                <PageList urls={p.pages} orgId={FIXABLE.includes(p.id) ? orgId : undefined} />
               </details>
             </li>
           ))}

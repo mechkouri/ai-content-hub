@@ -449,6 +449,11 @@ const ENTRIES: readonly Entry[] = [
     'Cette adresse n’est pas une page web.',
     'هذا العنوان ليس صفحة ويب.',
   ],
+  [
+    'This page has too little text to work from.',
+    'Cette page contient trop peu de texte.',
+    'تحتوي هذه الصفحة على نص قليل جدًا.',
+  ],
   ['Invalid URL', 'URL invalide', 'الرابط غير صالح'],
   [
     'Only http and https URLs are allowed',
