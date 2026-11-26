@@ -16,6 +16,7 @@ const planInput = z.object({
   language: z.enum(LANGUAGES),
 });
 const auditInput = z.object({ website });
+const snippetInput = z.object({ website, language: z.enum(LANGUAGES) });
 
 @Controller('organizations/:orgId/seo')
 @UseGuards(AuthGuard, OrgAccessGuard)
@@ -34,6 +35,14 @@ export class StrategyController {
   @RequirePermission('content:write')
   audit(@Body() body: unknown) {
     return this.strategy.audit(parseBody(auditInput, body).website);
+  }
+
+  /** A better title and description for one page. Uses one AI generation. */
+  @Post('page-snippet')
+  @RequirePermission('content:write')
+  snippet(@Param('orgId') orgId: string, @Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    const { website: url, language } = parseBody(snippetInput, body);
+    return this.strategy.suggestSnippet(orgId, req.user.id, url, language);
   }
 
   /** Checks up to ten pages of the website. Uses no AI generation. */

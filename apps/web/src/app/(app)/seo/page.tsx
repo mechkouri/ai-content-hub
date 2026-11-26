@@ -236,7 +236,7 @@ export default function SeoPlanPage() {
         <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('studio.readOnly')}</p>
       )}
 
-      {report && <SiteReport report={report} />}
+      {report && currentOrgId && <SiteReport report={report} orgId={currentOrgId} />}
 
       {plan && (
         <>
