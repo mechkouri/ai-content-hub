@@ -3,9 +3,10 @@
 import { PageFix } from '@/components/seo/page-fix';
 import { BusinessSchemaForm, CodeLines } from '@/components/seo/paste-fix';
 import { canonicalTag } from '@/lib/site-fixes';
+import { Download } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
-import type { SiteReport as Report } from '@/lib/seo-plan';
+import { reportToCsv, SiteReport as Report } from '@/lib/seo-plan';
 
 const TONE = {
   1: 'bg-red-100 text-red-800',
@@ -35,6 +36,22 @@ function PageList({ urls, orgId, fix }: { urls: string[]; orgId?: string; fix?: 
 /** What is wrong across the pages that were checked, most important first. */
 export function SiteReport({ report, orgId }: { report: Report; orgId: string }) {
   const { t } = useI18n();
+
+  function download() {
+    const csv = reportToCsv(report, {
+      header: [t('strat.csv.priority'), t('strat.csv.problem'), t('strat.csv.page')],
+      problem: (id) => t(`site.name.${id}` as MessageKey),
+      impact: (level) => t(`site.impact.${level}` as MessageKey),
+      sameTitle: t('strat.sameTitle'),
+    });
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'website-check.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   return (
     <section className="card p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -49,6 +66,12 @@ export function SiteReport({ report, orgId }: { report: Report; orgId: string })
           <span className="text-sm font-normal text-muted">/100</span>
         </p>
       </div>
+
+      {(report.problems.length > 0 || report.duplicateTitles.length > 0) && (
+        <button type="button" className="btn-ghost btn-sm mt-3" onClick={download}>
+          <Download size={14} aria-hidden /> {t('strat.export')}
+        </button>
+      )}
 
       {!report.hasSitemap && (
         <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
