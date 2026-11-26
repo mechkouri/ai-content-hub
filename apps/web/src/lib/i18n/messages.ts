@@ -483,6 +483,8 @@ export const en = {
   'biz.kind.MedicalClinic': 'Clinic',
   'biz.kind.RealEstateAgent': 'Real estate agency',
   'biz.kind.ProfessionalService': 'Services or agency',
+  'strat.csv.problem': 'Problem',
+  'strat.csv.page': 'Page',
   'strat.title': 'SEO plan',
   'strat.subtitle':
     'Find out what to write so customers can find you: a website check, keyword ideas and a blog plan.',
@@ -1794,6 +1796,8 @@ export const fr: Messages = {
   'biz.kind.MedicalClinic': 'Clinique',
   'biz.kind.RealEstateAgent': 'Agence immobilière',
   'biz.kind.ProfessionalService': 'Services ou agence',
+  'strat.csv.problem': 'Problème',
+  'strat.csv.page': 'Page',
   'strat.title': 'Plan SEO',
   'strat.subtitle':
     'Découvrez quoi écrire pour être trouvé : un contrôle de votre site, des idées de mots-clés et un plan de blog.',
@@ -3102,6 +3106,8 @@ export const ar: Messages = {
   'biz.kind.MedicalClinic': 'عيادة',
   'biz.kind.RealEstateAgent': 'وكالة عقارية',
   'biz.kind.ProfessionalService': 'خدمات أو وكالة',
+  'strat.csv.problem': 'المشكلة',
+  'strat.csv.page': 'الصفحة',
   'strat.title': 'خطة SEO',
   'strat.subtitle': 'اعرف ماذا تكتب ليجدك الزبائن: فحص لموقعك وأفكار كلمات مفتاحية وخطة للمدونة.',
   'strat.business': 'ماذا يقدم نشاطك؟',

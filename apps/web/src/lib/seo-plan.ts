@@ -31,6 +31,10 @@ function cell(value: string | number): string {
   return `"${s.replace(/"/g, '""')}"`;
 }
 
+/** Rows as CSV text (the BOM keeps Arabic and accents readable in Excel). */
+const csvText = (rows: (string | number)[][]) =>
+  `\uFEFF${rows.map((r) => r.map(cell).join(',')).join('\r\n')}`;
+
 /** The plan as a CSV file that opens in Excel or Google Sheets (the BOM keeps Arabic and accents readable). */
 export function planToCsv(plan: SeoPlan, header: [string, string, string, string, string]): string {
   const rows: (string | number)[][] = [
@@ -38,7 +42,7 @@ export function planToCsv(plan: SeoPlan, header: [string, string, string, string
     ...plan.articles.map((a) => [a.priority, a.title, a.keyword, a.intent, a.outline.join(' | ')]),
     ...plan.clusters.flatMap((c) => c.keywords.map((k) => ['', '', k, c.intent, c.name])),
   ];
-  return `﻿${rows.map((r) => r.map(cell).join(',')).join('\r\n')}`;
+  return csvText(rows);
 }
 
 /** Where "Write this article" leads: the quick create box, with the topic and keyword filled in. */
@@ -58,3 +62,24 @@ export interface SiteReport {
 /** People type "www.example.com"; the server needs a full address. */
 export const fullAddress = (site: string) =>
   /^https?:\/\//i.test(site.trim()) ? site.trim() : `https://${site.trim()}`;
+
+/** The website check as a to-do list: one row for every problem on every page, most important first. */
+export function reportToCsv(
+  report: SiteReport,
+  words: {
+    header: [string, string, string];
+    problem: (id: string) => string;
+    impact: (level: 1 | 2 | 3) => string;
+    sameTitle: string;
+  },
+): string {
+  return csvText([
+    words.header,
+    ...report.problems.flatMap((p) =>
+      p.pages.map((url) => [words.impact(p.impact), words.problem(p.id), url]),
+    ),
+    ...report.duplicateTitles.flatMap((d) =>
+      d.pages.map((url) => [words.impact(2), `${words.sameTitle} ${d.title}`, url]),
+    ),
+  ]);
+}
