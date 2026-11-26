@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { FacebookEditor, InstagramEditor, LinkedinEditor } from '@/components/studio/editors';
 import { FacebookPreview, InstagramPreview, LinkedinPreview } from '@/components/studio/previews';
 import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
@@ -37,6 +37,7 @@ import {
 } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { contentToText, isDirty } from '@/lib/content-text';
+import { leavesPage } from '@/lib/unsaved';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
@@ -82,16 +83,23 @@ export default function ContentDetailPage() {
   const [keyword, setKeyword] = useState('');
   const [savedKeyword, setSavedKeyword] = useState('');
 
+  // The id of the piece that has unsaved edits right now, so reloading it does not throw them away.
+  const unsavedFor = useRef<string | null>(null);
+
   const load = useCallback(async () => {
     if (!currentOrgId) return;
     try {
       const d = await apiFetch<ContentDetail>(base);
       setDetail(d);
-      setDraft(d.piece.content);
-      setSaved(d.piece.content);
+      // Adding a picture, scheduling or creating posts reloads the piece: what is being typed must stay.
+      const keep = unsavedFor.current === d.piece.id;
       const kw = String(d.piece.options?.primaryKeyword ?? '');
-      setKeyword(kw);
+      setSaved(d.piece.content);
       setSavedKeyword(kw);
+      if (!keep) {
+        setDraft(d.piece.content);
+        setKeyword(kw);
+      }
       const all = await apiFetch<ContentSummary[]>(
         `/organizations/${currentOrgId}/content?sourceId=${d.piece.sourceId}`,
       );
@@ -111,6 +119,8 @@ export default function ContentDetailPage() {
     draft !== null &&
     saved !== null &&
     (isDirty(draft, saved) || (isArticle && keyword.trim() !== savedKeyword.trim()));
+
+  unsavedFor.current = dirty ? (detail?.piece.id ?? null) : null;
 
   // Live check: while editing, ask the server (no AI involved) which details are not in the verified facts,
   // so invented dates, prices and links are highlighted as you type, not only after saving.
@@ -153,9 +163,27 @@ export default function ContentDetailPage() {
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
+    // Moving to another page of the app does not fire "beforeunload", so ask when a link is clicked.
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!link) return;
+      const info = {
+        href: link.href,
+        target: link.target,
+        download: link.hasAttribute('download'),
+      };
+      if (leavesPage(e, info, window.location.href) && !window.confirm(t('det.leaveConfirm'))) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
     window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [dirty]);
+    window.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+      window.removeEventListener('click', onClick, true);
+    };
+  }, [dirty, t]);
 
   async function save() {
     if (!draft) return;
