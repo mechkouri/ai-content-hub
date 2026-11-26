@@ -21,7 +21,7 @@ export async function createDrafts<K extends string>(
 }
 
 /** Lower case, without accents or Arabic vowel marks, so people can type titles loosely. */
-const plain = (s: string) => s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
+export const plain = (s: string) => s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
 
 /** True when every word of the search appears in the title. */
 export function matchesSearch(title: string, query: string): boolean {

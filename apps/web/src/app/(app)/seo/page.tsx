@@ -3,18 +3,20 @@
 import { Check, Download, PenLine, Search } from 'lucide-react';
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import { apiFetch, canWriteContent, LANG_LABELS, Lang } from '@/lib/api';
+import { apiFetch, canWriteContent, ContentSummary, LANG_LABELS, Lang } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 import { SiteReport } from '@/components/seo/site-report';
+import { StatusBadge } from '@/components/studio/status-badge';
 import {
   fullAddress,
   planToCsv,
   SeoPlan,
   SiteReport as Report,
   writeArticleLink,
+  writtenArticle,
 } from '@/lib/seo-plan';
 
 export default function SeoPlanPage() {
@@ -34,6 +36,24 @@ export default function SeoPlanPage() {
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState('');
   const storageKey = `aich.seoPlan.${currentOrgId}`;
+
+  // The articles already written, to show how far the plan has gone.
+  const [articles, setArticles] = useState<ContentSummary[]>([]);
+  useEffect(() => {
+    setArticles([]);
+    if (!currentOrgId) return;
+    let stale = false;
+    apiFetch<ContentSummary[]>(`/organizations/${currentOrgId}/content?kind=ARTICLE`)
+      .then((list) => {
+        if (!stale) setArticles(list);
+      })
+      .catch(() => {
+        /* without the list the plan still works */
+      });
+    return () => {
+      stale = true;
+    };
+  }, [currentOrgId]);
 
   // The last plan is kept in this browser, so leaving the page does not lose it.
   useEffect(() => {
@@ -130,6 +150,8 @@ export default function SeoPlanPage() {
   const failing = plan?.site?.checks.filter((c) => !c.ok) ?? [];
   const passing = plan?.site?.checks.filter((c) => c.ok) ?? [];
   const intent = (i: string) => t(`strat.intent.${i}` as MessageKey);
+  const planned = (plan?.articles ?? []).map((a) => ({ ...a, done: writtenArticle(a, articles) }));
+  const doneCount = planned.filter((a) => a.done).length;
 
   return (
     <div className="space-y-5">
@@ -305,8 +327,28 @@ export default function SeoPlanPage() {
           <section className="card p-6">
             <h2 className="font-display text-lg font-semibold">{t('strat.articles')}</h2>
             <p className="text-xs text-muted">{t('strat.articlesHint')}</p>
+            {doneCount > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-semibold">
+                  {t('strat.progress', { done: doneCount, total: planned.length })}
+                </p>
+                <div
+                  className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-200"
+                  role="progressbar"
+                  aria-valuenow={doneCount}
+                  aria-valuemin={0}
+                  aria-valuemax={planned.length}
+                  aria-label={t('strat.progress', { done: doneCount, total: planned.length })}
+                >
+                  <div
+                    className="h-full rounded-full bg-brand"
+                    style={{ width: `${(doneCount / planned.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <ol className="mt-3 divide-y divide-line">
-              {plan.articles.map((a) => (
+              {planned.map((a) => (
                 <li
                   key={a.title}
                   className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between"
@@ -319,7 +361,8 @@ export default function SeoPlanPage() {
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
                         {intent(a.intent)}
                       </span>
-                      {a.covered && (
+                      {a.done && <StatusBadge status={a.done.status} />}
+                      {a.covered && !a.done && (
                         <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800">
                           <Check size={11} className="inline" aria-hidden /> {t('strat.covered')}
                         </span>
@@ -351,13 +394,19 @@ export default function SeoPlanPage() {
                       </details>
                     )}
                   </div>
-                  {canWrite && (
-                    <Link
-                      href={writeArticleLink(a.title, a.keyword)}
-                      className="btn-primary btn-sm"
-                    >
-                      <PenLine size={14} aria-hidden /> {t('strat.write')}
+                  {a.done ? (
+                    <Link href={`/studio/${a.done.id}`} className="btn-ghost btn-sm">
+                      <Check size={14} aria-hidden /> {t('strat.open')}
                     </Link>
+                  ) : (
+                    canWrite && (
+                      <Link
+                        href={writeArticleLink(a.title, a.keyword)}
+                        className="btn-primary btn-sm"
+                      >
+                        <PenLine size={14} aria-hidden /> {t('strat.write')}
+                      </Link>
+                    )
                   )}
                 </li>
               ))}

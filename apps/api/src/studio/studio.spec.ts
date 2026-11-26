@@ -763,6 +763,16 @@ describe('content studio API', () => {
     const make = async () =>
       (await generate({ sourceId: SRC, kind: 'ARTICLE' }).expect(201)).body.piece;
 
+    it('lists the focus keyword of each piece without its other options', async () => {
+      await generate({ sourceId: SRC, kind: 'ARTICLE', options: { primaryKeyword: 'Open Day' } });
+      const res = await request(app.getHttpServer())
+        .get(`${base}?kind=ARTICLE`)
+        .set('Authorization', as(U_VIEWER))
+        .expect(200);
+      expect(res.body[0].primaryKeyword).toBe('Open Day');
+      expect(res.body[0]).not.toHaveProperty('options');
+    });
+
     it('lists without bodies, filters, and hides content from other organizations', async () => {
       const a = await make();
       nextRaw = { usedFacts: [], content: instagram() };

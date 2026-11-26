@@ -343,6 +343,8 @@ export interface ContentSummary {
   translatedFromId: string | null;
   warnings: ClaimWarning[];
   createdAt: string;
+  /** Sent by the content list only. */
+  primaryKeyword?: string | null;
 }
 export interface ContentPiece extends Omit<ContentSummary, 'warnings'> {
   warnings: ClaimWarning[];
