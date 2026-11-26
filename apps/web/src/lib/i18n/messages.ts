@@ -485,6 +485,10 @@ export const en = {
   'biz.kind.ProfessionalService': 'Services or agency',
   'strat.csv.problem': 'Problem',
   'strat.csv.page': 'Page',
+  'soc.title': 'Announce this article',
+  'soc.hint':
+    'Write social posts about it from the same details. Each post uses one AI generation.',
+  'soc.go': 'Create the posts',
   'strat.title': 'SEO plan',
   'strat.subtitle':
     'Find out what to write so customers can find you: a website check, keyword ideas and a blog plan.',
@@ -1798,6 +1802,10 @@ export const fr: Messages = {
   'biz.kind.ProfessionalService': 'Services ou agence',
   'strat.csv.problem': 'Problème',
   'strat.csv.page': 'Page',
+  'soc.title': 'Annoncez cet article',
+  'soc.hint':
+    'Rédigez des publications à partir des mêmes informations. Chaque publication utilise une génération d’IA.',
+  'soc.go': 'Créer les publications',
   'strat.title': 'Plan SEO',
   'strat.subtitle':
     'Découvrez quoi écrire pour être trouvé : un contrôle de votre site, des idées de mots-clés et un plan de blog.',
@@ -3108,6 +3116,9 @@ export const ar: Messages = {
   'biz.kind.ProfessionalService': 'خدمات أو وكالة',
   'strat.csv.problem': 'المشكلة',
   'strat.csv.page': 'الصفحة',
+  'soc.title': 'أعلن عن هذا المقال',
+  'soc.hint': 'اكتب منشورات عنه من المعلومات نفسها. يستهلك كل منشور عملية توليد واحدة.',
+  'soc.go': 'أنشئ المنشورات',
   'strat.title': 'خطة SEO',
   'strat.subtitle': 'اعرف ماذا تكتب ليجدك الزبائن: فحص لموقعك وأفكار كلمات مفتاحية وخطة للمدونة.',
   'strat.business': 'ماذا يقدم نشاطك؟',

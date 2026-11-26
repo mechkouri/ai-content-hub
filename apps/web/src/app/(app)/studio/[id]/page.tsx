@@ -8,6 +8,7 @@ import { FacebookPreview, InstagramPreview, LinkedinPreview } from '@/components
 import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
 import { PublishPanel } from '@/components/channels/publish-panel';
 import { ImagesPanel } from '@/components/studio/images-panel';
+import { SocialFromArticle } from '@/components/studio/social-from-article';
 import { ScheduleBox } from '@/components/studio/schedule-box';
 import { ArticleDocument } from '@/components/studio/article-document';
 import { SharePost } from '@/components/studio/share-post';
@@ -30,6 +31,7 @@ import {
   ContentSummary,
   FacebookContent,
   InstagramContent,
+  Lang,
   LANG_LABELS,
   LinkedinContent,
 } from '@/lib/api';
@@ -583,6 +585,17 @@ export default function ContentDetailPage() {
           )}
           {piece.kind === 'LINKEDIN' && (
             <LinkedinPreview p={draft as LinkedinContent} org={orgName} />
+          )}
+
+          {canWrite && piece.kind === 'ARTICLE' && source && currentOrgId && (
+            <SocialFromArticle
+              key={piece.id}
+              orgId={currentOrgId}
+              sourceId={source.id}
+              title={piece.title}
+              language={piece.language as Lang}
+              onCreated={load}
+            />
           )}
 
           {canWrite && (
