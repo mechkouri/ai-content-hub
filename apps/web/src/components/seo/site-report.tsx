@@ -1,6 +1,8 @@
 'use client';
 
 import { PageFix } from '@/components/seo/page-fix';
+import { BusinessSchemaForm, CodeLines } from '@/components/seo/paste-fix';
+import { canonicalTag } from '@/lib/site-fixes';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
 import type { SiteReport as Report } from '@/lib/seo-plan';
@@ -14,7 +16,7 @@ const TONE = {
 /** Problems the app can write a replacement for. */
 const FIXABLE = ['title', 'meta'];
 
-function PageList({ urls, orgId }: { urls: string[]; orgId?: string }) {
+function PageList({ urls, orgId, fix }: { urls: string[]; orgId?: string; fix?: string }) {
   return (
     <ul className="mt-1 space-y-0.5">
       {urls.map((u) => (
@@ -23,6 +25,7 @@ function PageList({ urls, orgId }: { urls: string[]; orgId?: string }) {
             {u}
           </a>
           {orgId && <PageFix orgId={orgId} url={u} />}
+          {fix === 'canonical' && <CodeLines code={canonicalTag(u)} />}
         </li>
       ))}
     </ul>
@@ -67,7 +70,12 @@ export function SiteReport({ report, orgId }: { report: Report; orgId: string })
                   <span className="font-semibold">{t(`site.name.${p.id}` as MessageKey)}</span>
                   <span className="text-muted">{t('strat.onPages', { n: p.pages.length })}</span>
                 </summary>
-                <PageList urls={p.pages} orgId={FIXABLE.includes(p.id) ? orgId : undefined} />
+                {p.id === 'schema' && <BusinessSchemaForm url={report.url} />}
+                <PageList
+                  urls={p.pages}
+                  fix={p.id}
+                  orgId={FIXABLE.includes(p.id) ? orgId : undefined}
+                />
               </details>
             </li>
           ))}
