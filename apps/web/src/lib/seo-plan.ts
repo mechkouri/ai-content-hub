@@ -1,3 +1,5 @@
+import { plain } from './quick-create';
+
 export type Intent = 'informational' | 'local' | 'commercial' | 'transactional';
 
 export interface SiteCheck {
@@ -48,6 +50,24 @@ export function planToCsv(plan: SeoPlan, header: [string, string, string, string
 /** Where "Write this article" leads: the quick create box, with the topic and keyword filled in. */
 export const writeArticleLink = (title: string, keyword: string) =>
   `/studio?${new URLSearchParams({ topic: title, keyword }).toString()}`;
+
+/**
+ * The article already written for a planned one: same focus keyword or same title. The keyword box of quick
+ * create keeps 80 characters, so only those are compared.
+ */
+export function writtenArticle<
+  P extends { kind: string; title: string; primaryKeyword?: string | null },
+>(planned: { title: string; keyword: string }, pieces: P[]): P | undefined {
+  const key = (s: string) => plain(s.slice(0, 80)).trim();
+  const keyword = key(planned.keyword);
+  const title = plain(planned.title).trim();
+  return pieces.find(
+    (p) =>
+      p.kind === 'ARTICLE' &&
+      ((keyword !== '' && key(p.primaryKeyword ?? '') === keyword) ||
+        plain(p.title).trim() === title),
+  );
+}
 
 export interface SiteReport {
   url: string;

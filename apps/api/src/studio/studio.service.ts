@@ -359,7 +359,7 @@ export class StudioService {
     return piece;
   }
 
-  list(
+  async list(
     orgId: string,
     filter: {
       sourceId?: string;
@@ -370,7 +370,7 @@ export class StudioService {
       scheduledTo?: Date;
     },
   ) {
-    return this.prisma.contentPiece.findMany({
+    const pieces = await this.prisma.contentPiece.findMany({
       where: {
         organizationId: orgId,
         ...(filter.sourceId ? { sourceId: filter.sourceId } : {}),
@@ -399,6 +399,7 @@ export class StudioService {
         edited: true,
         translatedFromId: true,
         warnings: true,
+        options: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -409,6 +410,11 @@ export class StudioService {
           : { createdAt: 'desc' },
       take: 200,
     });
+    // Only the focus keyword is needed from the options (the SEO plan uses it to mark what is written).
+    return pieces.map(({ options, ...piece }) => ({
+      ...piece,
+      primaryKeyword: (options as Partial<GenerationOptions> | null)?.primaryKeyword ?? null,
+    }));
   }
 
   async detail(orgId: string, id: string) {

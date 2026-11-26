@@ -4,6 +4,7 @@ const lib = require('../../web/src/lib/seo-plan') as {
   planToCsv: (plan: unknown, header: string[]) => string;
   writeArticleLink: (t: string, k: string) => string;
   reportToCsv: (report: unknown, words: unknown) => string;
+  writtenArticle: (planned: unknown, pieces: unknown[]) => { id: string } | undefined;
 };
 
 describe('seo plan export', () => {
@@ -55,5 +56,44 @@ describe('website check export', () => {
       '"level-1","name-meta","https://a/2"',
       '"level-2","Same title: =1+1","https://a/3"',
     ]);
+  });
+});
+
+describe('planned articles already written', () => {
+  const planned = { title: 'Évening French Courses', keyword: 'cours du soir Casablanca' };
+  const piece = (over: Record<string, unknown>) => ({
+    id: 'p1',
+    kind: 'ARTICLE',
+    title: 'Something else',
+    primaryKeyword: null,
+    ...over,
+  });
+
+  it('matches the focus keyword or the title, ignoring case and accents', () => {
+    expect(
+      lib.writtenArticle(planned, [piece({ primaryKeyword: 'Cours du Soir casablanca ' })])?.id,
+    ).toBe('p1');
+    expect(lib.writtenArticle(planned, [piece({ title: 'evening french courses' })])?.id).toBe(
+      'p1',
+    );
+  });
+
+  it('matches a long keyword that was shortened when the article was created', () => {
+    const keyword = 'k'.repeat(100);
+    expect(
+      lib.writtenArticle({ title: 't', keyword }, [piece({ primaryKeyword: 'k'.repeat(80) })])?.id,
+    ).toBe('p1');
+  });
+
+  it('ignores social posts, other articles and empty keywords', () => {
+    expect(
+      lib.writtenArticle(planned, [
+        piece({ kind: 'FACEBOOK', primaryKeyword: planned.keyword }),
+        piece({ primaryKeyword: 'cours du soir' }),
+      ]),
+    ).toBeUndefined();
+    expect(
+      lib.writtenArticle({ title: 'A', keyword: '' }, [piece({ primaryKeyword: '' })]),
+    ).toBeUndefined();
   });
 });
