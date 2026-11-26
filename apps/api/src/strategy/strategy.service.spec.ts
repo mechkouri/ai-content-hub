@@ -8,7 +8,7 @@ const answer = {
   quickWins: [],
 };
 
-function make(fetch: () => Promise<any>) {
+function make(fetch: (url: string) => Promise<any>, sitemap: string | null = null) {
   const prisma = {
     organization: { findUnique: jest.fn().mockResolvedValue({ name: 'Atlas' }) },
     contentPiece: { findMany: jest.fn().mockResolvedValue([]) },
@@ -20,7 +20,13 @@ function make(fetch: () => Promise<any>) {
       provider: 'fake',
     })),
   };
-  return { service: new StrategyService(prisma as any, { fetch } as any, ai as any), prisma, ai };
+  const service = new StrategyService(
+    prisma as any,
+    { fetch } as any,
+    ai as any,
+    async () => sitemap,
+  );
+  return { service, prisma, ai };
 }
 
 describe('StrategyService', () => {
@@ -47,5 +53,20 @@ describe('StrategyService', () => {
     expect(out.site).toBeNull();
     expect(out.siteError).toMatch(/not allowed/);
     expect(out.articles).toHaveLength(1);
+  });
+
+  it('checks several pages of the site and lists the ones it cannot read', async () => {
+    const html =
+      '<html><head><title>Atlas</title></head><body><a href="/a">a</a><a href="/b">b</a></body></html>';
+    const { service, ai } = make(async (url) => {
+      if (url.endsWith('/b')) throw new UnsafeUrlError('private');
+      return { finalUrl: url, contentType: 'text/html', body: html };
+    }, '<urlset><url><loc>https://a.example/a</loc></url></urlset>');
+    const out = await service.auditSite('https://a.example/');
+    expect(out.pages.map((p) => p.url)).toEqual(['https://a.example/', 'https://a.example/a']);
+    expect(out.unreadable).toEqual(['https://a.example/b']);
+    expect(out.hasSitemap).toBe(true);
+    expect(out.duplicateTitles).toHaveLength(1);
+    expect(ai.generateJson).not.toHaveBeenCalled();
   });
 });

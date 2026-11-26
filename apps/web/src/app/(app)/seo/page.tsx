@@ -8,7 +8,14 @@ import { useApp } from '@/lib/app-context';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/messages';
-import { planToCsv, SeoPlan, writeArticleLink } from '@/lib/seo-plan';
+import { SiteReport } from '@/components/seo/site-report';
+import {
+  fullAddress,
+  planToCsv,
+  SeoPlan,
+  SiteReport as Report,
+  writeArticleLink,
+} from '@/lib/seo-plan';
 
 export default function SeoPlanPage() {
   const { currentOrgId, currentRole } = useApp();
@@ -23,11 +30,15 @@ export default function SeoPlanPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
+  const [report, setReport] = useState<Report | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState('');
   const storageKey = `aich.seoPlan.${currentOrgId}`;
 
   // The last plan is kept in this browser, so leaving the page does not lose it.
   useEffect(() => {
     setPlan(null);
+    setReport(null);
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
       if (saved?.plan?.articles) {
@@ -53,7 +64,7 @@ export default function SeoPlanPage() {
       language,
       ...(location.trim() ? { location: location.trim() } : {}),
       ...(audience.trim() ? { audience: audience.trim() } : {}),
-      ...(site ? { website: /^https?:\/\//i.test(site) ? site : `https://${site}` } : {}),
+      ...(site ? { website: fullAddress(site) } : {}),
     };
     try {
       const result = await apiFetch<SeoPlan>(`/organizations/${currentOrgId}/seo/plan`, {
@@ -70,6 +81,23 @@ export default function SeoPlanPage() {
       setError(describeError(err));
     }
     setBusy(false);
+  }
+
+  async function checkSite() {
+    setCheckError('');
+    setChecking(true);
+    setReport(null);
+    try {
+      setReport(
+        await apiFetch<Report>(`/organizations/${currentOrgId}/seo/audit-site`, {
+          method: 'POST',
+          body: JSON.stringify({ website: fullAddress(website) }),
+        }),
+      );
+    } catch (err) {
+      setCheckError(describeError(err));
+    }
+    setChecking(false);
   }
 
   function exportCsv() {
@@ -183,8 +211,21 @@ export default function SeoPlanPage() {
             <button className="btn-primary" disabled={busy || business.trim().length < 10}>
               <Search size={15} aria-hidden /> {busy ? t('strat.working') : t('strat.go')}
             </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={checking || !website.trim()}
+              onClick={checkSite}
+            >
+              {checking ? t('strat.checkingSite') : t('strat.checkSite')}
+            </button>
             <p className="text-xs text-muted">{t('strat.cost')}</p>
           </div>
+          {checkError && (
+            <p className="rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
+              {checkError}
+            </p>
+          )}
           {error && (
             <p className="rounded-lg border border-red-200 bg-danger-soft p-3 text-sm text-danger-ink">
               {error}
@@ -194,6 +235,8 @@ export default function SeoPlanPage() {
       ) : (
         <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('studio.readOnly')}</p>
       )}
+
+      {report && <SiteReport report={report} />}
 
       {plan && (
         <>
