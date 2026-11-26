@@ -143,6 +143,13 @@ export class StudioController {
     return this.studio.checkArticleLinks(orgId, uuid(id), body?.content);
   }
 
+  /** The article as HTML for the person to paste into their own website. */
+  @Post(':id/html')
+  @RequirePermission('content:read')
+  html(@Param('orgId') orgId: string, @Param('id') id: string, @Body() body: any) {
+    return this.studio.websiteHtml(orgId, uuid(id), body?.content);
+  }
+
   @Get(':id/reviews')
   @RequirePermission('content:read')
   reviews(@Param('orgId') orgId: string, @Param('id') id: string) {
