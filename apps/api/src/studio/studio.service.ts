@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApprovalStatus, ContentKind, ContentStatus, Prisma, SourceStatus } from '@prisma/client';
 import { AiService } from '../ai/ai.service';
+import { pastableHtml } from '../channels/article-html';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApprovalsService } from './approvals.service';
 import { fitMeta } from './fit-meta';
@@ -554,6 +555,17 @@ export class StudioService {
    * Checks the links of an article (the draft being edited, or the saved text) and says which work, which move,
    * which are broken and which could not be checked. Only public web addresses are ever contacted.
    */
+  /** The article body as HTML to paste into a website, from the draft being edited. Saves nothing. */
+  async websiteHtml(orgId: string, id: string, rawContent: unknown) {
+    const piece = await this.find(orgId, id);
+    if (piece.kind !== ContentKind.ARTICLE) {
+      throw new BadRequestException('Website text is for articles');
+    }
+    const parsed = schemaFor(piece.kind as Kind).safeParse(rawContent);
+    if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
+    return pastableHtml(parsed.data, piece.language);
+  }
+
   async checkArticleLinks(orgId: string, id: string, draft?: unknown) {
     const piece = await this.find(orgId, id);
     if (piece.kind !== ContentKind.ARTICLE) {

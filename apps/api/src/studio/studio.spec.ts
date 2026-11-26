@@ -763,6 +763,41 @@ describe('content studio API', () => {
     const make = async () =>
       (await generate({ sourceId: SRC, kind: 'ARTICLE' }).expect(201)).body.piece;
 
+    it('gives an article as HTML to paste into a website, from the draft being edited', async () => {
+      const a = await make();
+      const draft = article({
+        introduction:
+          'Come to the **Open Day** <script>x</script>.\n\n![The campus](media:77777777-7777-4777-8777-777777777777 "Photo: A. Writer")',
+      });
+      const res = await request(app.getHttpServer())
+        .post(`${base}/${a.id}/html`)
+        .set('Authorization', as(U_VIEWER))
+        .send({ content: draft })
+        .expect(201);
+      expect(res.body.html).toContain('<h2>What to expect</h2>');
+      expect(res.body.html).toContain('<strong>Open Day</strong>');
+      expect(res.body.html).toContain('&lt;script&gt;');
+      // private pictures cannot travel with the text: a marker shows where each one goes, the credit stays
+      expect(res.body.html).not.toContain('<img');
+      expect(res.body.html).toContain('[📷 The campus]');
+      expect(res.body.html).toContain('Photo: A. Writer');
+      expect(res.body.pictures).toBe(1);
+      expect(res.body.html).not.toContain('<h1>');
+    });
+
+    it('refuses HTML for posts, broken drafts and other organizations', async () => {
+      const a = await make();
+      nextRaw = { usedFacts: [], content: instagram() };
+      const ig = (await generate({ sourceId: SRC, kind: 'INSTAGRAM' }).expect(201)).body.piece;
+      const send = (url: string, user: string, content: unknown) =>
+        request(app.getHttpServer()).post(url).set('Authorization', as(user)).send({ content });
+      await send(`${base}/${ig.id}/html`, U_EDITOR, instagram()).expect(400);
+      await send(`${base}/${a.id}/html`, U_EDITOR, { h1: 'only a title' }).expect(400);
+      await send(`/api/organizations/${ORG_B}/content/${a.id}/html`, U_OTHER, article()).expect(
+        404,
+      );
+    });
+
     it('lists the focus keyword of each piece without its other options', async () => {
       await generate({ sourceId: SRC, kind: 'ARTICLE', options: { primaryKeyword: 'Open Day' } });
       const res = await request(app.getHttpServer())

@@ -440,6 +440,11 @@ const ENTRIES: readonly Entry[] = [
     'فحص الروابط مخصص للمقالات فقط',
   ],
   [
+    'Website text is for articles',
+    'Le texte pour site web est réservé aux articles',
+    'نص الموقع مخصص للمقالات فقط',
+  ],
+  [
     'This website asks not to be checked automatically.',
     'Ce site demande à ne pas être vérifié automatiquement.',
     'يطلب هذا الموقع عدم فحصه تلقائيًا.',

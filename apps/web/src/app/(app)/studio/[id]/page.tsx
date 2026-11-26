@@ -9,6 +9,7 @@ import { ApprovalBadge, ReviewHistory } from '@/components/studio/approval';
 import { PublishPanel } from '@/components/channels/publish-panel';
 import { ImagesPanel } from '@/components/studio/images-panel';
 import { SocialFromArticle } from '@/components/studio/social-from-article';
+import { WebsiteCopy } from '@/components/studio/website-copy';
 import { ScheduleBox } from '@/components/studio/schedule-box';
 import { ArticleDocument } from '@/components/studio/article-document';
 import { SharePost } from '@/components/studio/share-post';
@@ -332,7 +333,7 @@ export default function ContentDetailPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="btn-ghost" onClick={copy}>
-              {t('det.copy')}
+              {piece.kind === 'ARTICLE' ? t('det.copyMarkdown') : t('det.copy')}
             </button>
             {piece.kind !== 'ARTICLE' && (
               <SharePost text={() => contentToText(piece.kind, draft)} />
@@ -615,9 +616,18 @@ export default function ContentDetailPage() {
             <LinkedinPreview p={draft as LinkedinContent} org={orgName} />
           )}
 
+          {piece.kind === 'ARTICLE' && currentOrgId && (
+            <WebsiteCopy
+              key={`web-${piece.id}`}
+              orgId={currentOrgId}
+              contentId={piece.id}
+              article={draft as ArticleContent}
+            />
+          )}
+
           {canWrite && piece.kind === 'ARTICLE' && source && currentOrgId && (
             <SocialFromArticle
-              key={piece.id}
+              key={`social-${piece.id}`}
               orgId={currentOrgId}
               sourceId={source.id}
               title={piece.title}
