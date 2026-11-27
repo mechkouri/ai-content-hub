@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ReactNode, useMemo, useState } from 'react';
 import { ArticleContent, SeoCheck } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -102,6 +103,7 @@ export function SeoSidebar({
   live,
   orgId,
   contentId,
+  rivals = [],
 }: {
   article: ArticleContent;
   onChange: (a: ArticleContent) => void;
@@ -116,6 +118,8 @@ export function SeoSidebar({
   live: boolean;
   orgId: string;
   contentId: string;
+  /** Other articles aiming at the same focus keyword. */
+  rivals?: { id: string; title: string }[];
 }) {
   const { t } = useI18n();
   const [mobile, setMobile] = useState(false);
@@ -211,6 +215,20 @@ export function SeoSidebar({
           />
           <span className="mt-1 block text-[11px] text-slate-400">{t('rm.focusHint')}</span>
         </label>
+        {rivals.length > 0 && (
+          <div role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+            <p>{t('rm.sameKeyword')}</p>
+            <ul className="mt-1 space-y-1">
+              {rivals.slice(0, 3).map((r) => (
+                <li key={r.id}>
+                  <Link href={`/studio/${r.id}`} className="font-semibold underline" dir="auto">
+                    {r.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <SeoSuggest
           orgId={orgId}
           contentId={contentId}

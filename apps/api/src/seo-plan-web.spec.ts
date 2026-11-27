@@ -5,6 +5,11 @@ const lib = require('../../web/src/lib/seo-plan') as {
   writeArticleLink: (t: string, k: string) => string;
   reportToCsv: (report: unknown, words: unknown) => string;
   writtenArticle: (planned: unknown, pieces: unknown[]) => { id: string } | undefined;
+  sameKeywordArticles: (
+    keyword: string,
+    current: { id: string; language: string },
+    pieces: unknown[],
+  ) => { id: string }[];
 };
 
 describe('seo plan export', () => {
@@ -95,5 +100,31 @@ describe('planned articles already written', () => {
     expect(
       lib.writtenArticle({ title: 'A', keyword: '' }, [piece({ primaryKeyword: '' })]),
     ).toBeUndefined();
+  });
+});
+
+describe('articles competing for one search', () => {
+  const me = { id: 'me', language: 'fr' };
+  const piece = (id: string, over: Record<string, unknown> = {}) => ({
+    id,
+    kind: 'ARTICLE',
+    language: 'fr',
+    primaryKeyword: 'Cours du soir',
+    ...over,
+  });
+
+  it('finds other articles with the same keyword in the same language', () => {
+    const found = lib.sameKeywordArticles(' cours du SOIR ', me, [
+      piece('me'),
+      piece('a'),
+      piece('english', { language: 'en' }),
+      piece('post', { kind: 'FACEBOOK' }),
+      piece('other', { primaryKeyword: 'cours du matin' }),
+    ]);
+    expect(found.map((p) => p.id)).toEqual(['a']);
+  });
+
+  it('says nothing without a keyword', () => {
+    expect(lib.sameKeywordArticles('  ', me, [piece('a', { primaryKeyword: null })])).toEqual([]);
   });
 });

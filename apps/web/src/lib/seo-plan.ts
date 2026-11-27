@@ -51,21 +51,38 @@ export function planToCsv(plan: SeoPlan, header: [string, string, string, string
 export const writeArticleLink = (title: string, keyword: string) =>
   `/studio?${new URLSearchParams({ topic: title, keyword }).toString()}`;
 
+/** Two keywords are the same search when only capitals, accents or spaces differ; articles keep 80 characters. */
+const keywordKey = (s: string) => plain(s.slice(0, 80)).trim();
+
 /**
  * The article already written for a planned one: same focus keyword or same title. The keyword box of quick
- * create keeps 80 characters, so only those are compared.
+ * create keeps 80 characters.
  */
 export function writtenArticle<
   P extends { kind: string; title: string; primaryKeyword?: string | null },
 >(planned: { title: string; keyword: string }, pieces: P[]): P | undefined {
-  const key = (s: string) => plain(s.slice(0, 80)).trim();
-  const keyword = key(planned.keyword);
+  const keyword = keywordKey(planned.keyword);
   const title = plain(planned.title).trim();
   return pieces.find(
     (p) =>
       p.kind === 'ARTICLE' &&
-      ((keyword !== '' && key(p.primaryKeyword ?? '') === keyword) ||
+      ((keyword !== '' && keywordKey(p.primaryKeyword ?? '') === keyword) ||
         plain(p.title).trim() === title),
+  );
+}
+
+/** Other articles in the same language aiming at the same keyword: they compete with each other in search. */
+export function sameKeywordArticles<
+  P extends { id: string; kind: string; language: string; primaryKeyword?: string | null },
+>(keyword: string, current: { id: string; language: string }, pieces: P[]): P[] {
+  const wanted = keywordKey(keyword);
+  if (!wanted) return [];
+  return pieces.filter(
+    (p) =>
+      p.id !== current.id &&
+      p.kind === 'ARTICLE' &&
+      p.language === current.language &&
+      keywordKey(p.primaryKeyword ?? '') === wanted,
   );
 }
 

@@ -38,6 +38,7 @@ import {
 } from '@/lib/api';
 import { useApp } from '@/lib/app-context';
 import { contentToText, isDirty } from '@/lib/content-text';
+import { sameKeywordArticles } from '@/lib/seo-plan';
 import { leavesPage } from '@/lib/unsaved';
 import { describeError } from '@/lib/errors';
 import { useI18n } from '@/lib/i18n';
@@ -72,6 +73,7 @@ export default function ContentDetailPage() {
   const [draft, setDraft] = useState<AnyContent | null>(null);
   const [saved, setSaved] = useState<AnyContent | null>(null);
   const [related, setRelated] = useState<ContentSummary[]>([]);
+  const [articles, setArticles] = useState<ContentSummary[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
@@ -105,6 +107,12 @@ export default function ContentDetailPage() {
         `/organizations/${currentOrgId}/content?sourceId=${d.piece.sourceId}`,
       );
       setRelated(all);
+      if (d.piece.kind === 'ARTICLE') {
+        // only used for a warning, so the page works without it
+        apiFetch<ContentSummary[]>(`/organizations/${currentOrgId}/content?kind=ARTICLE`)
+          .then(setArticles)
+          .catch(() => setArticles([]));
+      }
       setReviews(await apiFetch<ContentReview[]>(`${base}/reviews`));
     } catch (e) {
       setError(describeError(e));
@@ -426,6 +434,7 @@ export default function ContentDetailPage() {
               live={dirty && !!liveSeo}
               orgId={currentOrgId ?? ''}
               contentId={piece.id}
+              rivals={sameKeywordArticles(keyword, piece, articles)}
             />
             <div className="mt-4">
               <LinkChecker

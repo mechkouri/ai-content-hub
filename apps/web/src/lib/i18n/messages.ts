@@ -1237,6 +1237,8 @@ export const en = {
   'wp.words': '{n} words',
   'rm.unsaved': 'Live score for your unsaved edits.',
   'rm.focus': 'Focus keyword',
+  'rm.sameKeyword':
+    'Another article already aims at this keyword. Two pages competing for the same search weaken each other: change one keyword or merge them.',
   'rm.focusPh': 'e.g. open day Rabat',
   'rm.focusHint': 'The word or phrase you want this article to rank for.',
   'rm.noKeyword': 'Add a focus keyword to see the keyword checks.',
@@ -2582,6 +2584,8 @@ export const fr: Messages = {
   'wp.words': '{n} mots',
   'rm.unsaved': 'Score en direct pour vos modifications non enregistrées.',
   'rm.focus': 'Mot-clé principal',
+  'rm.sameKeyword':
+    'Un autre article vise déjà ce mot-clé. Deux pages sur la même recherche s’affaiblissent : changez un mot-clé ou fusionnez-les.',
   'rm.focusPh': 'ex. portes ouvertes Rabat',
   'rm.focusHint':
     'Le mot ou l’expression pour lesquels vous voulez que cet article soit bien classé.',
@@ -3874,6 +3878,8 @@ export const ar: Messages = {
   'wp.words': '{n} كلمة',
   'rm.unsaved': 'نتيجة مباشرة لتعديلاتك غير المحفوظة.',
   'rm.focus': 'الكلمة المفتاحية الرئيسية',
+  'rm.sameKeyword':
+    'هناك مقال آخر يستهدف هذه الكلمة المفتاحية. صفحتان على البحث نفسه تُضعف إحداهما الأخرى: غيّر إحدى الكلمتين أو ادمج المقالين.',
   'rm.focusPh': 'مثال: يوم مفتوح الرباط',
   'rm.focusHint': 'الكلمة أو العبارة التي تريد أن يتصدر بها هذا المقال.',
   'rm.noKeyword': 'أضف كلمة مفتاحية رئيسية لعرض فحوصاتها.',
